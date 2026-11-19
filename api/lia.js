@@ -23,6 +23,14 @@ async function modelos(key) {
   catalogoT = Date.now();
   return catalogo;
 }
+// Respuestas rápidas: le pedimos al modelo que "piense" lo mínimo (si el modelo no lo acepta, se reintenta sin esto).
+function conRapidez(cuerpo, modelo) {
+  let tc = null;
+  if (/gemini-2\.5-flash/.test(modelo)) tc = { thinkingBudget: 0 };
+  else if (/gemini-[3-9]/.test(modelo) && /flash/.test(modelo)) tc = { thinkingLevel: 'low' };
+  if (!tc) return null;
+  return JSON.stringify(Object.assign({}, cuerpo, { generationConfig: Object.assign({}, cuerpo.generationConfig, { thinkingConfig: tc }) }));
+}
 let limiteT = 0; // hora en que la función debe responder sí o sí (Vercel corta a los 60 s)
 async function pedir(lista, cuerpo, key, maxMs) {
   let r, mejor = null;
@@ -30,7 +38,10 @@ async function pedir(lista, cuerpo, key, maxMs) {
     const queda = (limiteT || Date.now() + 55000) - Date.now();
     if (queda < 4000) break;
     try {
-      r = await fetch(API + '/' + lista[n] + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: cuerpo, signal: AbortSignal.timeout(Math.min(maxMs || 30000, queda - 2000)) });
+      const ir = c => fetch(API + '/' + lista[n] + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: c, signal: AbortSignal.timeout(Math.min(maxMs || 30000, (limiteT || Date.now() + 55000) - Date.now() - 2000)) });
+      const rapido = typeof cuerpo === 'string' ? null : conRapidez(cuerpo, lista[n]);
+      if (rapido) { r = await ir(rapido); if (r.status === 400) r = await ir(JSON.stringify(cuerpo)); }
+      else r = await ir(typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo));
     } catch (e) { r = { ok: false, status: 504, clone() { return this; }, json: async () => ({ error: { message: 'tiempo' } }) }; if (!mejor) mejor = r; continue; }
     if (r.ok) return r;
     if (r.status !== 404 && !mejor) mejor = r.clone();
@@ -56,8 +67,8 @@ async function guia(cat, key, ctx, consulta, img) {
   const parts = [{ text: 'Datos de la familia: ' + ctx }, { text: 'Consulta de la mamá: ' + consulta }];
   if (img) parts.push({ inlineData: { mimeType: img.mime, data: img.data } });
   const base = { systemInstruction: { parts: [{ text: GUIA }] }, contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.4, maxOutputTokens: 2500 } };
-  let r = await pedir(cat.texto.slice(0, 2), JSON.stringify(Object.assign({ tools: [{ google_search: {} }] }, base)), key, 32000);
-  if (!r || !r.ok) r = await pedir(cat.texto.slice(0, 3), JSON.stringify(base), key, 20000);
+  let r = await pedir(cat.texto.slice(0, 2), Object.assign({ tools: [{ google_search: {} }] }, base), key, 32000);
+  if (!r || !r.ok) r = await pedir(cat.texto.slice(0, 3), base, key, 20000);
   if (!r || !r.ok) return null;
   const j = await r.json();
   const c = (j.candidates || [])[0] || {};
@@ -190,11 +201,11 @@ module.exports = async (req, res) => {
   if (img) parts.push({ text: 'Foto adjunta:' }, { inlineData: { mimeType: img.mime, data: img.data } });
 
   try {
-    const cuerpo = JSON.stringify({
+    const cuerpo = {
       systemInstruction: { parts: [{ text: SYS }] },
       contents: [{ role: 'user', parts }],
       generationConfig: { temperature: 0.5, maxOutputTokens: 2000, responseMimeType: 'application/json' }
-    });
+    };
     let r = await pedir(cat.texto, cuerpo, key, 25000);
     if (!r.ok) {
       let d = '';

@@ -822,7 +822,7 @@ const micBtn=src=>`<button type="button" class="mic" aria-label="Mantén apretad
 let rec=null;
 const SRc=()=>window.SpeechRecognition||window.webkitSpeechRecognition;
 const canAudio=()=>!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder);
-function micDown(e,src){e.preventDefault();ctxOn();try{if(vozSrc)vozSrc.stop()}catch(x){}
+function micDown(e,src){e.preventDefault();ctxOn();vozSeq++;try{if(vozSrc)vozSrc.stop()}catch(x){}
  if(rec){if(rec.locked)finishRec(false);return}
  if(busy){toast('Lía está pensando, un momentito…');return}
  try{e.currentTarget.setPointerCapture(e.pointerId)}catch(x){}
@@ -928,18 +928,24 @@ function ctxOn(){try{actx=actx||new (window.AudioContext||window.webkitAudioCont
 let vozSrc=null,vozSeq=0;
 async function vozIA(text){const key='/lia-voz/'+encodeURIComponent(text.slice(0,1500));let j=null,cache=null;
  try{cache=await caches.open('lia-voz-v2');const hit=await cache.match(key);if(hit)j=await hit.json()}catch(e){}
- if(!j){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),15000);
+ if(!j){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),20000);
   try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:aiCode(),modo:'voz',texto:text}),signal:ctl.signal});if(!r.ok)return null;j=await r.json()}catch(e){return null}finally{clearTimeout(to)}
   if(!j||!j.audio)return null;try{if(cache)await cache.put(key,new Response(JSON.stringify(j),{headers:{'content-type':'application/json'}}))}catch(e){}}
  return j}
-function playPCM(j){const a=ctxOn();if(!a)return false;const bin=atob(j.audio);const n=bin.length>>1;const buf=a.createBuffer(1,n,j.rate||24000);const ch=buf.getChannelData(0);
+function playPCM(j,onDone){const a=ctxOn();if(!a)return false;const bin=atob(j.audio);const n=bin.length>>1;const buf=a.createBuffer(1,n,j.rate||24000);const ch=buf.getChannelData(0);
  for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;ch[i]=v/32768}
  try{if(vozSrc)vozSrc.stop()}catch(e){}const src=a.createBufferSource();const g=a.createGain();g.gain.value=.95;src.buffer=buf;if(!liaAn||liaAn.context!==a){liaAn=a.createAnalyser();liaAn.fftSize=512;liaAn.connect(a.destination);liaBuf=null}src.connect(g).connect(liaAn);vozSrc=src;
- document.body.classList.add('lia-talk');src.onended=()=>{if(vozSrc===src)document.body.classList.remove('lia-talk')};src.start(a.currentTime+.05);return true}
+ document.body.classList.add('lia-talk');src.onended=()=>{if(vozSrc!==src)return;if(onDone){vozSrc=null;onDone()}if(!vozSrc)document.body.classList.remove('lia-talk')};src.start(a.currentTime+.05);return true}
 function vozTxt(t){return String(t).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\*\*/g,'').replace(/^\s*[-•]\s+/gm,'').replace(/\bBs\.?\s*(\d+(?:[.,]\d+)?)/g,'$1 bolivianos').replace(/\s+\./g,'.').replace(/\s*\n+\s*/g,'. ').replace(/:\./g,':').replace(/\.\.+/g,'.').replace(/\s+/g,' ').trim().slice(0,1500)}
+// Parte el texto en trozos: el primero cortito para que Lía empiece a hablar enseguida; los demás se piden al mismo tiempo.
+function vozTrozos(t){const fr=t.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[t];const out=[];let cur='';
+ for(const f of fr.map(x=>x.trim()).filter(Boolean)){const lim=out.length?320:110;if(cur&&(cur+' '+f).length>lim){out.push(cur);cur=f}else cur=cur?cur+' '+f:f}
+ if(cur)out.push(cur);return out}
 function speak(text,withChime){if(S.voice===false)return;const my=++vozSeq;ctxOn();if(withChime)chime();
- if(aiCode()){const clean=vozTxt(text);
-  vozIA(clean).then(j=>{if(my!==vozSeq)return;if(j&&playPCM(j))return;speakBrowser(text,false)});return}
+ if(aiCode()){const parts=vozTrozos(vozTxt(text));const reqs=parts.map(p=>vozIA(p));let i=0,ok=false;
+  const next=()=>{if(my!==vozSeq||i>=parts.length)return;const k=i++;reqs[k].then(j=>{if(my!==vozSeq)return;
+    if(j&&playPCM(j,next)){ok=true;return}if(!ok){speakBrowser(parts.slice(k).join(' '),false);return}next()})};
+  next();return}
  speakBrowser(text,false)}
 function speakBrowser(text,withChime){if(!('speechSynthesis' in window))return;
  const clean=String(text).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\bBs\b\.?/g,'bolivianos').replace(/\s+/g,' ').trim().slice(0,400);if(!clean)return;
