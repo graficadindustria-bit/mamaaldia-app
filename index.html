@@ -128,6 +128,9 @@ nav.tabs .lia .face{width:58px;height:58px;border-radius:50%;background:var(--ac
 .mimg{display:block;max-width:180px;width:100%;border-radius:12px;margin-bottom:6px}
 .msg.guia{max-width:94%}.gtag{display:inline-block;font-size:12px;font-weight:700;color:var(--sage);margin-bottom:6px}
 .gnote{margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}.gsrc{margin-top:6px;font-size:12px;color:var(--muted)}.gsrc a{color:var(--accent)}
+.mes{padding:4px 12px}.mrow{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.mrow:last-child{border-bottom:0}
+.mrow .md{width:38px;flex:none;text-align:center;font-size:12px;color:var(--muted)}.mrow .md b{display:block;font-size:17px;color:var(--ink)}.mrow.today .md b{color:var(--accent)}
+.mrow .mm{flex:1;min-width:0;font-size:14px;display:flex;flex-direction:column;gap:2px}
 .recbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 24px));background:var(--surface);border:1.5px solid var(--danger);border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px var(--shadow);z-index:60}
 .recbar .dot{width:12px;height:12px;border-radius:50%;background:var(--danger);animation:pulse 1s infinite;flex:none}
 .recbar .tm{font-variant-numeric:tabular-nums;font-weight:700;flex:none}
@@ -237,7 +240,7 @@ const IC={
  food:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0zM8 8c0-2 2-2 2-4M13 8c0-2 2-2 2-4"/></svg>',
  ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>',
 };
-const LIA='<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="#D2603F"/><circle cx="32" cy="35" r="19" fill="#FFF3EA"/><path d="M32 16c-2-6 3-10 8-9-1 5-4 8-8 9z" fill="#7FB892"/><circle cx="25.5" cy="34" r="2.6" fill="#2B2220"/><circle cx="38.5" cy="34" r="2.6" fill="#2B2220"/><path d="M26 41c3.5 3.5 8.5 3.5 12 0" stroke="#2B2220" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="21" cy="39.5" r="2.6" fill="#F6B9A3"/><circle cx="43" cy="39.5" r="2.6" fill="#F6B9A3"/></svg>';
+const LIA='<svg viewBox="0 0 64 64"><defs><radialGradient id="liaO" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FFF7F0"/><stop offset="1" stop-color="#F3D5C4"/></radialGradient></defs><circle cx="32" cy="32" r="32" fill="#D2603F"/><ellipse cx="32" cy="12" rx="11" ry="3" fill="none" stroke="#9FD3AE" stroke-width="2.2"/><circle cx="32" cy="35" r="20" fill="url(#liaO)"/><rect x="15.5" y="27" width="33" height="13" rx="6.5" fill="#2F2624"/><circle cx="25" cy="33.5" r="2.8" fill="#9FD3AE"/><circle cx="39" cy="33.5" r="2.8" fill="#9FD3AE"/><path d="M28.5 46q3.5 2.2 7 0" stroke="#D2603F" stroke-width="2" fill="none" stroke-linecap="round"/><ellipse cx="32" cy="58" rx="9" ry="2" fill="#B34A31" opacity=".6"/></svg>';
 
 /* ====================== datos ====================== */
 const KEY='mamaaldia-v1';
@@ -373,13 +376,15 @@ const ALLERG=[['leche','Leche'],['huevo','Huevo'],['gluten','Trigo (gluten)'],['
 
 function ageMonths(){const b=S.profile.birth;if(!b)return 36;const d=fromYmd(b),n=new Date();return (n.getFullYear()-d.getFullYear())*12+(n.getMonth()-d.getMonth())-(n.getDate()<d.getDate()?1:0)}
 function ageText(){const m=ageMonths();if(m<24)return m+' meses';const y=Math.floor(m/12),r=m%12;return y+' años'+(r?' y '+r+(r>1?' meses':' mes'):'')}
-function kidFactor(){const m=ageMonths();return m<24?.3:m<48?.45:.6}
+function kidFactor(){const m=ageMonths();return m<24?.3:m<48?.45:m<96?.6:m<156?.8:1}
 function portion(k){const m=ageMonths();
  if(m<12)return 'Menor de 1 año: la alimentación la guía el pediatra.';
  const big=k==='a'||k==='c';
  if(m<24)return big?'Porción orientativa: ½ a ¾ taza, en trocitos blandos.':k==='d'?'Porción orientativa: ½ taza.':'Porción orientativa: ½ fruta o ¼ taza.';
  if(m<48)return big?'Porción orientativa: ¾ a 1 taza en total (¼ proteína, ¼ arroz o papa, ½ verduras).':k==='d'?'Porción orientativa: ½ a ¾ taza.':'Porción orientativa: 1 fruta pequeña o ½ taza.';
- return big?'Porción orientativa: 1 a 1¼ taza en total.':k==='d'?'Porción orientativa: ¾ a 1 taza.':'Porción orientativa: 1 fruta o ½ taza.';}
+ if(m<96)return big?'Porción orientativa: 1 a 1¼ taza en total.':k==='d'?'Porción orientativa: ¾ a 1 taza.':'Porción orientativa: 1 fruta o ½ taza.';
+ if(m<156)return big?'Porción orientativa: 1¼ a 1½ taza (¼ proteína, ¼ cereal o papa, ½ verduras).':k==='d'?'Porción orientativa: 1 taza y una fruta.':'Porción orientativa: 1 fruta o 1 yogur.';
+ return big?'Porción orientativa: como un adulto (1½ a 2 tazas); en la adolescencia crecen rápido y pueden necesitar más.':k==='d'?'Porción orientativa: 1 a 1½ taza y una fruta.':'Porción orientativa: 1 fruta, yogur o un puñado de frutos secos.';}
 
 /* ====================== menú y compras ====================== */
 function rnd(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647}
@@ -400,6 +405,12 @@ function makeMenu(seed){
  S.menu={week:ymd(weekStart()),days,seed};
  fitBudget();S.shopChecked={};
 }
+function planWeek(ws){S.plan=S.plan||{};return S.plan[ws]}
+function makeMonth(){const keep=S.menu;S.plan={};S.plan[keep.week]=JSON.parse(JSON.stringify(keep));
+ for(let i=1;i<4;i++){const ws=ymd(addDays(weekStart(),7*i));makeMenu((keep.seed||1)*7+i*7919);S.menu.week=ws;S.plan[ws]=S.menu}
+ S.menu=keep;save()}
+function ensureMenu(){const cw=ymd(weekStart());if(S.menu&&S.menu.week===cw)return;const p=planWeek(cw);if(p){S.menu=JSON.parse(JSON.stringify(p));S.shopChecked={}}else makeMenu();
+ if(S.plan)for(const k of Object.keys(S.plan))if(k<cw)delete S.plan[k];save()}
 function menuCost(){if(!S.menu)return 0;return shopList().reduce((a,x)=>a+x.cost,0)}
 function fitBudget(){
  const b=Number(S.profile.budget)||0;if(!b||!S.menu)return;let guard=0;
@@ -627,7 +638,7 @@ function liaReply(text,lead,pre){
  if(out.some(a=>a.kind==='bills'))lines.push('Te aviso 2 días antes de cada pago.');
  {const cs=new Set();for(const a of out){if(a.kind==='expenses')cs.add(a.obj.cat);if(a.kind==='purchases'&&a.obj.amount)cs.add('comida');if(a.kind==='cap')cs.add(a.cat)}
   for(const c of cs){const cap=S.caps[c];if(!cap)continue;const used=monthCat(c);const pc=Math.round(used/cap*100);if(pc>=100)lines.push('Ojo: en '+GNAME[c]+' ya pasaste tu tope del mes ('+bs(used)+' de '+bs(cap)+').');else if(pc>=80)lines.push('En '+GNAME[c]+' ya usaste el '+pc+'% de tu tope ('+bs(used)+' de '+bs(cap)+').');else if(out.some(a=>a.kind==='cap'&&a.cat===c))lines.push('Este mes llevas '+bs(used)+' en '+GNAME[c]+'.')}}
- if(out.some(a=>a.kind==='places'))lines.push('Lo guardé en Casa › Lugares. Pronto podrás ver también los lugares que recomiendan otras mamás.');
+ if(out.some(a=>a.kind==='places'))lines.push('Lo guardé en Menú › Lugares. Pronto podrás ver también los lugares que recomiendan otras mamás.');
  if(out.some(a=>a.med)){lines.push('Te aviso en cada dosis. La dosis siempre la indica el pediatra; yo solo te recuerdo.')}
  if(out.some(a=>a.warn)){lines.push('Con 39 °C o más, o si la notas decaída, con dificultad para respirar o sin tomar líquidos, llama al pediatra o ve a emergencias.')}
  const buy=out.find(a=>a.buy);
@@ -685,7 +696,7 @@ async function checkCode(c){try{const r=await fetch('/api/lia',{method:'POST',he
  const j=await r.json();toast(j.ia?'✨ Lía con IA activada':'Código guardado. La IA se activa en cuanto esté lista en el servidor');render()}catch(e){}}
 function liaCtx(){const now=new Date();
  return {hoy:now.toLocaleDateString('es-BO',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),hora:hm(now),mama:S.profile.mom,
-  peque:{nombre:S.profile.kid||'',edad:S.profile.birth?ageText():''},ciudad:S.profile.city||'',
+  peque:{nombre:S.profile.kid||'',edad:S.profile.birth?ageText():'',condicion:S.profile.cond||''},ciudad:S.profile.city||'',
   contexto:{medicamentos_activos:S.meds.filter(medActive).map(m=>m.name+(m.dose?' '+m.dose:'')+' cada '+m.every+' h'),pagos_fijos:S.bills.map(b=>b.name+' Bs '+b.amount),productos:S.items.map(i=>i.name),no_le_gusta:S.profile.dislikes||[],alergias:S.profile.allergies||[]},
   historial:S.chat.filter(m=>!m.typing).slice(-6).map(m=>(m.from==='me'?'Mamá: ':'Lía: ')+String(m.text||'').slice(0,300))}}
 async function liaAsk(body){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),75000);
@@ -838,7 +849,7 @@ function render(){
  <nav class="tabs"><div class="in">
   ${navBtn('hoy','Hoy',IC.home)}${navBtn('agenda','Agenda',IC.cal)}
   <button class="lia ${tab==='lia'?'on':''}" onclick="go('lia')" aria-label="Hablar con Lía"><span class="face">${LIA}</span>Lía</button>
-  ${navBtn('salud','Salud',IC.heart)}${navBtn('comidas','Casa',IC.basket)}
+  ${navBtn('salud','Salud',IC.heart)}${navBtn('comidas','Menú',IC.basket)}
  </div></nav></div>`;
  if(tab==='lia'){const m=$('.msgs');if(m)window.scrollTo(0,document.body.scrollHeight)}
 }
@@ -868,6 +879,7 @@ function vHoy(){
  <div class="card">${items.length?`<ul class="tl">${items.map((i,ix)=>tlItem(i,ix===nextIdx)).join('')}</ul>`:`<div class="empty">Nada para hoy todavía. Escríbele a Lía y ella lo ordena.</div>`}</div>
  ${act.length?`<div class="sect"><h2>Medicamentos activos</h2></div>${act.map(medCard).join('')}`:''}
  ${(()=>{const lim=ymd(addDays(new Date(),7));const up=S.bills.filter(b=>b.due<=lim).sort((a,b)=>a.due.localeCompare(b.due));return up.length?`<div class="sect"><h2>Pagos de la semana</h2><button class="btn sm soft" onclick="foodSeg='gastos';go('comidas')">Ver gastos</button></div><div class="card"><ul class="tl">${up.map(b=>`<li><div class="b"><div class="ttl">${esc(b.name)} · ${bs(b.amount)}</div><span class="small muted">${cap(billDueTxt(b))}</span></div><button class="btn sm ghost" onclick="payBill('${b.id}')">Pagado</button></li>`).join('')}</ul></div>`:''})()}
+ ${(()=>{ensureMenu();const md=menuDay(ds);if(!md)return '';return `<div class="sect"><h2>🍲 Menú de hoy</h2><button class="btn sm soft" onclick="foodSeg='menu';go('comidas')">Ver semana y mes</button></div><div class="card"><ul class="tl">${SLOTS.filter(x=>['desayuno','almuerzo','cena'].includes(x[0])).map(([id,lab,time])=>{const r=RECBY[md[id]];return r?`<li><div class="t">${time}</div><div class="b"><div class="ttl">${esc(r.n)}</div><span class="chip c-comida">${lab}</span></div></li>`:''}).join('')}</ul></div>`})()}
  <div class="sect"><h2>Pendientes sin hora</h2><button class="btn sm soft" onclick="addTaskDlg()">+ Agregar</button></div>
  <div class="card">${pend.length?`<ul class="tl">${pend.map(t=>`<li class="${t.done?'done':''}"><button class="check ${t.done?'on':''}" onclick="toggleTask('${t.id}')" aria-label="Marcar">${t.done?IC.ok:''}</button><div class="b"><div class="ttl">${esc(t.text)}</div></div></li>`).join('')}</ul>`:`<div class="empty">Sin pendientes. ¡Bien!</div>`}</div>`;
 }
@@ -915,7 +927,7 @@ function sendChat(t){const v=(t||$('#ci').value).trim();if(!v&&!pendImg)return;t
 function vSalud(){
  const act=S.meds.filter(medActive);const past=S.meds.filter(m=>!medActive(m));
  const log=[...S.health].sort((a,b)=>b.ts-a.ts).slice(0,25);
- return `<h1 style="font-size:24px">Salud${S.profile.kid?' de '+esc(S.profile.kid):''}</h1>
+ return `<h1 style="font-size:24px">Salud${S.profile.kid?' de '+esc(S.profile.kid):''}</h1>${S.profile.birth?`<div class="small muted">${ageText()}</div>`:''}${S.profile.cond?`<div class="note" style="margin-top:8px"><b>Cuidado especial:</b> ${esc(S.profile.cond)}. Lía lo tiene en cuenta en sus guías. <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Cambiar</a></div>`:`<div class="tiny muted" style="margin:4px 0 8px">¿Tiene alguna condición o cuidado especial (autismo, síndrome de Down, asma…)? <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Anótala en Ajustes</a> y Lía la tendrá en cuenta.</div>`}
  <div class="muted small" style="margin:2px 0 12px">${ageText()}${(S.profile.allergies||[]).length?' · Alergias: '+S.profile.allergies.map(a=>ALLERG.find(x=>x[0]===a)[1]).join(', '):''}</div>
  <div class="note"><b>Importante:</b> esta app no calcula dosis ni diagnostica. Anota la dosis que indicó el pediatra y consulta ante cualquier duda.</div>
  <div class="row" style="gap:8px;margin-bottom:6px"><button class="btn block" onclick="addMedDlg()">+ Medicamento</button><button class="btn ghost block" onclick="addTempDlg()">Anotar temperatura</button></div>
@@ -927,12 +939,12 @@ function vSalud(){
  <div class="danger-note"><b>Ve a emergencias</b> si tiene dificultad para respirar, convulsiones, está muy decaída o no despierta bien, no toma líquidos, o tiene manchas en la piel que no desaparecen al presionarlas.</div>`}
 
 function vComidas(){
- if(!S.menu||S.menu.week!==ymd(weekStart())){makeMenu();save()}
+ ensureMenu();
  if(foodSeg==='despensa')foodSeg='gastos';
  const sb=(id,l)=>`<button class="${foodSeg===id?'on':''}" onclick="foodSeg='${id}';render()">${l}</button>`;
- return `<h1 style="font-size:24px">Casa</h1>
- <div class="seg">${sb('menu','Menú')}${sb('compras','Compras')}${sb('gastos','Gastos')}${sb('lugares','Lugares')}</div>
- ${foodSeg==='menu'?vMenu():foodSeg==='compras'?vCompras():foodSeg==='gastos'?vGastos():vLugares()}`}
+ return `<h1 style="font-size:24px">Menú y casa</h1>
+ <div class="seg">${sb('menu','Menú')}${sb('mes','Mes')}${sb('compras','Compras')}${sb('gastos','Gastos')}${sb('lugares','Lugares')}</div>
+ ${foodSeg==='menu'?vMenu():foodSeg==='mes'?vMes():foodSeg==='compras'?vCompras():foodSeg==='gastos'?vGastos():vLugares()}`}
 function vGastos(){
  const now=Date.now(),ms=monthStart(),ws=weekStart().getTime();const mon=spentBetween(ms,now+1),tw=spentBetween(ws,now+1),lw=spentBetween(ws-7*864e5,ws);
  const mb=Number(S.profile.mbudget)||0;const fixed=S.bills.reduce((a,b)=>a+perMonthly(b),0);
@@ -1002,6 +1014,12 @@ function vMenu(){
  <div class="note"><b>Regla de los 5 grupos:</b> en desayuno, almuerzo y cena intenta que haya cereal, grasa buena, fruta, verdura y proteína. ${ageMonths()<24?'<b>Hasta los 2 años:</b> sin azúcar, poca sal y nada de golosinas con colorantes (como la tartracina). ':''}</div>
  <div class="note"><b>Porciones orientativas generales.</b> Cada niño es distinto: consulta con tu pediatra o nutricionista, también para introducir alimentos que pueden dar alergia. Corta uvas, salchichas y frutas redondas en trocitos para evitar atragantamientos.</div>
  <button class="btn ghost block" onclick="makeMenu();save();render();toast('Nuevo menú listo')">Nuevo menú</button>`}
+function vMes(){if(!S.plan||!S.plan[S.menu.week]||Object.keys(S.plan).length<4)makeMonth();S.plan[S.menu.week]=JSON.parse(JSON.stringify(S.menu));
+ const ws=Object.keys(S.plan).sort().slice(0,4);const ti=ymd(new Date());
+ return `<div class="note"><b>Menú del mes.</b> 4 semanas armadas con tu presupuesto, alergias y lo que no le gusta. Cada lunes la semana nueva pasa sola a "Menú" y a la lista de compras.</div>
+ ${ws.map((w,wi)=>{const m=S.plan[w];const w0=fromYmd(w);return `<div class="sect"><h2>Semana ${wi+1} · ${w0.getDate()} ${MON[w0.getMonth()].slice(0,3)}</h2>${wi===0?'<span class="chip c-comida">Esta semana</span>':''}</div>
+  <div class="card mes">${m.days.map((d,i)=>{const dd=addDays(w0,i);const r=id=>RECBY[d[id]]?esc(RECBY[d[id]].n):'—';return `<div class="mrow ${ymd(dd)===ti?'today':''}"><div class="md">${DSH[dd.getDay()]}<b>${dd.getDate()}</b></div><div class="mm"><div><span class="tiny muted">Almuerzo</span> ${r('almuerzo')}</div><div><span class="tiny muted">Cena</span> ${r('cena')}</div><div class="tiny muted">Desayuno: ${r('desayuno')}</div></div></div>`}).join('')}</div>`}).join('')}
+ <button class="btn ghost block" onclick="makeMenu();makeMonth();render();toast('Nuevo menú del mes listo')">Armar otro mes</button>`}
 function swapMeal(di,slot){const k=SLOTS.find(s=>s[0]===slot)[3];const cur=S.menu.days[di][slot];const opts=REC.filter(r=>r.k===k&&okRec(r)&&r.id!==cur);if(!opts.length)return;
  const used=new Set(S.menu.days.map(d=>d[slot]));const fresh=opts.filter(r=>!used.has(r.id));const pool=fresh.length?fresh:opts;S.menu.days[di][slot]=pool[Math.floor(Math.random()*pool.length)].id;save();render()}
 function vCompras(){
@@ -1060,7 +1078,8 @@ function budgetDlg(){dlg(`<h3>Presupuesto de comida</h3><label class="f">Por sem
 function priceDlg(k){dlg(`<h3>${esc(CAT[k].n)}</h3><label class="f">Precio por ${CAT[k].u==='u'?'unidad':CAT[k].u} (Bs)</label><input class="inp" id="pP" type="number" step="0.1" inputmode="decimal" value="${price(k)}"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.prices['${k}']=parseFloat($('#pP').value)||0;save();closeDlg();render()">Guardar</button></div>`)}
 function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3>
  <label class="f">Tu nombre</label><input class="inp" id="sM" value="${esc(p.mom)}">
- <div class="row"><div style="flex:1"><label class="f">Nombre de tu peque</label><input class="inp" id="sK" value="${esc(p.kid)}"></div><div style="flex:1"><label class="f">Nacimiento</label><input class="inp" type="date" id="sB" value="${p.birth}"></div></div>
+ <div class="row"><div style="flex:1"><label class="f">Nombre de tu hijo o hija</label><input class="inp" id="sK" value="${esc(p.kid)}"></div><div style="flex:1"><label class="f">Nacimiento</label><input class="inp" type="date" id="sB" value="${p.birth}"></div></div>
+ <label class="f">Condición o cuidado especial (opcional)</label><textarea class="inp" id="sCond" rows="2" placeholder="Ej.: autismo, síndrome de Down, asma, diabetes, TDAH… escríbelo como quieras">${esc(p.cond||'')}</textarea>
  <label class="f">Alergias (se quitan del menú)</label><div class="chips">${ALLERG.map(([k,l])=>`<label><input type="checkbox" class="sA" value="${k}" ${p.allergies.includes(k)?'checked':''}>${l}</label>`).join('')}</div>
  <label class="f">Ciudad</label><input class="inp" id="sCity" value="${esc(p.city||'')}">
  <label class="f">No le gusta</label><input class="inp" id="sD" value="${esc((p.dislikes||[]).join(', '))}" placeholder="brócoli, hígado">
@@ -1074,7 +1093,7 @@ function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3>
  <button class="btn ghost block" style="margin-top:8px;color:var(--danger)" onclick="confirmInline('¿Borrar todos tus datos de este celular?',()=>{localStorage.removeItem(KEY);S=null;render()})">Borrar todo</button>
  <p class="tiny muted" style="margin-top:14px">Versión de prueba. Tus datos y los de tu peque se guardan solo en este celular. Con Lía con IA, lo que le escribes o le dices se envía a la IA de Google (Gemini) solo para entenderlo y responderte; no lo guardamos en ningún servidor. Si borras los datos del navegador se pierden, por eso descarga un respaldo cada semana. Las porciones y la información de salud son guía general y no reemplazan al pediatra.</p>
  <button class="btn ghost block" onclick="closeDlg()">Cerrar</button>`)}
-function saveSettings(){const p=S.profile;const nc=$('#sCode').value.trim().toUpperCase().replace(/\s+/g,'');if(nc!==aiCode()){setCode(nc);if(nc)checkCode(nc)}S.voice=$('#sVoice').checked;p.mom=$('#sM').value.trim()||p.mom;p.kid=$('#sK').value.trim();p.birth=$('#sB').value;p.city=$('#sCity').value.trim();p.allergies=[...document.querySelectorAll('.sA:checked')].map(x=>x.value);p.dislikes=$('#sD').value.split(',').map(x=>norm(x.trim())).filter(Boolean);makeMenu(S.menu&&S.menu.seed);save();closeDlg();render();toast('Guardado')}
+function saveSettings(){const p=S.profile;const nc=$('#sCode').value.trim().toUpperCase().replace(/\s+/g,'');if(nc!==aiCode()){setCode(nc);if(nc)checkCode(nc)}S.voice=$('#sVoice').checked;p.mom=$('#sM').value.trim()||p.mom;p.kid=$('#sK').value.trim();p.birth=$('#sB').value;p.city=$('#sCity').value.trim();p.cond=$('#sCond').value.trim();p.allergies=[...document.querySelectorAll('.sA:checked')].map(x=>x.value);p.dislikes=$('#sD').value.split(',').map(x=>norm(x.trim())).filter(Boolean);makeMenu(S.menu&&S.menu.seed);save();closeDlg();render();toast('Guardado')}
 function exportData(){const b=new Blob([JSON.stringify(S)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mamaaldia-respaldo-'+ymd(new Date())+'.json';a.click()}
 function importData(f){if(!f)return;f.text().then(t=>{const d=JSON.parse(t);if(!d.profile)throw 0;S=Object.assign(blank(),d);save();closeDlg();render();toast('Respaldo cargado')}).catch(()=>toast('Archivo no válido'))}
 async function askNotif(force){try{if(!('Notification' in window)){if(force)toast('Este navegador no permite avisos. Instala la app primero.');return}if(Notification.permission==='default'||force){const r=await Notification.requestPermission();if(force)toast(r==='granted'?'Avisos activados':'Avisos bloqueados en el navegador')}}catch(e){}}
@@ -1097,16 +1116,17 @@ function renderWelcome(){
 function startForm(){$('#root').innerHTML=`<div class="welcome" style="justify-content:flex-start">
  <h1 style="font-size:26px;margin-top:10px">Cuéntame de ustedes</h1><p>Solo lo necesario para ordenar tu día.</p>
  <label class="f">Tu nombre</label><input class="inp" id="fM" placeholder="Andrea">
- <div class="row"><div style="flex:1"><label class="f">Nombre de tu peque</label><input class="inp" id="fK" placeholder="Sofi"></div><div style="flex:1"><label class="f">Fecha de nacimiento</label><input class="inp" type="date" id="fB"></div></div>
+ <div class="row"><div style="flex:1"><label class="f">Nombre de tu hijo o hija (0 a 18 años)</label><input class="inp" id="fK" placeholder="Sofi"></div><div style="flex:1"><label class="f">Fecha de nacimiento</label><input class="inp" type="date" id="fB"></div></div>
  <label class="f">Ciudad</label><select class="inp" id="fCity">${['Santa Cruz','La Paz','Cochabamba','El Alto','Sucre','Tarija','Oruro','Potosí','Otra'].map(c=>`<option>${c}</option>`).join('')}</select>
  <label class="f">Presupuesto de comida por semana (Bs)</label><input class="inp" id="fP" type="number" inputmode="numeric" value="150">
  <label class="f">Adultos que comen el mismo menú</label><select class="inp" id="fA"><option value="0">Ninguno (solo la peque)</option><option>1</option><option>2</option><option>3</option></select>
+ <label class="f">Condición o cuidado especial (opcional)</label><textarea class="inp" id="fCond" rows="2" placeholder="Ej.: autismo, síndrome de Down, asma, diabetes, TDAH… escríbelo como quieras"></textarea>
  <label class="f">Alergias</label><div class="chips">${ALLERG.map(([k,l])=>`<label><input type="checkbox" class="fAl" value="${k}">${l}</label>`).join('')}</div>
  <label class="chips" style="margin-top:16px"><label style="border-radius:14px;align-items:flex-start"><input type="checkbox" id="fOk" style="margin-top:4px"><span class="small">Entiendo que es una versión de prueba, que las porciones y la información de salud son guía general y que siempre consulto al pediatra.</span></label></label>
  <button class="btn block" style="margin-top:16px" onclick="finishForm()">Listo</button>
  <button class="btn ghost block" style="margin-top:8px" onclick="render()">Volver</button></div>`}
 function finishForm(){const m=$('#fM').value.trim();if(!m){toast('Escribe tu nombre');return}if(!$('#fOk').checked){toast('Marca la casilla para continuar');return}
- S=blank();Object.assign(S.profile,{mom:cap(m),kid:cap($('#fK').value.trim()),birth:$('#fB').value,budget:+$('#fP').value||150,adults:+$('#fA').value,city:$('#fCity').value,allergies:[...document.querySelectorAll('.fAl:checked')].map(x=>x.value)});
+ S=blank();Object.assign(S.profile,{mom:cap(m),kid:cap($('#fK').value.trim()),birth:$('#fB').value,budget:+$('#fP').value||150,adults:+$('#fA').value,city:$('#fCity').value,cond:$('#fCond').value.trim(),allergies:[...document.querySelectorAll('.fAl:checked')].map(x=>x.value)});
  makeMenu();S.tab='lia';save();render()}
 function loadDemo(){
  S=blank();const now=new Date();const t=ymd(now);const b=addDays(now,-(3*365+40));
