@@ -19,7 +19,9 @@ async function modelos(key) {
   const texto = nombres.filter(n => /flash/.test(n) && !/tts|image|live|audio|embed|thinking|exp|vision|native/.test(n))
     .sort((a, b) => (/lite/.test(a) - /lite/.test(b)) || (/preview/.test(a) - /preview/.test(b)) || ver(b) - ver(a)).slice(0, 4);
   const tts = nombres.filter(n => /tts/.test(n)).sort((a, b) => (/flash/.test(b) - /flash/.test(a)) || ver(b) - ver(a));
-  catalogo = { texto: [...new Set(MODELOS.concat(texto))], tts: [...new Set(tts.concat(['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts']))], todos: nombres };
+  const lite = nombres.filter(n => /flash-lite/.test(n) && !/tts|image|live|audio|embed|thinking|exp|vision|native/.test(n))
+    .sort((a, b) => (/preview/.test(a) - /preview/.test(b)) || ver(b) - ver(a)).slice(0, 2);
+  catalogo = { rapido: [...new Set(lite.concat(['gemini-flash-lite-latest'], MODELOS, texto))], texto: [...new Set(MODELOS.concat(texto))], tts: [...new Set(tts.concat(['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts']))], todos: nombres };
   catalogoT = Date.now();
   return catalogo;
 }
@@ -43,7 +45,7 @@ async function pedir(lista, cuerpo, key, maxMs) {
       if (rapido) { r = await ir(rapido); if (r.status === 400) r = await ir(JSON.stringify(cuerpo)); }
       else r = await ir(typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo));
     } catch (e) { r = { ok: false, status: 504, clone() { return this; }, json: async () => ({ error: { message: 'tiempo' } }) }; if (!mejor) mejor = r; continue; }
-    if (r.ok) return r;
+    if (r.ok) { pedir.ultimo = lista[n]; return r; }
     if (r.status !== 404 && !mejor) mejor = r.clone();
     if ([400, 404, 429, 500, 503].indexOf(r.status) < 0) break;
   }
@@ -63,11 +65,11 @@ Una o dos frases para calmarla y validar lo que siente.
 **Para tu consulta:** qué anotar o fotografiar para mostrarle al pediatra.
 Cierra con una frase de ánimo.
 No indiques medicamentos con dosis ni recetes antibióticos o cremas con corticoides; si un medicamento podría ayudar, di que lo consulte con el pediatra. Si el peque es menor de 3 meses con fiebre, o hay dificultad para respirar, labios morados, decaimiento fuerte, manchas que no desaparecen al presionar, convulsión o deshidratación: lo primero es ir a emergencias.`;
-async function guia(cat, key, ctx, consulta, img) {
+async function guia(cat, key, ctx, consulta, img, buscar) {
   const parts = [{ text: 'Datos de la familia: ' + ctx }, { text: 'Consulta de la mamá: ' + consulta }];
   if (img) parts.push({ inlineData: { mimeType: img.mime, data: img.data } });
   const base = { systemInstruction: { parts: [{ text: GUIA }] }, contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.4, maxOutputTokens: 2500 } };
-  let r = await pedir(cat.texto.slice(0, 2), Object.assign({ tools: [{ google_search: {} }] }, base), key, 32000);
+  let r = buscar ? await pedir(cat.texto.slice(0, 2), Object.assign({ tools: [{ google_search: {} }] }, base), key, 30000) : null;
   if (!r || !r.ok) r = await pedir(cat.texto.slice(0, 3), base, key, 20000);
   if (!r || !r.ok) return null;
   const j = await r.json();
@@ -109,9 +111,10 @@ Tu trabajo:
    - Algo para recordar sin fecha ni categoría: "Nota: ..."
    Convierte "mañana", "el viernes", "la otra semana" en fecha exacta "el D de mes" usando "hoy". Horas en formato 24 h "a las HH:MM". Montos como "Bs N".
    Si solo conversa, pregunta algo o pide un consejo, deja "frases" vacío.
-3. Si te pide consejo, guía u orientación (salud, síntomas, una foto de algo que le preocupa, alimentación, sueño, crianza, desarrollo, rabietas), pon "consulta": true y en "tema" resume en una línea qué consulta (por ejemplo "sarpullido rojo en el brazo izquierdo de niña de 3 años"). Otra app preparará la guía completa; tú solo pon en "respuesta" una frase breve y cariñosa.
+3. Si pide consejo de crianza, conducta, escuela, bullying, emociones, sueño, alimentación, rutinas, juegos o desarrollo (sin síntomas de enfermedad), respóndele tú misma en "respuesta" (hasta 130 palabras): una frase de empatía y luego 3 a 5 ideas concretas en líneas que empiecen con "- ", adaptadas a la edad; si hay señales de riesgo, sugiere hablar con la escuela, la psicóloga o el pediatra. Ahí "consulta" va false.
+   Solo si es de SALUD física (síntomas, fiebre, piel, golpes, enfermedad, medicamentos) o manda una foto de algo que le preocupa, pon "consulta": true y en "tema" resume en una línea qué consulta (por ejemplo "sarpullido rojo en el brazo izquierdo de niña de 3 años"). Otra app preparará la guía completa; tú solo pon en "respuesta" una frase breve y cariñosa.
    Si manda una foto, descríbela con cuidado en "tema".
-4. Escribir "respuesta": máximo 45 palabras, cálida y natural, para leerse en voz alta. Si guardaste cosas, confírmalo en una frase sin repetir todo (la app muestra el detalle). Si pregunta algo (ideas de comida, rutinas, juegos, organización), responde con ideas concretas y breves.
+4. Escribir "respuesta": máximo 45 palabras (salvo los consejos del punto 3), cálida y natural, para leerse en voz alta. Si guardaste cosas, confírmalo en una frase sin repetir todo (la app muestra el detalle). Si pregunta algo (ideas de comida, rutinas, juegos, organización), responde con ideas concretas y breves.
 5. Si es nota de voz, pon en "transcripcion" lo que dijo, limpio y sin muletillas.
 
 Si el peque tiene una condición (autismo, síndrome de Down, TDAH, asma, diabetes u otra), tenla en cuenta con respeto y sin etiquetas, adaptando tus ideas a su edad y necesidades.
@@ -206,7 +209,9 @@ module.exports = async (req, res) => {
       contents: [{ role: 'user', parts }],
       generationConfig: { temperature: 0.5, maxOutputTokens: 2000, responseMimeType: 'application/json' }
     };
-    let r = await pedir(cat.texto, cuerpo, key, 25000);
+    const t0 = Date.now();
+    let r = await pedir(cat.rapido, cuerpo, key, 20000);
+    const tIA = Date.now() - t0, mIA = pedir.ultimo;
     if (!r.ok) {
       let d = '';
       try { const e = await r.json(); d = (e.error && (e.error.message || e.error.status)) || ''; } catch (x) {}
@@ -222,11 +227,13 @@ module.exports = async (req, res) => {
     const lista = x => Array.isArray(x) ? x.filter(e => e && typeof e === 'object').slice(0, 12) : [];
     let g = null;
     if (o.consulta || (img && !lista(o.eventos).length && !frases.length)) {
+      o.consulta = true;
       const q = [o.tema, o.transcripcion || texto].filter(Boolean).join('. Lo que dijo: ');
-      try { g = await guia(cat, key, ctx, q || 'Mira la foto y oriéntame', img); } catch (e) {}
+      try { g = await guia(cat, key, ctx, q || 'Mira la foto y oriéntame', img, true); } catch (e) {}
     }
     res.status(200).json({
-      respuesta: g ? g.texto : String(o.respuesta || '').slice(0, 600),
+      respuesta: g ? g.texto : String(o.respuesta || '').slice(0, 1500),
+      tiempos: { ia: tIA, modelo: mIA, total: Date.now() - t0 },
       guia: !!g,
       fuentes: g ? g.fuentes : [],
       eventos: lista(o.eventos),
