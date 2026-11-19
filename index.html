@@ -715,7 +715,8 @@ function applyAI(j,fallbackText){
  return lead}
 let busy=false;
 let pendImg=null;
-function pickImg(){if(!aiCode()){toast('Para mandar fotos activa Lía con IA con tu código en Ajustes');return}const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>{if(i.files[0])loadImg(i.files[0])};i.click()}
+function askCode(){dlg(`<h3>Activar Lía con IA</h3><div class="small muted">Escribe el código que te dieron (empieza con MD-).</div><input class="inp" id="acC" placeholder="MD-XXXXXX" autocapitalize="characters" style="margin-top:10px"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="const c=$('#acC').value.trim().toUpperCase().replace(/\\s+/g,'');if(c){setCode(c);closeDlg();checkCode(c)}">Activar</button></div>`)}
+function pickImg(){if(!aiCode()){askCode();return}const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>{if(i.files[0])loadImg(i.files[0])};i.click()}
 function loadImg(f){const u=URL.createObjectURL(f);const im=new Image();im.onload=()=>{const sc=(mx,q)=>{const k=Math.min(1,mx/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q)};
  pendImg={full:sc(1280,.82).split(',')[1],thumb:sc(260,.7)};URL.revokeObjectURL(u);render();const i=$('#ci');if(i){i.placeholder='Cuéntale qué te preocupa de la foto…';i.focus()}};im.onerror=()=>toast('No pude abrir esa foto');im.src=u}
 function imgBox(){return pendImg?`<div class="pimg"><img src="${pendImg.thumb}" alt="Foto adjunta"><span>Foto lista para enviar</span><button type="button" onclick="pendImg=null;render()" aria-label="Quitar foto">✕</button></div>`:''}
@@ -723,7 +724,7 @@ function fmt(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^\s
 async function talk(v,opts={}){
  const img=pendImg;pendImg=null;
  S.chat.push({id:uid(),from:'me',text:v,img:img&&img.thumb,ts:Date.now()});const inp=$('#ci');if(inp)inp.value='';const qa=$('#qa');if(qa)qa.value='';
- if(!aiCode()){liaReply(v);render();if(opts.speak)speakLast();return}
+ if(!aiCode()){if(/\b(consejo|consejos|aconsej\w*|gu[ií]ame|orient\w*|qu[eé] (hago|le doy|puedo hacer)|es normal|me preocupa|ayudame con|ay[uú]dame con)\b/i.test(v)){S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:'Para darte consejos y guías (también con fotos) necesito estar en modo Lía con IA. Toca "Activar Lía con IA" aquí abajo y escribe tu código. Mientras tanto, si es urgente, llama a tu pediatra.'});save();render();return}liaReply(v);render();if(opts.speak)speakLast();return}
  typingOn();busy=true;
  try{const j=await liaAsk(Object.assign({texto:v},img?{imagen:img.full,imgMime:'image/jpeg'}:{}));typingOff();applyAI(j,v)}
  catch(e){typingOff();liaReply(v);const m=S.chat[S.chat.length-1];if(m&&e.message!=='codigo')m.extra=(m.extra?m.extra+'\n':'')+'(Sin conexión con la IA: lo ordené con la Lía básica.)';if(e.message==='codigo')toast('Tu código de IA ya no es válido');save()}
@@ -907,7 +908,7 @@ function vLia(){
  </div>
  <div class="composer"><div class="sugs">${sug.map(s=>`<button onclick="sendChat(this.textContent)">${esc(s)}</button>`).join('')}</div>
  ${imgBox()}<form class="ask" onsubmit="event.preventDefault();sendChat()"><button type="button" class="cam" onclick="pickImg()" aria-label="Adjuntar foto">${IC.cam}</button><input id="ci" placeholder="${pendImg?'Cuéntale qué te preocupa de la foto…':'Escribe o mantén 🎤 para hablar'}" autocomplete="off">${micBtn('ci')}<button aria-label="Enviar">${IC.send}</button></form>
- <div class="tiny muted" style="text-align:center;margin-top:4px">${aiCode()?'<span class="aibadge">✨ Lía con IA</span> Mantén apretado 🎤 para hablar, suelta para enviar. Un toque: graba manos libres.':'Lía básica: entiende frases comunes. Activa Lía con IA con tu código en Ajustes ⚙️.'}</div></div></div>`}
+ <div class="tiny muted" style="text-align:center;margin-top:4px">${aiCode()?'<span class="aibadge">✨ Lía con IA</span> Mantén apretado 🎤 para hablar, suelta para enviar. Un toque: graba manos libres.':'Lía básica: entiende frases comunes. <a href="#" onclick="askCode();return false" style="color:var(--accent);font-weight:600">Activar Lía con IA</a>'}</div></div></div>`}
 function sendChat(t){const v=(t||$('#ci').value).trim();if(!v&&!pendImg)return;talk(v||'📷 Mira esta foto')}
 
 
