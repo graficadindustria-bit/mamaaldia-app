@@ -41,6 +41,33 @@ async function pedir(lista, cuerpo, key) {
   return mejor || r;
 }
 const VOZ = process.env.LIA_VOZ || 'Sulafat';
+const GUIA = `Eres Lía, guía cálida de la app "Mamá al Día" para mamás de Bolivia. Una mamá te consulta algo sobre su peque (o sobre ella). Tu misión: darle paz, tranquilidad y una guía clara y correcta, y ser un puente hacia el pediatra, nunca reemplazarlo.
+Busca en internet información de fuentes confiables (Asociación Americana de Pediatría/HealthyChildren.org, OMS, UNICEF, Mayo Clinic, MedlinePlus, sociedades de pediatría) y básate en ella. Si hay una foto, obsérvala con cuidado y describe lo que ves sin afirmar un diagnóstico.
+Escribe en español de Bolivia, tuteando, con cariño y frases cortas. Máximo 230 palabras. Usa exactamente este formato (sin #, sin tablas):
+Una o dos frases para calmarla y validar lo que siente.
+**Lo que puede ser:** 2 o 3 causas comunes y en general leves, con palabras simples (son posibilidades, no un diagnóstico).
+**Qué puedes hacer ahora:**
+- 3 o 4 cuidados seguros en casa
+**Ve a emergencias de inmediato si:**
+- las señales de alarma concretas para este caso
+**Llévala al pediatra:** cuándo (hoy, en 24-48 h, o si no mejora en X días).
+**Para tu consulta:** qué anotar o fotografiar para mostrarle al pediatra.
+Cierra con una frase de ánimo.
+No indiques medicamentos con dosis ni recetes antibióticos o cremas con corticoides; si un medicamento podría ayudar, di que lo consulte con el pediatra. Si el peque es menor de 3 meses con fiebre, o hay dificultad para respirar, labios morados, decaimiento fuerte, manchas que no desaparecen al presionar, convulsión o deshidratación: lo primero es ir a emergencias.`;
+async function guia(cat, key, ctx, consulta, img) {
+  const parts = [{ text: 'Datos de la familia: ' + ctx }, { text: 'Consulta de la mamá: ' + consulta }];
+  if (img) parts.push({ inlineData: { mimeType: img.mime, data: img.data } });
+  const base = { systemInstruction: { parts: [{ text: GUIA }] }, contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.4, maxOutputTokens: 2500 } };
+  let r = await pedir(cat.texto.slice(0, 3), JSON.stringify(Object.assign({ tools: [{ google_search: {} }] }, base)), key);
+  if (!r || !r.ok) r = await pedir(cat.texto.slice(0, 3), JSON.stringify(base), key);
+  if (!r || !r.ok) return null;
+  const j = await r.json();
+  const c = (j.candidates || [])[0] || {};
+  const texto = ((c.content || {}).parts || []).map(p => p.text || '').join('').trim();
+  const vistos = {};
+  const fuentes = (((c.groundingMetadata || {}).groundingChunks) || []).map(g => g.web).filter(w => w && w.uri && !vistos[w.title] && (vistos[w.title] = 1)).slice(0, 4).map(w => ({ titulo: String(w.title || 'Fuente').slice(0, 80), url: w.uri }));
+  return texto ? { texto: texto.slice(0, 2500), fuentes } : null;
+}
 
 const SYS = `Eres Lía, la asistente de la app "Mamá al Día" para mamás de Bolivia con hijos pequeños.
 Hablas en español de Bolivia, tuteas, eres cálida, breve y práctica, como una amiga organizada. Nunca juzgas.
@@ -72,15 +99,17 @@ Tu trabajo:
    - Algo para recordar sin fecha ni categoría: "Nota: ..."
    Convierte "mañana", "el viernes", "la otra semana" en fecha exacta "el D de mes" usando "hoy". Horas en formato 24 h "a las HH:MM". Montos como "Bs N".
    Si solo conversa, pregunta algo o pide un consejo, deja "frases" vacío.
-3. Escribir "respuesta": máximo 45 palabras, cálida y natural, para leerse en voz alta. Si guardaste cosas, confírmalo en una frase sin repetir todo (la app muestra el detalle). Si pregunta algo (ideas de comida, rutinas, juegos, organización), responde con ideas concretas y breves.
-4. Si es nota de voz, pon en "transcripcion" lo que dijo, limpio y sin muletillas.
+3. Si te pide consejo, guía u orientación (salud, síntomas, una foto de algo que le preocupa, alimentación, sueño, crianza, desarrollo, rabietas), pon "consulta": true y en "tema" resume en una línea qué consulta (por ejemplo "sarpullido rojo en el brazo izquierdo de niña de 3 años"). Otra app preparará la guía completa; tú solo pon en "respuesta" una frase breve y cariñosa.
+   Si manda una foto, descríbela con cuidado en "tema".
+4. Escribir "respuesta": máximo 45 palabras, cálida y natural, para leerse en voz alta. Si guardaste cosas, confírmalo en una frase sin repetir todo (la app muestra el detalle). Si pregunta algo (ideas de comida, rutinas, juegos, organización), responde con ideas concretas y breves.
+5. Si es nota de voz, pon en "transcripcion" lo que dijo, limpio y sin muletillas.
 
 Salud: eres guía general, no médica. No diagnosticas ni indicas dosis. Con fiebre de 39 °C o más, dificultad para respirar, decaimiento fuerte, deshidratación o un bebé menor de 3 meses con fiebre, dile con calma que llame al pediatra o vaya a emergencias. Si la mamá se nota agotada o triste, respóndele con cariño y recuérdale que pedir ayuda está bien.
 No inventes datos que ella no dio. No pidas datos personales.
 
 Nunca pongas una cita, clase o pendiente en "frases" ni como nota: van en "eventos" o "pendientes".
 
-Responde SOLO con JSON: {"respuesta":"...","eventos":[],"pendientes":[],"frases":[],"transcripcion":"..."}`;
+Responde SOLO con JSON: {"respuesta":"...","consulta":false,"tema":"","eventos":[],"pendientes":[],"frases":[],"transcripcion":"..."}`;
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -116,7 +145,8 @@ module.exports = async (req, res) => {
   const texto = typeof b.texto === 'string' ? b.texto.slice(0, 4000) : '';
   const audio = typeof b.audio === 'string' ? b.audio : '';
   const mime = /^audio\/[a-z0-9.+-]+$/i.test(b.mime || '') ? String(b.mime).split(';')[0] : 'audio/webm';
-  if (!texto && !audio) return res.status(400).json({ error: 'vacio' });
+  const img = typeof b.imagen === 'string' && b.imagen.length < 3000000 && /^image\/(jpeg|png|webp)$/.test(b.imgMime || '') ? { data: b.imagen, mime: b.imgMime } : null;
+  if (!texto && !audio && !img) return res.status(400).json({ error: 'vacio' });
   if (audio.length > 4000000) return res.status(413).json({ error: 'audio-largo' });
   const ctx = JSON.stringify(b.ctx || {}).slice(0, 6000);
 
@@ -126,7 +156,8 @@ module.exports = async (req, res) => {
 
   const parts = [{ text: 'Datos: ' + ctx }];
   if (audio) parts.push({ text: 'Mensaje de la mamá (nota de voz):' }, { inlineData: { mimeType: mime, data: audio } });
-  else parts.push({ text: 'Mensaje de la mamá: ' + texto });
+  else parts.push({ text: 'Mensaje de la mamá: ' + (texto || '(solo mandó una foto)') });
+  if (img) parts.push({ text: 'Foto adjunta:' }, { inlineData: { mimeType: img.mime, data: img.data } });
 
   try {
     const cuerpo = JSON.stringify({
@@ -148,8 +179,15 @@ module.exports = async (req, res) => {
     try { o = JSON.parse(t); } catch (e) { o = { respuesta: t.slice(0, 400), frases: [] }; }
     const frases = Array.isArray(o.frases) ? o.frases.filter(x => typeof x === 'string' && x.trim()).slice(0, 15) : [];
     const lista = x => Array.isArray(x) ? x.filter(e => e && typeof e === 'object').slice(0, 12) : [];
+    let g = null;
+    if (o.consulta || (img && !lista(o.eventos).length && !frases.length)) {
+      const q = [o.tema, o.transcripcion || texto].filter(Boolean).join('. Lo que dijo: ');
+      try { g = await guia(cat, key, ctx, q || 'Mira la foto y oriéntame', img); } catch (e) {}
+    }
     res.status(200).json({
-      respuesta: String(o.respuesta || '').slice(0, 600),
+      respuesta: g ? g.texto : String(o.respuesta || '').slice(0, 600),
+      guia: !!g,
+      fuentes: g ? g.fuentes : [],
       eventos: lista(o.eventos),
       pendientes: lista(o.pendientes),
       frases,
