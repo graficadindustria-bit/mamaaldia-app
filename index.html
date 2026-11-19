@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#C4553A">
+<meta name="description" content="Mamá al Día: escribe como te salga y Lía te ordena agenda, medicamentos, menú y compras. Versión de prueba.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mamá al Día">
+<title>Mamá al Día</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+[hidden]{display:none!important}
+:root{
+  --bg:#FBF5EF; --surface:#FFFFFF; --surface2:#FFF9F4; --line:#EEDFD3; --ink:#2B2220; --sub:#75645D;
+  --accent:#C4553A; --accent2:#D2603F; --onaccent:#FFFFFF; --asoft:#FBE3D9;
+  --sage:#3F7154; --sagesoft:#DDEEE2; --sun:#9A6510; --sunsoft:#FCEFD6; --lilac:#6A5A9C; --lilacsoft:#ECE7F7;
+  --danger:#A83232; --dangersoft:#FBE4E2; --shadow:rgba(120,60,40,.14);
+  --f:'Nunito',system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1B1614; --surface:#251E1B; --surface2:#2B2320; --line:#3A2F2A; --ink:#F3E9E2; --sub:#BBA99F;
+  --accent:#F0927A; --accent2:#F0927A; --onaccent:#2A130C; --asoft:#4A2A20;
+  --sage:#8CC7A3; --sagesoft:#22382B; --sun:#F2C46E; --sunsoft:#3D3020; --lilac:#BDB0EA; --lilacsoft:#312B45;
+  --danger:#F2A3A0; --dangersoft:#4A2423; --shadow:rgba(0,0,0,.5); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1B1614; --surface:#251E1B; --surface2:#2B2320; --line:#3A2F2A; --ink:#F3E9E2; --sub:#BBA99F;
+  --accent:#F0927A; --accent2:#F0927A; --onaccent:#2A130C; --asoft:#4A2A20;
+  --sage:#8CC7A3; --sagesoft:#22382B; --sun:#F2C46E; --sunsoft:#3D3020; --lilac:#BDB0EA; --lilacsoft:#312B45;
+  --danger:#F2A3A0; --dangersoft:#4A2423; --shadow:rgba(0,0,0,.5); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--f);-webkit-tap-highlight-color:transparent}
+h1,h2,h3{margin:0;font-weight:800;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;min-height:100%;position:relative;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+header.top{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px}
+.brand img{width:30px;height:30px;border-radius:8px}
+.top .sp{flex:1}
+.iconbtn{border:0;background:var(--surface);border:1px solid var(--line);width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.iconbtn svg{width:20px;height:20px}
+main{padding:4px 16px 16px}
+.view{display:none}.view.on{display:block}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;margin:0 0 12px}
+.muted{color:var(--sub)}.small{font-size:13px}.tiny{font-size:12px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.sect{display:flex;align-items:baseline;justify-content:space-between;margin:18px 2px 8px}
+.sect h2{font-size:17px}
+.btn{border:0;border-radius:14px;padding:12px 16px;font-weight:800;background:var(--accent);color:var(--onaccent);min-height:46px}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.soft{background:var(--asoft);color:var(--accent)}
+.btn.sm{min-height:36px;padding:7px 12px;border-radius:11px;font-size:14px}
+.btn.block{width:100%}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:12.5px;font-weight:700;background:var(--asoft);color:var(--accent)}
+.c-salud{background:var(--sagesoft);color:var(--sage)}
+.c-clase{background:var(--lilacsoft);color:var(--lilac)}
+.c-familia{background:var(--sunsoft);color:var(--sun)}
+.c-mama{background:var(--asoft);color:var(--accent)}
+.c-comida{background:var(--sunsoft);color:var(--sun)}
+.c-med{background:var(--sagesoft);color:var(--sage)}
+.c-tarea{background:var(--surface2);color:var(--sub);border:1px solid var(--line)}
+.hello h1{font-size:25px}
+.ask{display:flex;gap:8px;align-items:center;background:var(--surface);border:1.5px solid var(--accent);border-radius:16px;padding:6px 6px 6px 14px;margin:12px 0 4px}
+.ask input{flex:1;border:0;background:transparent;outline:0;min-width:0;padding:8px 0}
+.ask button{border:0;background:var(--accent);color:var(--onaccent);border-radius:12px;width:42px;height:42px;display:grid;place-items:center;flex:none}
+.ask button svg{width:20px;height:20px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px 12px}
+.stat b{font-size:22px;display:block;line-height:1.1}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.tl li:first-child{border-top:0}
+.tl .t{width:48px;flex:none;font-weight:800;font-variant-numeric:tabular-nums;padding-top:2px}
+.tl .b{flex:1;min-width:0}
+.tl .ttl{font-weight:700}
+.tl li.done .ttl{text-decoration:line-through;color:var(--sub)}
+.tl li.now{background:var(--asoft);margin:0 -14px;padding:10px 14px;border-radius:12px;border-top-color:transparent}
+.check{flex:none;width:28px;height:28px;border-radius:9px;border:2px solid var(--line);background:var(--surface);display:grid;place-items:center;padding:0}
+.check.on{background:var(--sage);border-color:var(--sage);color:var(--surface)}
+.check svg{width:16px;height:16px}
+.alert{background:var(--sagesoft);border:1px solid var(--sage);border-radius:16px;padding:12px 14px;margin:0 0 10px;display:flex;gap:10px;align-items:center}
+.alert.ev{background:var(--asoft);border-color:var(--accent)}
+.alert .b{flex:1}
+.med{display:flex;gap:12px;align-items:center}
+.ring{width:54px;height:54px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;background:conic-gradient(var(--sage) calc(var(--p)*1%),var(--sagesoft) 0);position:relative}
+.ring span{background:var(--surface);width:42px;height:42px;border-radius:50%;display:grid;place-items:center;text-align:center;line-height:1.05}
+.note{background:var(--sunsoft);color:var(--ink);border-radius:14px;padding:10px 12px;font-size:13px;margin:0 0 12px}
+.note b{color:var(--sun)}
+.danger-note{background:var(--dangersoft);border-radius:14px;padding:10px 12px;font-size:13px;margin:0 0 12px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);align-items:end}
+nav.tabs button{border:0;background:transparent;padding:8px 0 9px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;font-weight:700;color:var(--sub)}
+nav.tabs button svg{width:23px;height:23px}
+nav.tabs button.on{color:var(--accent)}
+nav.tabs .lia{position:relative;top:-14px}
+nav.tabs .lia .face svg{width:100%;height:100%}
+nav.tabs .lia .face{width:58px;height:58px;border-radius:50%;background:var(--accent2);display:grid;place-items:center;box-shadow:0 6px 16px var(--shadow);border:4px solid var(--surface)}
+.face svg{width:100%;height:100%}
+/* chat */
+.chatwrap{display:flex;flex-direction:column;min-height:calc(100vh - 170px)}
+.msgs{flex:1;display:flex;flex-direction:column;gap:10px;padding-bottom:12px}
+.msg{max-width:88%;padding:10px 13px;border-radius:18px;white-space:pre-wrap;word-wrap:break-word}
+.msg.me{align-self:flex-end;background:var(--accent);color:var(--onaccent);border-bottom-right-radius:6px}
+.msg.lia{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:6px}
+.lia-row{display:flex;gap:8px;align-items:flex-end}
+.lia-row .av{width:32px;height:32px;flex:none;border-radius:50%;background:var(--accent2)}
+.org{display:flex;flex-direction:column;gap:6px;margin-top:8px;white-space:normal}
+.org .it{display:flex;gap:8px;align-items:flex-start;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:14px}
+.org .it .chip{flex:none}
+.undo{margin-top:8px;border:0;background:transparent;color:var(--sub);font-size:13px;font-weight:700;text-decoration:underline;padding:4px 0}
+.composer{position:sticky;bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--bg);padding:8px 0 4px}
+.composer .ask{margin:0}
+.mic.rec{background:var(--danger)!important;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.6}}
+.sugs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.sugs button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600}
+/* agenda */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0 12px}
+.week button{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:7px 0;display:flex;flex-direction:column;align-items:center;font-size:11.5px;font-weight:700;color:var(--sub);position:relative}
+.week button b{font-size:17px;color:var(--ink)}
+.week button.on{background:var(--accent);border-color:var(--accent);color:var(--onaccent)}
+.week button.on b{color:var(--onaccent)}
+.week button.today:not(.on){border-color:var(--accent)}
+.week i{position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.week button.on i{background:var(--onaccent)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px;margin:6px 0 12px}
+.seg button{border:0;background:transparent;border-radius:10px;padding:8px 4px;font-weight:800;font-size:14px;color:var(--sub)}
+.seg button.on{background:var(--asoft);color:var(--accent)}
+.meal{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.meal:first-child{border-top:0}
+.meal .t{width:48px;flex:none;font-weight:800;font-variant-numeric:tabular-nums}
+.meal .k{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--sun)}
+.meal .n{font-weight:800}
+.meal .swap{border:0;background:transparent;color:var(--accent);font-weight:800;font-size:13px;padding:4px 0}
+.bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin:8px 0 4px}
+.bar i{display:block;height:100%;background:var(--sage);border-radius:99px}
+.bar.over i{background:var(--danger)}
+.shop{list-style:none;margin:0;padding:0}
+.shop li{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.shop li:first-child{border-top:0}
+.shop li .n{flex:1}
+.shop li.on .n{text-decoration:line-through;color:var(--sub)}
+.shop .p{font-variant-numeric:tabular-nums;color:var(--sub);font-size:13px;border:0;background:transparent;padding:4px}
+.grp{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);margin:4px 0 2px}
+.fab{position:fixed;right:max(16px,calc(50% - 224px));bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:5;border-radius:16px;box-shadow:0 8px 20px var(--shadow)}
+label.f{display:block;font-weight:700;font-size:13px;margin:10px 0 4px}
+.inp{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 12px;min-height:44px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:var(--surface);font-weight:600;font-size:14px}
+.chips input{accent-color:var(--accent)}
+dialog{border:0;border-radius:22px;padding:0;width:min(440px,calc(100vw - 24px));background:var(--surface);color:var(--ink);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(30,15,10,.45)}
+dialog .in{padding:18px;max-height:85vh;overflow:auto}
+dialog h3{font-size:19px;margin-bottom:4px}
+.dlg-act{display:flex;gap:8px;margin-top:16px}
+.dlg-act .btn{flex:1}
+.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;z-index:50;max-width:90vw}
+/* welcome */
+.welcome{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:28px 22px calc(28px + env(safe-area-inset-bottom,0px));max-width:480px;margin:0 auto}
+.welcome .logo{width:84px;height:84px;border-radius:22px;box-shadow:0 10px 30px var(--shadow)}
+.welcome h1{font-size:32px;margin:18px 0 6px}
+.welcome p{font-size:16px;color:var(--sub);margin:0 0 6px}
+.feat{display:flex;gap:10px;align-items:flex-start;margin:10px 0}
+.feat .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;flex:none;font-size:18px}
+.empty{text-align:center;color:var(--sub);padding:14px 6px;font-size:14px}
+.install{display:flex;gap:10px;align-items:center;background:var(--asoft);border-radius:16px;padding:10px 12px;margin:0 0 12px}
+.install .b{flex:1;font-size:13.5px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="toast" class="toast" hidden></div>
+<dialog id="dlg"><div class="in" id="dlgIn"></div></dialog>
+
+<script>
+'use strict';
+/* ====================== utilidades ====================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const uid=()=>Math.random().toString(36).slice(2,9);
+const DAYN=['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const DSH=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MON=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const hm=d=>pad(d.getHours())+':'+pad(d.getMinutes());
+const fromYmd=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const at=(dateStr,time)=>{const d=fromYmd(dateStr);if(time){const [h,m]=time.split(':').map(Number);d.setHours(h,m,0,0)}return d};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const startDay=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
+const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
+const fmtDate=d=>DAYS[d.getDay()]+' '+d.getDate()+' de '+MON[d.getMonth()];
+const bs=n=>'Bs '+(Math.round(n*10)/10).toLocaleString('es-BO',{maximumFractionDigits:1});
+function rel(ts){const m=Math.round((ts-Date.now())/60000);if(Math.abs(m)<1)return 'ahora';const a=Math.abs(m);let s=a<60?a+' min':a<1440?(Math.floor(a/60)+' h'+(a%60?' '+(a%60)+' min':'')):Math.round(a/1440)+' días';return m>0?'en '+s:'hace '+s}
+function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2600)}
+const IC={
+ send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+ mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+ gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+ home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
+ cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+ heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M9 11h6M12 8v6" stroke-linecap="round"/></svg>',
+ basket:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h18l-2 10H5zM8 10l4-6 4 6M9 14v3M15 14v3"/></svg>',
+ food:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0zM8 8c0-2 2-2 2-4M13 8c0-2 2-2 2-4"/></svg>',
+ ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>',
+};
+const LIA='<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="#D2603F"/><circle cx="32" cy="35" r="19" fill="#FFF3EA"/><path d="M32 16c-2-6 3-10 8-9-1 5-4 8-8 9z" fill="#7FB892"/><circle cx="25.5" cy="34" r="2.6" fill="#2B2220"/><circle cx="38.5" cy="34" r="2.6" fill="#2B2220"/><path d="M26 41c3.5 3.5 8.5 3.5 12 0" stroke="#2B2220" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="21" cy="39.5" r="2.6" fill="#F6B9A3"/><circle cx="43" cy="39.5" r="2.6" fill="#F6B9A3"/></svg>';
+
+/* ====================== datos ====================== */
+const KEY='mamaaldia-v1';
+let S=null;
+function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function blank(){return {v:1,profile:{mom:'',kid:'',birth:'',allergies:[],dislikes:[],budget:150,adults:0,city:'Santa Cruz',mbudget:0},events:[],tasks:[],meds:[],health:[],chat:[],menu:null,shopChecked:{},extraShop:[],purchases:[],prices:{},notified:{},notes:[],bills:[],expenses:[],places:[],caps:{},items:[],tab:'hoy'}}
+
+/* Catálogo con precios estimados (Santa Cruz, Bs). Editables desde Compras. */
+const CAT={
+ pollo:{n:'Pollo (pechuga)',u:'kg',p:28,s:'Carnes',st:.25},
+ carne:{n:'Carne de res',u:'kg',p:60,s:'Carnes',st:.25},
+ molida:{n:'Carne molida',u:'kg',p:55,s:'Carnes',st:.25},
+ higado:{n:'Hígado de res',u:'kg',p:35,s:'Carnes',st:.25},
+ pescado:{n:'Pescado (surubí o sábalo)',u:'kg',p:45,s:'Carnes',st:.25},
+ huevo:{n:'Huevos',u:'u',p:1,s:'Lácteos y huevos',st:1},
+ leche:{n:'Leche',u:'L',p:7,s:'Lácteos y huevos',st:1},
+ yogur:{n:'Yogur natural',u:'L',p:14,s:'Lácteos y huevos',st:1},
+ queso:{n:'Queso fresco',u:'kg',p:45,s:'Lácteos y huevos',st:.25},
+ arroz:{n:'Arroz',u:'kg',p:10,s:'Abarrotes',st:1},
+ fideo:{n:'Fideo',u:'kg',p:12,s:'Abarrotes',st:.5},
+ avena:{n:'Avena',u:'kg',p:16,s:'Abarrotes',st:.5},
+ quinua:{n:'Quinua',u:'kg',p:28,s:'Abarrotes',st:.5},
+ lentejas:{n:'Lentejas',u:'kg',p:16,s:'Abarrotes',st:.5},
+ almidon:{n:'Almidón de yuca',u:'kg',p:14,s:'Abarrotes',st:.5},
+ mani:{n:'Maní pelado',u:'kg',p:30,s:'Abarrotes',st:.25},
+ pan:{n:'Pan',u:'u',p:.5,s:'Panadería',st:1},
+ papa:{n:'Papa',u:'kg',p:6,s:'Verduras',st:.5},
+ yuca:{n:'Yuca',u:'kg',p:5,s:'Verduras',st:.5},
+ zanahoria:{n:'Zanahoria',u:'kg',p:7,s:'Verduras',st:.5},
+ zapallo:{n:'Zapallo',u:'kg',p:5,s:'Verduras',st:.5},
+ remolacha:{n:'Remolacha (beterraga)',u:'kg',p:6,s:'Verduras',st:.5},
+ brocoli:{n:'Brócoli',u:'u',p:8,s:'Verduras',st:1},
+ tomate:{n:'Tomate',u:'kg',p:9,s:'Verduras',st:.5},
+ cebolla:{n:'Cebolla',u:'kg',p:6,s:'Verduras',st:.5},
+ choclo:{n:'Choclo',u:'u',p:2.5,s:'Verduras',st:1},
+ arveja:{n:'Arveja',u:'kg',p:16,s:'Verduras',st:.25},
+ espinaca:{n:'Espinaca o acelga',u:'atado',p:3,s:'Verduras',st:1},
+ platano:{n:'Plátano verde (para cocinar)',u:'u',p:1.5,s:'Verduras',st:1},
+ palta:{n:'Palta',u:'u',p:4,s:'Frutas',st:1},
+ banana:{n:'Banana (guineo)',u:'u',p:.5,s:'Frutas',st:1},
+ manzana:{n:'Manzana',u:'u',p:1.5,s:'Frutas',st:1},
+ papaya:{n:'Papaya',u:'u',p:12,s:'Frutas',st:1},
+ mandarina:{n:'Mandarina',u:'u',p:.6,s:'Frutas',st:1},
+ frutilla:{n:'Frutilla',u:'kg',p:25,s:'Frutas',st:.25},
+};
+const SECT=['Verduras','Frutas','Carnes','Lácteos y huevos','Panadería','Abarrotes'];
+/* Recetas: k = momentos (d desayuno, s merienda/media mañana, a almuerzo, c cena). i = ingredientes por porción adulta. al = alérgenos */
+const REC=[
+ {id:'avena',n:'Avena con leche y banana',k:'d',i:{avena:.04,leche:.2,banana:.5},al:['leche']},
+ {id:'huevopan',n:'Huevo revuelto con pan y mandarina',k:'d',i:{huevo:1,pan:1,mandarina:1},al:['huevo','gluten']},
+ {id:'panqueso',n:'Pan con queso y leche tibia',k:'d',i:{pan:1,queso:.03,leche:.2},al:['leche','gluten']},
+ {id:'quinualeche',n:'Quinua con leche y manzana',k:'d',i:{quinua:.04,leche:.2,manzana:.5},al:['leche']},
+ {id:'panqueques',n:'Panqueques de banana y avena',k:'d',i:{banana:1,huevo:1,avena:.03},al:['huevo']},
+ {id:'yogurpapaya',n:'Yogur con papaya y avena',k:'d',i:{yogur:.15,papaya:.15,avena:.02},al:['leche']},
+ {id:'cunape',n:'Cuñapé con leche',k:'d',i:{almidon:.05,queso:.04,leche:.2,huevo:.3},al:['leche','huevo']},
+ {id:'s_banana',n:'Banana en rodajas',k:'s',i:{banana:1}},
+ {id:'s_papaya',n:'Papaya en cubitos',k:'s',i:{papaya:.15}},
+ {id:'s_mandarina',n:'Mandarina en gajos (sin semillas)',k:'s',i:{mandarina:1}},
+ {id:'s_manzana',n:'Manzana en tajadas finas',k:'s',i:{manzana:1}},
+ {id:'s_yogur',n:'Yogur con frutilla picada',k:'s',i:{yogur:.12,frutilla:.04},al:['leche']},
+ {id:'s_palta',n:'Pan con palta',k:'s',i:{pan:1,palta:.25},al:['gluten']},
+ {id:'s_huevo',n:'Huevo duro en trocitos',k:'s',i:{huevo:1},al:['huevo']},
+ {id:'s_galleta',n:'Galletitas caseras de avena y banana',k:'s',i:{avena:.03,banana:.5}},
+ {id:'s_zanahoria',n:'Bastones de zanahoria cocida con queso',k:'s',i:{zanahoria:.06,queso:.02},al:['leche']},
+ {id:'majadito',n:'Majadito de pollo con plátano',k:'a',i:{arroz:.08,pollo:.1,tomate:.05,cebolla:.03,platano:.5}},
+ {id:'locro',n:'Locro de pollo con zapallo',k:'a',i:{arroz:.06,pollo:.1,papa:.1,zapallo:.06,cebolla:.03}},
+ {id:'mani',n:'Sopa de maní suave',k:'a',i:{mani:.03,papa:.1,fideo:.02,carne:.07,arveja:.03},al:['mani','gluten']},
+ {id:'lentejas',n:'Lentejas con arroz y zanahoria',k:'a',i:{lentejas:.06,arroz:.06,zanahoria:.05,cebolla:.03}},
+ {id:'pescado',n:'Pescado al horno con yuca',k:'a',i:{pescado:.12,yuca:.15,tomate:.05},al:['pescado']},
+ {id:'albondigas',n:'Albóndigas con puré de papa',k:'a',i:{molida:.1,papa:.15,leche:.05,huevo:.5},al:['huevo','leche']},
+ {id:'fideocarne',n:'Fideos con salsa de carne y verduras',k:'a',i:{fideo:.07,molida:.08,tomate:.1,zanahoria:.05},al:['gluten']},
+ {id:'pollojugo',n:'Pollo al jugo con arroz y choclo',k:'a',i:{pollo:.12,arroz:.07,choclo:.5,cebolla:.03}},
+ {id:'higado',n:'Hígado suave con puré de papa',k:'a',i:{higado:.08,papa:.15,cebolla:.04}},
+ {id:'guisoquinua',n:'Guiso de quinua con verduras y queso',k:'a',i:{quinua:.06,zapallo:.05,arveja:.03,queso:.03,zanahoria:.04},al:['leche']},
+ {id:'c_sopa',n:'Sopa de verduras con fideo',k:'c',i:{zapallo:.08,zanahoria:.05,papa:.08,fideo:.03,cebolla:.02},al:['gluten']},
+ {id:'c_tortilla',n:'Tortilla de espinaca con papa',k:'c',i:{huevo:1.5,espinaca:.3,papa:.1},al:['huevo']},
+ {id:'c_pure',n:'Puré de zapallo con pollo desmenuzado',k:'c',i:{zapallo:.15,pollo:.06,leche:.05},al:['leche']},
+ {id:'c_choclo',n:'Crema de choclo con queso',k:'c',i:{choclo:1,leche:.15,queso:.02},al:['leche']},
+ {id:'c_palta',n:'Pan con palta y huevo',k:'c',i:{pan:1,palta:.25,huevo:1},al:['huevo','gluten']},
+ {id:'c_quinua',n:'Sopa de quinua con carne',k:'c',i:{quinua:.04,papa:.08,zanahoria:.04,carne:.05}},
+ {id:'c_sobra',n:'Lo que sobró del almuerzo (porción pequeña)',k:'c',i:{},cheap:true},
+ {id:'c_brocoli',n:'Arroz con brócoli y huevo',k:'c',i:{arroz:.05,brocoli:.25,huevo:1},al:['huevo']},
+];
+REC.push({id:'remolacha',n:'Panqueque de remolacha, avena, huevo y banana (con aceite de palta)',k:'d',i:{remolacha:.05,avena:.03,huevo:1,banana:.5},al:['huevo'],g:['grasa']});
+const RECBY=Object.fromEntries(REC.map(r=>[r.id,r]));
+const GRP={cereal:['arroz','fideo','avena','quinua','pan','almidon','papa','yuca','choclo','platano'],grasa:['palta','mani'],fruta:['banana','manzana','papaya','mandarina','frutilla'],verdura:['zanahoria','zapallo','brocoli','tomate','cebolla','arveja','espinaca','remolacha'],proteina:['pollo','carne','molida','higado','pescado','huevo','lentejas','queso','leche','yogur']};
+const GRPN={cereal:'Cereal',grasa:'Grasa buena',fruta:'Fruta',verdura:'Verdura',proteina:'Proteína'};
+function groupsOf(r){const g=new Set(r.g||[]);for(const [k,list] of Object.entries(GRP))if(Object.keys(r.i).some(x=>list.includes(x)))g.add(k);return g}
+/* ====================== gastos ====================== */
+const GCAT=[['comida','Comida','🥕'],['higiene','Higiene y cuidado','🧴'],['limpieza','Limpieza','🧽'],['educacion','Educación y actividades','🎒'],['salud','Salud y médicos','🩺'],['servicios','Servicios y casa','💡'],['transporte','Transporte','🚕'],['mama','Para mí','💛'],['otros','Otros','📦']];
+const GNAME=Object.fromEntries(GCAT.map(g=>[g[0],g[1]]));
+const GKW=[['servicios',/\b(luz|agua|internet|gas|expensas|alquiler|telefono|celular|cable|catering|wifi)\b/],['salud',/\b(pediatra|doctor\w*|medic\w*|farmacia|remedio|jarabe|vitamina\w*|consulta|estudios|analisis|odonto\w*|dentista|ibuprofeno|paracetamol|ginecolog\w*|traumatolog\w*|endocrin\w*|ecograf\w*)\b/],['educacion',/\b(kinder|pre ?kinder|guarderia|colegio|piscina|natacion|ballet|musica|karate|clase|clases|matricula|material|utiles|cine|parque|parques)\b/],['transporte',/\b(pasajes?|taxi|micro|gasolina|transporte|uber|trufi|minibus)\b/],['higiene',/\b(shampoo|champu|crema|panales|pañales|toallitas|panitos|jabon|pasta dental|cepillo|protector|desodorante|acondicionador)\b/],['limpieza',/\b(detergente|lavandina|suavizante|lavavajilla|esponja|limpieza|bolsas|ola|ambientador\w*|papel)\b/],['mama',/\b(gimnasio|gym|peluqueria|perfume|manicure|maquillaje|curso|cursos|trading|barismo|chino)\b/],['comida',/\b(verduras?|frutas?|carne|pollo|mercado|super\w*|leche|pan|comida|huevos?|arroz|yogur|queso|fideo|avena)\b/]];
+function gcat(t){const n=norm(t);for(const [k,re] of GKW)if(re.test(n))return k;return 'otros'}
+const PER={semana:['cada semana',0],mes:['cada mes',1],'2meses':['cada 2 meses',2],'3meses':['cada 3 meses',3],'6meses':['cada 6 meses',6],'año':['cada año',12]};
+function perOf(n){if(/\b(cada semana|semanal|por semana|a la semana)\b/.test(n))return 'semana';if(/\b(cada (2|dos) meses|bimestral)\b/.test(n))return '2meses';if(/\b(cada (3|tres) meses|trimestral)\b/.test(n))return '3meses';if(/\b(cada (6|seis) meses|semestral)\b/.test(n))return '6meses';if(/\b(cada ano|anual|al ano|por ano)\b/.test(n))return 'año';if(/\b(cada mes|mensual|al mes|por mes|mensualmente)\b/.test(n))return 'mes';return null}
+function nextDue(due,per){const d=fromYmd(due);if(per==='semana')d.setDate(d.getDate()+7);else d.setMonth(d.getMonth()+PER[per][1]);return ymd(d)}
+function perMonthly(b){return b.per==='semana'?b.amount*4.33:b.amount/PER[b.per][1]}
+const NUMW={un:1,una:1,uno:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,diez:10,quince:15};
+function durDays(n){const m=/\b(\d+|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|diez|quince)\s*(dias?|semanas?|mes(?:es)?)\b/.exec(n);if(!m)return null;const q=NUMW[m[1]]||+m[1];return q*(/^d/.test(m[2])?1:/^s/.test(m[2])?7:30)}
+function itemLeft(it){return Math.round((fromYmd(it.last).getTime()+it.days*864e5-startDay(new Date()).getTime())/864e5)}
+function monthCat(c){const ms=monthStart();return moves().filter(m=>m.ts>=ms&&m.cat===c).reduce((a,m)=>a+m.amount,0)}
+function boughtItem(id,aid){const it=S.items.find(x=>x.id===id);if(!it)return;it.last=ymd(new Date());if(it.price)S.expenses.push({id:uid(),ts:Date.now(),amount:it.price,cat:it.cat,who:it.who||'Familia',text:it.name});S.extraShop=S.extraShop.filter(x=>norm(x.n)!==norm(it.name));if(aid)S.notified['x'+aid]=1;save();render();toast('Anotado. Te aviso cuando se esté acabando')}
+function itemToList(id,aid){const it=S.items.find(x=>x.id===id);if(!it)return;if(!S.extraShop.some(x=>norm(x.n)===norm(it.name)))S.extraShop.push({id:uid(),n:it.name,checked:false});if(aid)S.notified['x'+aid]=1;save();render();toast('Agregado a la lista de compras')}
+function members(){return [S.profile.kid||'Peque','Mamá','Papá','Familia']}
+function whoOf(n){const k=norm(S.profile.kid||'');if((k&&n.includes(k))||/\b(bebe|nena|nene|hija|hijo|wawa|kinder|guarderia|piscina|ballet|pediatra|odontopediatra|panales|pañales)\b/.test(n))return S.profile.kid||'Peque';if(/\b(papa|esposo|marido)\b/.test(n))return 'Papá';if(/\b(para mi|mis?|yo|ginecolog\w*|mamografia|gimnasio|peluqueria)\b/.test(n))return 'Mamá';return 'Familia'}
+function moves(){const a=S.expenses.map(e=>({ts:e.ts,amount:e.amount,cat:e.cat,text:e.text,who:e.who||'Familia'}));for(const p of S.purchases)if(p.amount)a.push({ts:p.ts,amount:p.amount,cat:p.items.length?(gcat(p.items.join(' '))==='otros'?'comida':gcat(p.items.join(' '))):'comida',text:'Compra: '+(p.items.join(', ')||'varios'),who:'Familia'});return a.sort((x,y)=>y.ts-x.ts)}
+function spentBetween(a,b){return moves().filter(m=>m.ts>=a&&m.ts<b).reduce((s,m)=>s+m.amount,0)}
+function monthStart(){const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1).getTime()}
+function billDueTxt(b){const d=Math.round((fromYmd(b.due)-startDay(new Date()))/864e5);return d<0?'venció hace '+(-d)+' día'+(d===-1?'':'s'):d===0?'vence hoy':d===1?'vence mañana':'vence en '+d+' días'}
+function weeklyReport(){const ws=weekStart().getTime(),now=Date.now();const tw=spentBetween(ws,now+1),lw=spentBetween(ws-7*864e5,ws);
+ const byC={};for(const m of moves())if(m.ts>=ws)byC[m.cat]=(byC[m.cat]||0)+m.amount;const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0];
+ const lim=ymd(addDays(new Date(),7));const up=S.bills.filter(b=>b.due<=lim).sort((a,b)=>a.due.localeCompare(b.due));
+ let evs=0;for(let i=0;i<7;i++)evs+=eventsOn(ymd(addDays(new Date(),i))).filter(e=>!e.recur).length;
+ const L=[];L.push('Esta semana llevas '+bs(tw)+' en gastos'+(lw?' (la semana pasada: '+bs(lw)+(tw>lw?', vas un poco más alto':', vas mejor')+')':'')+'.');
+ if(top)L.push('Lo que más pesa: '+GNAME[top[0]]+' con '+bs(top[1])+'.');
+ L.push('En el mes llevas '+bs(spentBetween(monthStart(),now+1))+(S.profile.mbudget?' de '+bs(S.profile.mbudget)+' de presupuesto':'')+'.');
+ if(up.length)L.push('Próximos pagos: '+up.slice(0,4).map(b=>b.name+' '+bs(b.amount)+' ('+billDueTxt(b)+')').join('; ')+'.');
+ L.push('En los próximos 7 días tienes '+evs+' cita'+(evs===1?'':'s')+' y '+S.tasks.filter(t=>!t.done).length+' pendiente'+(S.tasks.filter(t=>!t.done).length===1?'':'s')+'.');
+ if(top&&top[0]==='comida')L.push('Consejo: compra con la lista del menú semanal; así compras solo lo que vas a usar.');
+ return L.join('\n')}
+function payBill(id,aid){const b=S.bills.find(x=>x.id===id);if(!b)return;S.expenses.push({id:uid(),ts:Date.now(),amount:b.amount,cat:b.cat,who:b.who||'Familia',text:b.name,bill:b.id});b.due=nextDue(b.due,b.per);if(aid)S.notified['x'+aid]=1;save();render();toast('Pagado. Próximo: '+fromYmd(b.due).toLocaleDateString('es-BO',{day:'numeric',month:'short'}))}
+function cleanMoney(orig){let t=orig.replace(/(?:bs\.?|bolivianos?)\s*\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:bs\b\.?|bolivianos?)/gi,' ')
+ .replace(/\b(cada|por|al|a la)\s+(semana|mes|a[nñ]o|\d+\s+meses|dos meses|tres meses|seis meses)\b|\b(mensual(mente)?|semanal|trimestral|semestral|bimestral|anual)\b/gi,' ')
+ .replace(/\b(el\s+)?d[ií]a\s+\d{1,2}\b|\bel\s+\d{1,2}\b/gi,' ').replace(/(^|\s)(ya\s+)?(pagu[eé]|pagamos|gast[eé]|gastamos|me\s+cost[oó]|cost[oó]|pago|pagos|pagar|es|son)(?=\s|$|[,.;:])/gi,' ')
+ .replace(/\b(en|de|del|la|el|los|las|por|un|una)\b\s*$/i,' ').replace(/^\s*(en|de|del|la|el|los|las|por|un|una)\b/i,' ');
+ t=t.replace(/\s+/g,' ').replace(/^[\s,.;:]+|[\s,.;:]+$/g,'');for(let i=0;i<3;i++)t=t.replace(/^(en|de|del|la|el|los|las|por|un|una)\s+/i,'').replace(/\s+(en|de|del|la|el|los|las|por|y)$/i,'');return cap(t)}
+const PLACE_RE=/\b(guarda(r)?|anota|agrega|apunta)( el| este| un| ese)? lugar\b|\b(parque|plaza|ludoteca|pediatra|doctor|doctora|dra|dr|especialista|clinica|consultorio|terapeuta|fonoaudiolog\w*|neurolog\w*|psicolog\w*)\b.*\b(recomiend\w*|recomendad\w*|es (muy )?(buen[oa]|lind[oa]|bonit[oa]|excelente)|me gusto|nos gusto|para bebes|para ninos)\b/;
+function placeType(n){return /parque|plaza|ludoteca|juegos|piscina/.test(n)?'parque':/especialista|terap|autism|fono|neuro|psicolog/.test(n)?'especialista':/pediatra|doctor|dra\b|dr\b|clinica|consultorio|hospital/.test(n)?'medico':'otro'}
+const PTYPE={parque:['Parques y espacios','🌳'],medico:['Pediatras y médicos','🩺'],especialista:['Especialistas y terapias','🧩'],otro:['Otros lugares','📍']};
+const SLOTS=[['desayuno','Desayuno','08:00','d'],['mm','Media mañana','10:30','s'],['almuerzo','Almuerzo','12:30','a'],['merienda','Merienda','16:00','s'],['cena','Cena','19:30','c']];
+const ALLERG=[['leche','Leche'],['huevo','Huevo'],['gluten','Trigo (gluten)'],['mani','Maní'],['pescado','Pescado']];
+
+function ageMonths(){const b=S.profile.birth;if(!b)return 36;const d=fromYmd(b),n=new Date();return (n.getFullYear()-d.getFullYear())*12+(n.getMonth()-d.getMonth())-(n.getDate()<d.getDate()?1:0)}
+function ageText(){const m=ageMonths();if(m<24)return m+' meses';const y=Math.floor(m/12),r=m%12;return y+' años'+(r?' y '+r+(r>1?' meses':' mes'):'')}
+function kidFactor(){const m=ageMonths();return m<24?.3:m<48?.45:.6}
+function portion(k){const m=ageMonths();
+ if(m<12)return 'Menor de 1 año: la alimentación la guía el pediatra.';
+ const big=k==='a'||k==='c';
+ if(m<24)return big?'Porción orientativa: ½ a ¾ taza, en trocitos blandos.':k==='d'?'Porción orientativa: ½ taza.':'Porción orientativa: ½ fruta o ¼ taza.';
+ if(m<48)return big?'Porción orientativa: ¾ a 1 taza en total (¼ proteína, ¼ arroz o papa, ½ verduras).':k==='d'?'Porción orientativa: ½ a ¾ taza.':'Porción orientativa: 1 fruta pequeña o ½ taza.';
+ return big?'Porción orientativa: 1 a 1¼ taza en total.':k==='d'?'Porción orientativa: ¾ a 1 taza.':'Porción orientativa: 1 fruta o ½ taza.';}
+
+/* ====================== menú y compras ====================== */
+function rnd(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647}
+function okRec(r){const al=S.profile.allergies||[];if((r.al||[]).some(a=>al.includes(a)))return false;
+ const dis=(S.profile.dislikes||[]).map(norm);if(dis.some(d=>norm(r.n).includes(d)||Object.keys(r.i).some(k=>norm(CAT[k].n).includes(d))))return false;return true}
+function price(k){return S.prices[k]!=null?S.prices[k]:CAT[k].p}
+function recCost(r){return Object.entries(r.i).reduce((a,[k,q])=>a+q*price(k),0)}
+function weekStart(d=new Date()){const x=startDay(d);const dw=(x.getDay()+6)%7;return addDays(x,-dw)}
+function makeMenu(seed){
+ const R=rnd(seed||Date.now());
+ const pool=k=>{const a=REC.filter(r=>r.k===k&&okRec(r));for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+ const P={d:pool('d'),s:pool('s'),a:pool('a').filter(r=>!r.cheap),c:pool('c').filter(r=>!r.cheap)};
+ const days=[];
+ for(let i=0;i<7;i++){const day={};let si=0;
+  for(const [id,,,k] of SLOTS){const arr=P[k];if(!arr.length){day[id]=null;continue}
+   if(k==='s'){day[id]=arr[(i*2+si)%arr.length].id;si++}else day[id]=arr[i%arr.length].id}
+  days.push(day)}
+ S.menu={week:ymd(weekStart()),days,seed};
+ fitBudget();S.shopChecked={};
+}
+function menuCost(){if(!S.menu)return 0;return shopList().reduce((a,x)=>a+x.cost,0)}
+function fitBudget(){
+ const b=Number(S.profile.budget)||0;if(!b||!S.menu)return;let guard=0;
+ const cheapC=REC.filter(r=>r.k==='c'&&okRec(r)).sort((x,y)=>recCost(x)-recCost(y));
+ const cheapA=REC.filter(r=>r.k==='a'&&okRec(r)).sort((x,y)=>recCost(x)-recCost(y));
+ while(menuCost()>b&&guard++<20){
+  // 1) cenas caras -> sobrante del almuerzo
+  let best=null;
+  S.menu.days.forEach((d,i)=>{const r=RECBY[d.cena];if(r&&!r.cheap&&(!best||recCost(r)>best.c))best={i,c:recCost(r),slot:'cena'}});
+  const sobras=S.menu.days.filter(d=>d.cena==='c_sobra').length;
+  if(best&&sobras<4){S.menu.days[best.i].cena='c_sobra';continue}
+  // 2) almuerzos caros -> los más baratos
+  let worst=null;S.menu.days.forEach((d,i)=>{const r=RECBY[d.almuerzo];if(r&&(!worst||recCost(r)>worst.c))worst={i,c:recCost(r)}});
+  const alt=cheapA.find(r=>!S.menu.days.some(d=>d.almuerzo===r.id))||cheapA[0];
+  if(worst&&alt&&recCost(alt)<worst.c){S.menu.days[worst.i].almuerzo=alt.id;continue}
+  break;
+ }
+}
+function shopList(){
+ const f=kidFactor()+Number(S.profile.adults||0);const tot={};
+ if(S.menu)for(const d of S.menu.days)for(const [id] of SLOTS){const r=RECBY[d[id]];if(!r)continue;for(const [k,q] of Object.entries(r.i))tot[k]=(tot[k]||0)+q*f}
+ return Object.entries(tot).map(([k,q])=>{const c=CAT[k];const qq=Math.max(c.st,Math.ceil(q/c.st-1e-9)*c.st);const ab=c.s==='Abarrotes';return {id:k,n:c.n,s:c.s,q:ab?Math.max(.01,Math.round(q*100)/100):qq,u:c.u,ab,cost:(ab?q:qq)*price(k)}});
+}
+function qtyTxt(x){const q=Math.round(x.q*100)/100;if(x.ab)return 'usa ~'+(q<1?Math.round(q*1000)+' g':String(q).replace('.',',')+' kg')+' (de tu alacena)';if(x.u==='kg')return q<1?(q*1000)+' g':(String(q).replace('.',','))+' kg';if(x.u==='u')return q+(q>1?' unidades':' unidad');if(x.u==='L')return q+' L';return q+' '+x.u+(q>1?'s':'')}
+
+/* ====================== Lía: organizador ====================== */
+const WD='(lunes|martes|miercoles|jueves|viernes|sabados?|domingos?)';
+const MED_RE=/\b(ibuprofeno|paracetamol|acetaminofen|amoxicilina|azitromicina|cefalexina|dipirona|metamizol|salbutamol|loratadina|cetirizina|desloratadina|prednisolona|dexametasona|omeprazol|domperidona|ondansetron|suero oral|sales de rehidratacion|jarabe|antibiotico|antialergico|antigripal|vitamina \w+|vitaminas|hierro|zinc|nebulizacion(?:es)?|nebulizar|inhalador|pomada|crema|supositorio|remedio|medicamento|medicina|gotas)\b/;
+const SYM_RE=/\b(fiebre|temperatura|tos|vomito|vomitos|vomitando|diarrea|mocos?|resfrio|resfriado|gripe|congestion|catarro|sarpullido|alergia|dolor de \w+|le duele \w+|decaid[oa])\b/;
+const EV_SALUD=/\b(cita|pediatra|doctor|doctora|medico|dentista|odontolog\w*|vacuna\w*|control|hospital|clinica|consulta|terapia|fonoaudiolog\w*|nutricionista|laboratorio|analisis)\b/;
+const EV_CLASE=/\b(clase|clases|natacion|ballet|musica|estimulacion|futbol|danza|kinder|guarderia|nido|taller|piscina|gimnasia|catequesis)\b/;
+const EV_FAM=/\b(cumple\w*|visita|fiesta|reunion|almuerzo con|cena con|abuel[oa]s?|tias?|tios?|amig[oa]s?|primos?|bautizo|boda|matrimonio|paseo|parque)\b/;
+const EV_MAMA=/\b(peluqueria|gimnasio|gym|trabajo|banco|tramite|manicure|yoga)\b/;
+const BOUGHT_RE=/\b(ya compre|compre|compramos|compro|traje|trajimos)\b/;
+const NEED_RE=/\b(hay que comprar|tengo que comprar|necesito comprar|tenemos que comprar|anota en compras|agrega a compras|agrega a la lista|comprar|se acabo|se acabaron|se termino|se terminaron|falta|faltan|no hay)\b/;
+const TASK_RE=/\b(recordar|recuerdame|recordame|acordarme|no olvidar|no olvides|tengo que|tenemos que|debo|hay que|pagar|llamar|lavar|preparar|llevar|enviar|mandar|avisame|comprarle|inscribir|renovar)\b/;
+const FOOD_RE=/\b(no quiso|no le gusto|no le gusta|no comio|le encanto|le gusto|comio bien|comio todo|comio)\b/;
+
+function parseTime(n){
+ let h=null,mi=0,ap=null,m;
+ if(/\bmediodia\b/.test(n))return '12:00';
+ if((m=/\b(?:a las|a la|alas|las|tipo|como a las)\s*(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?\s*(am|pm|a\. ?m\.|p\. ?m\.|hs|hrs|h)?\b/.exec(n))){h=+m[1];mi=m[2]?+m[2]:0;ap=m[3]}
+ else if((m=/\b(\d{1,2}):(\d{2})\s*(am|pm|hs)?\b/.exec(n))){h=+m[1];mi=+m[2];ap=m[3]}
+ else if((m=/\b(\d{1,2})\s*(am|pm|hs|hrs)\b/.exec(n))){h=+m[1];ap=m[2]}
+ if(h==null||h>23)return null;
+ if(/\by media\b/.test(n)&&!mi)mi=30;else if(/\by cuarto\b/.test(n)&&!mi)mi=15;
+ ap=ap?ap.replace(/[\s.]/g,''):null;
+ if(ap==='pm'&&h<12)h+=12;else if(ap==='am'&&h===12)h=0;
+ else if(!ap||ap==='hs'||ap==='hrs'||ap==='h'){
+  if(/(de|en|por) la (tarde|noche)|esta (tarde|noche)/.test(n)&&h<12)h+=12;
+  else if(!/(de|en|por) la manana|esta manana/.test(n)&&h>=1&&h<=6)h+=12;}
+ return pad(h)+':'+pad(mi);
+}
+function parseDate(n,now=new Date()){
+ const today=startDay(now);let date=null,recur=null,m;
+ const wi=w=>DAYN.indexOf(w.replace(/(sabado|domingo)s$/,'$1'));
+ if(/\btodos los dias\b|\bcada dia\b|\ba diario\b|\bdiariamente\b/.test(n))recur=[0,1,2,3,4,5,6];
+ else if(/\bde lunes a viernes\b/.test(n))recur=[1,2,3,4,5];
+ else if((m=new RegExp('\\b(?:los|todos los|cada)\\s+'+WD+'((?:\\s*(?:,|y|e)\\s*'+WD+')*)').exec(n))){
+  recur=[wi(m[1])];const rest=m[2]||'';const re=new RegExp(WD,'g');let x;while((x=re.exec(rest)))recur.push(wi(x[1]));recur=[...new Set(recur)].sort()}
+ if(recur)return {date:null,recur,explicit:true};
+ const nm=n.replace(/\b(de|en|por|esta|en la|por la|de la)\s+(la\s+)?manana\b/g,' ');
+ if(/\bpasado manana\b/.test(nm))date=addDays(today,2);
+ else if(/\bmanana\b/.test(nm))date=addDays(today,1);
+ else if(/\bhoy\b|\besta (tarde|noche|manana)\b|\bahorita\b/.test(n))date=today;
+ if(!date&&(m=/\b(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/.exec(n))){
+  const mo=m[2]==='setiembre'?8:MON.indexOf(m[2]);date=new Date(today.getFullYear(),mo,+m[1]);if(date<today)date.setFullYear(date.getFullYear()+1)}
+ if(!date&&(m=/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/.exec(n))){let y=m[3]?+m[3]:today.getFullYear();if(y<100)y+=2000;date=new Date(y,+m[2]-1,+m[1]);if(!m[3]&&date<today)date.setFullYear(y+1)}
+ if(!date&&(m=new RegExp('\\b(?:el |este |proximo |el proximo |para el )?'+WD+'\\b').exec(n))){
+  const w=wi(m[1]);let diff=(w-today.getDay()+7)%7;if(diff===0&&/proximo/.test(m[0]))diff=7;date=addDays(today,diff)}
+ if(!date&&(m=/\bel (\d{1,2})\b(?!\s*(?:ml|mg|h|hs|horas|bs|gotas|cc|%|:|kilos?|kg|años|meses|grados))/.exec(n))){const dd=+m[1];if(dd>=1&&dd<=31){date=new Date(today.getFullYear(),today.getMonth(),dd);if(date<today)date.setMonth(date.getMonth()+1)}}
+ return {date,recur:null,explicit:!!date};
+}
+function stripDT(s){
+ const R=[/\b(pasado\s+)?ma[nñ]ana\b/gi,/\bhoy\b|\bahorita\b/gi,/\b(esta|en la|por la|de la)\s+(ma[nñ]ana|tarde|noche)\b/gi,
+  /\b(como\s+)?(a\s+las?|alas|tipo)\s*\d{1,2}(\s*[:.h]\s*\d{2})?\s*(am|pm|a\.\s?m\.|p\.\s?m\.|hrs|hs|h)?\b(\s+y\s+(media|cuarto))?/gi,
+  /\b\d{1,2}:\d{2}\s*(am|pm|hs)?/gi,/\b\d{1,2}\s*(am|pm|hrs|hs)\b/gi,/\bal?\s+mediod[ií]a\b/gi,
+  /\b(todos\s+los|los|cada|el|este|pr[oó]ximo|el\s+pr[oó]ximo|para\s+el)?\s*\b(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?|domingos?)\b(\s*(,|y|e)\s*(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?|domingos?)\b)*/gi,
+  /\bde\s+lunes\s+a\s+viernes\b/gi,/\btodos\s+los\s+d[ií]as\b|\bcada\s+d[ií]a\b|\ba\s+diario\b/gi,
+  /\b(el\s+|para\s+el\s+)?\d{1,2}\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/gi,/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/gi,
+  /\b(recu[eé]rdame|record[aá]me|recordar|acordarme|no\s+olvidar|no\s+olvides|av[ií]same)(\s+que)?(\s+de)?\b/gi];
+ let t=' '+s+' ';for(const r of R)t=t.replace(r,' ');
+ t=t.replace(/\s+/g,' ').trim();
+ for(let i=0;i<4;i++)t=t.replace(/^(lia,?|tengo|tenemos|tiene|hay|anota|que|el|la|para|y|de|es)\s+/i,'').replace(/[\s,.;:]+(a|el|la|para|de|y|en|que|es)?\s*$/i,'');
+ t=t.replace(/^[,.;:\s]+|[,.;:\s]+$/g,'');
+ return cap(t);
+}
+function cleanItems(seg){
+ seg=seg.replace(/(?:bs\.?|bolivianos?)\s*\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:bs\b\.?|bolivianos?)/gi,' ')
+  .replace(/\b(en|del|de la|al)\s+(el\s+|la\s+)?(mercado|super\w*|tienda|feria|mutualista|abasto|ketal|hipermaxi|fidalga|farmacia|ramada|los pozos|7 calles)\b.*$/i,' ')
+  .replace(/\b(por|a|con|y gaste|gaste|pague)\s*$/i,' ');
+ return seg.split(/,|\s+y\s+|\s+e\s+/).map(x=>{x=x.trim();
+  for(let i=0;i<4;i++)x=x.replace(/^(\d+([.,]\d+)?|medio|media|un|una|unos|unas|el|la|los|las|mas|más|algo de|un poco de|de|del|para|le|la|lo)\s+/i,'').replace(/^(kilos?|kg|libras?|lb|paquetes?|bolsas?|docenas?|litros?|cajas?|atados?|unidades|latas?|frascos?|sobres?|cuartos?)\s+(de\s+)?/i,'');
+  return x.replace(/[.;:!]+$/,'').trim()}).filter(x=>x&&x.length<40&&!/^(nada|todo|algo|eso|esto)$/i.test(x));
+}
+function matchCat(item){const n=norm(item).replace(/es$|s$/,'');
+ if(/^verdura/.test(n))return Object.keys(CAT).filter(k=>CAT[k].s==='Verduras');
+ if(/^fruta/.test(n))return Object.keys(CAT).filter(k=>CAT[k].s==='Frutas');
+ if(/^carne$/.test(n)&&false)return [];
+ if(/^lacteo/.test(n))return ['leche','yogur','queso'];
+ return Object.keys(CAT).filter(k=>{const c=norm(CAT[k].n);return k===n||c.startsWith(n)||c.split(/[ (]/)[0].replace(/es$|s$/,'')===n})}
+function amountOf(n){const m=/(?:bs\.?|bolivianos?)\s*(\d+(?:[.,]\d+)?)|(\d+(?:[.,]\d+)?)\s*(?:bs\b|bolivianos?)/.exec(n);return m?parseFloat((m[1]||m[2]).replace(',','.')):null}
+
+function organize(text,now=new Date()){
+ const out=[];const shopMarks=[];
+ const sentences=text.replace(/\b(dra|dr|lic|sra|sr|ing)\./gi,'$1').split(/[\n;!?]+|\.(?!\d)|\s+(?:y\s+)?(?:tambien|ademas|despues|luego)\s+/i).map(s=>s.trim()).filter(s=>s.length>1);
+ const kidN=norm(S.profile.kid||'');
+ for(const orig of sentences){
+  const n=norm(orig);let used=false;
+  const isKid=(kidN&&n.includes(kidN))||/\b(bebe|nena|nene|nina|nino|hija|hijo|la peque|el peque|mi peque|wawa|guagua)\b/.test(n);
+  // terminar tratamiento
+  if(/\b(termino|terminamos|ya termino|terminaron|ya esta san[oa]|se curo|suspend\w*|deja de dar\w*|dejar de dar\w*|ya no le (doy|damos|des)|quita\w* (el|la|los) (remedio|medicamento|tratamiento))\b/.test(n)&&S.meds.some(medActive)){
+   const act=S.meds.filter(medActive);let hit=act.filter(m=>n.includes(norm(m.name)));if(!hit.length&&(/san[oa]|se curo/.test(n)||act.length===1))hit=act;
+   if(hit.length){out.push({kind:'medStop',ids:hit.map(m=>m.id),label:'Tratamiento',detail:hit.map(m=>m.name).join(', ')+' terminado · lo quité de tu día',cls:'c-med'});
+    if(/san[oa]|se curo/.test(n))out.push({kind:'health',obj:{id:uid(),ts:now.getTime(),type:'nota',text:'Ya está sana'+(hit.length?' · terminó '+hit.map(m=>m.name).join(', '):'')},label:'Salud',detail:'Anoté en el historial que ya está sana',cls:'c-salud'});continue}}
+  // salud: síntomas / fiebre
+  const sym=SYM_RE.exec(n);let temp=null;
+  if(/fiebre|temperatura|grados|°|º/.test(n)){const tm=/\b(3[5-9]|4[0-2])(?:[.,](\d))?\b/.exec(n);if(tm)temp=parseFloat(tm[1]+'.'+(tm[2]||0))}
+  if(sym||temp){const txt=temp?('Temperatura '+String(temp).replace('.',',')+' °C'+(sym&&sym[1]!=='fiebre'&&sym[1]!=='temperatura'?' · '+sym[1]:'')):cap(sym[1]);
+   out.push({kind:'health',obj:{id:uid(),ts:now.getTime(),type:temp?'temp':'sintoma',text:txt,value:temp,raw:orig},label:'Salud',detail:txt+(temp&&temp>=39?' · revisa los signos de alarma':''),cls:'c-salud',warn:temp&&temp>=39});used=true}
+  // medicamentos
+  const med=MED_RE.exec(n);const ev=/\bcada\s+(\d{1,2})\s*(h|hs|hrs|horas?)\b/.exec(n);
+  let every=ev?+ev[1]:null;
+  if(!every){if(/\b(una vez al dia|1 vez al dia|cada dia en la manana)\b/.test(n))every=24;else if(/\b(dos|2) veces al dia\b/.test(n))every=12;else if(/\b(tres|3) veces al dia\b/.test(n))every=8;else if(/\b(cuatro|4) veces al dia\b/.test(n))every=6}
+  if(med&&(every||/\b(le di|darle|dar|tomar|toma|recet\w*|indic\w*)\b/.test(n))||(every&&!EV_CLASE.test(n))){
+   const nm=med?cap(med[1]==='gotas'?'gotas':med[1]):'Medicamento';
+   const dm=/(\d+(?:[.,]\d+)?)\s*(ml|mg|gotas|cc|cucharadit\w*|cucharad\w*|tabletas?|pastillas?|sobres?|puff\w*)/.exec(n);
+   const dose=dm?dm[1].replace('.',',')+' '+dm[2].replace(/^cucharadit\w*/,'cucharadita'):'';
+   const dd=/\b(?:por|durante)\s+(\d{1,2})\s+dias\b/.exec(n);let days=dd?+dd[1]:/una semana/.test(n)?7:/diez dias/.test(n)?10:null;
+   const t=parseTime(n.replace(/cada\s+\d+\s*(h|hs|hrs|horas?)/,''));let start=now.getTime();
+   const gaveNow=/\b(le di|ya le di|le dimos|tomo)\b/.test(n);
+   if(t&&!gaveNow){const d=at(ymd(now),t);if(d.getTime()<now.getTime()-60*60000)d.setDate(d.getDate()+1);start=d.getTime()}
+   const o={id:uid(),name:nm,dose,every:every||8,start,days,given:gaveNow?[now.getTime()]:[],forKid:isKid||!/\b(yo|me|tomar yo)\b/.test(n),created:now.getTime()};
+   out.push({kind:'meds',obj:o,label:'Medicamento',detail:nm+(dose?' '+dose:'')+' cada '+o.every+' h'+(days?' por '+days+' días':'')+(gaveNow?' · primera dosis registrada ahora':' · desde las '+hm(new Date(start))),cls:'c-med',med:true});used=true}
+  if(used)continue;
+  // informe
+  if(/\b(informe|resumen|cuanto gaste|cuanto llevo|como voy)\b/.test(n)){out.push({kind:'report',label:'Informe',detail:'',cls:'c-tarea',report:true});continue}
+  // lugares
+  if(PLACE_RE.test(n)){let name=orig.replace(/^.*?\b(guarda(r)?|anota|agrega|apunta)( el| este| un| ese)? lugar\b\s*:?/i,'').trim()||orig;name=name.replace(/^[,.:;\s]+/,'');
+   const o={id:uid(),name:cap(name.slice(0,70)),type:placeType(n),city:S.profile.city||'',note:'',ts:now.getTime()};
+   out.push({kind:'places',obj:o,label:'Lugar',detail:o.name+' · '+PTYPE[o.type][0],cls:'c-familia'});continue}
+  // topes por categoría
+  if(/\b(tope|limite|presupuesto|no (gastar|pasar(me)?|pasarme)( mas)? de|maximo)\b/.test(n)&&amountOf(n)){const amt=amountOf(n);const c=gcat(n)==='otros'?null:gcat(n);
+   if(c){out.push({kind:'cap',cat:c,amount:amt,label:'Tope',detail:GNAME[c]+': máximo '+bs(amt)+' al mes',cls:'c-mama'});continue}}
+  // productos que duran
+  if(/\b(dura|duran|me dura|le dura|nos dura|alcanza para|rinde|se acaba en)\b/.test(n)&&durDays(n)){const days=durDays(n);
+   let name=orig.split(/\b(?:me |le |nos )?(?:dura|duran|alcanza para|rinde|se acaba en)\b/i)[0];name=cleanMoney(name.replace(/^(el|la|los|las|mi|su|sus|mis)\s+/i,''))||'Producto';
+   const o={id:uid(),name,days,price:amountOf(n),cat:gcat(n)==='otros'?'higiene':gcat(n),who:whoOf(n),last:ymd(now)};
+   out.push({kind:'items',obj:o,label:'Producto',detail:name+' · dura '+days+' días'+(o.price?' · '+bs(o.price):'')+' · te aviso cuando se esté acabando',cls:'c-mama'});continue}
+  // pagos fijos o periódicos
+  const amt0=amountOf(n);const per=perOf(n);
+  if(amt0&&per){let due=null;const dm=/\b(?:el )?dia (\d{1,2})\b|\bel (\d{1,2})\b(?!\s*(?:bs|bolivianos|de))/.exec(n);
+   if(dm){const dd=+(dm[1]||dm[2]);const d=new Date(now.getFullYear(),now.getMonth(),Math.min(28,dd));if(d<startDay(now))d.setMonth(d.getMonth()+1);due=ymd(d)}else{const pd=parseDate(n,now);due=ymd(pd.date||startDay(now))}
+   const name=cleanMoney(orig)||'Pago';const o={id:uid(),name,amount:amt0,per,cat:gcat(n),who:whoOf(n),due,created:now.getTime()};
+   out.push({kind:'bills',obj:o,label:'Pago fijo',detail:name+' · '+bs(amt0)+' '+PER[per][0]+' · próximo '+fromYmd(due).toLocaleDateString('es-BO',{day:'numeric',month:'short'}),cls:'c-mama'});continue}
+  // gastos pagados
+  if(/\b(pague|pagamos|gaste|gastamos|me costo|costo)\b/.test(n)){const bill=S.bills.find(b=>norm(b.name).split(' ').filter(w=>w.length>3).some(w=>n.includes(w)));const amt=amt0||(bill&&bill.amount);
+   if(amt){const text=cleanMoney(orig)||(bill?bill.name:'Gasto');const o={id:uid(),ts:now.getTime(),amount:amt,cat:bill?bill.cat:gcat(n),who:bill?(bill.who||'Familia'):whoOf(n),text,bill:bill&&bill.id};
+    out.push({kind:'expenses',obj:o,label:'Gasto',detail:text+' · '+bs(amt)+' · '+GNAME[o.cat]+(bill?' (marqué el pago como hecho)':''),cls:'c-mama',billPaid:bill&&bill.id});continue}}
+  // compras realizadas
+  if(BOUGHT_RE.test(n)){
+   const m=BOUGHT_RE.exec(n);const items=cleanItems(orig.slice(orig.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').indexOf(m[0])+m[0].length));
+   const amt=amountOf(n);const marked=[];
+   for(const it of items){const du=S.items.find(x=>norm(x.name).split(' ').filter(w=>w.length>3).some(w=>norm(it).includes(w)));if(du)du.last=ymd(now);for(const k of matchCat(it)){shopMarks.push('c:'+k);marked.push(k)}
+    const ex=S.extraShop.find(x=>norm(x.n).includes(norm(it))||norm(it).includes(norm(x.n)));if(ex)shopMarks.push('x:'+ex.id)}
+   const o={id:uid(),ts:now.getTime(),items,amount:amt};
+   out.push({kind:'purchases',obj:o,label:'Compra',detail:(items.length?cap(items.join(', ')):'Compra')+(amt?' · '+bs(amt):''),cls:'c-comida',buy:items});continue}
+  // por comprar
+  if(NEED_RE.test(n)){const m=NEED_RE.exec(n);const items=cleanItems(orig.slice(n.indexOf(m[0])+m[0].length));
+   if(items.length){for(const it of items){const mc=matchCat(it);if(mc.length){out.push({kind:'needCat',keys:mc,label:'A comprar',detail:cap(it)+' (ya estaba en tu lista, lo dejé pendiente)',cls:'c-comida'});continue}
+    const o={id:uid(),n:cap(it),checked:false};out.push({kind:'extraShop',obj:o,label:'A comprar',detail:o.n,cls:'c-comida'})}continue}}
+  // gustos de comida
+  if(FOOD_RE.test(n)){const m=/\b(?:no quiso|no le gusto|no le gusta|no comio)\s+(?:el |la |los |las |nada de |su )?([a-zñ ]{3,30})/.exec(n);
+   const o={id:uid(),ts:now.getTime(),type:'comida',text:cap(orig)};
+   out.push({kind:'health',obj:o,label:'Comida',detail:cap(orig),cls:'c-comida'});
+   if(m&&/no (le gust|quiso)/.test(n)){const d=m[1].trim().split(' ').filter(w=>!/^(el|la|los|las|de|y|a)$/.test(w)).slice(0,2).join(' ');out.push({kind:'dislike',obj:{id:uid(),n:d},label:'No le gusta',detail:cap(d)+' (lo evitaré en el próximo menú)',cls:'c-comida'})}
+   continue}
+  // eventos y tareas
+  const pd=parseDate(n,now);const t=parseTime(n);
+  const cat=EV_SALUD.test(n)?'salud':EV_CLASE.test(n)?'clase':EV_FAM.test(n)?'familia':EV_MAMA.test(n)?'mama':null;
+  const isTask=TASK_RE.test(n)&&!(/\b(cita|clase|consulta|control)\b/.test(n));
+  if(cat&&!isTask||(!isTask&&(pd.explicit||t)&&!cat)){
+   let date=pd.date?ymd(pd.date):null;
+   if(!date&&!pd.recur){const d=t?at(ymd(now),t):startDay(now);if(t&&d<now)d.setDate(d.getDate()+1);date=ymd(d)}
+   let title=stripDT(orig);
+   if(!title||title.length<3)title={salud:'Cita médica',clase:'Clase',familia:'Compromiso familiar',mama:'Compromiso'}[cat||'mama'];
+   const o={id:uid(),title,cat:cat||(isKid?'familia':'mama'),who:isKid||cat==='clase'||/pediatra|vacuna/.test(n)?'kid':'mom',date,time:t,recur:pd.recur,remind:cat==='salud'?60:30,created:ymd(now)};
+   const when=pd.recur?('Cada '+pd.recur.map(i=>DAYS[i].toLowerCase()).join(', ')):fmtDate(fromYmd(date));
+   out.push({kind:'events',obj:o,label:{salud:'Cita',clase:'Clase',familia:'Compromiso',mama:'Para ti'}[o.cat],detail:title+' · '+when+(t?' a las '+t:''),cls:'c-'+o.cat});continue}
+  if(isTask||pd.explicit||t){
+   let due=null;if(t||pd.date){const d=pd.date?new Date(pd.date):startDay(now);if(t){const [h,mm]=t.split(':');d.setHours(+h,+mm,0,0)}else d.setHours(9,0,0,0);if(!pd.date&&d<now)d.setDate(d.getDate()+1);due=d.getTime()}
+   const title=stripDT(orig)||cap(orig);
+   const o={id:uid(),text:title,due,done:false,created:now.getTime()};
+   out.push({kind:'tasks',obj:o,label:'Pendiente',detail:title+(due?' · '+fmtDate(new Date(due))+(t?' a las '+t:''):''),cls:'c-tarea'});continue}
+  // nota
+  const o={id:uid(),ts:now.getTime(),text:cap(orig)};out.push({kind:'notes',obj:o,label:'Nota',detail:cap(orig),cls:'c-tarea',note:true});
+ }
+ return {out,shopMarks};
+}
+function liaReply(text){
+ const now=new Date();const {out,shopMarks}=organize(text,now);
+ const prevChecked=JSON.parse(JSON.stringify(S.shopChecked));const prevDis=[...(S.profile.dislikes||[])];const refs=[];const billPrev=[];const medPrev=[];const capPrev=[];
+ const lines=[];
+ for(const a of out){
+  if(a.kind==='dislike'){S.profile.dislikes=[...new Set([...(S.profile.dislikes||[]),norm(a.obj.n)])];continue}
+  if(a.kind==='needCat'){for(const k of a.keys)S.shopChecked[k]=false;continue}
+  if(a.kind==='report')continue;
+  if(a.kind==='cap'){capPrev.push({c:a.cat,v:S.caps[a.cat]});S.caps[a.cat]=a.amount;continue}
+  if(a.kind==='medStop'){for(const id of a.ids){const m=S.meds.find(x=>x.id===id);if(m){m.stopped=true;medPrev.push(id)}}continue}
+  if(a.billPaid){const b=S.bills.find(x=>x.id===a.billPaid);if(b){billPrev.push({id:b.id,due:b.due});b.due=nextDue(b.due,b.per)}}
+  S[a.kind].push(a.obj);refs.push({k:a.kind,id:a.obj.id});
+ }
+ for(const m of shopMarks){if(m.startsWith('x:')){const x=S.extraShop.find(e=>e.id===m.slice(2));if(x)x.checked=true}else S.shopChecked[m.slice(2)]=true}
+ const real=out.filter(a=>!a.note&&!a.report);const undoable=out.some(a=>a.obj||a.keys||a.ids||a.cat);
+ let msg;
+ if(!out.length)msg='No entendí bien. Prueba con algo como "cita con el pediatra el jueves a las 10".';
+ else if(!real.length)msg='Lo guardé en tus notas. Si tiene fecha u hora, dímelo y lo paso a tu agenda.';
+ else msg=['Listo, ya lo ordené:','Anotado, quedó así:','Hecho, lo organicé así:'][Math.floor(Math.random()*3)];
+ if(out.some(a=>a.report)){msg=(real.length?msg+'\n\n':'')+'Tu resumen de la semana:\n'+weeklyReport();if(!real.length){const ix=out.findIndex(a=>a.report);out.splice(ix,1)}}
+ if(out.some(a=>a.kind==='bills'))lines.push('Te aviso 2 días antes de cada pago.');
+ {const cs=new Set();for(const a of out){if(a.kind==='expenses')cs.add(a.obj.cat);if(a.kind==='purchases'&&a.obj.amount)cs.add('comida');if(a.kind==='cap')cs.add(a.cat)}
+  for(const c of cs){const cap=S.caps[c];if(!cap)continue;const used=monthCat(c);const pc=Math.round(used/cap*100);if(pc>=100)lines.push('Ojo: en '+GNAME[c]+' ya pasaste tu tope del mes ('+bs(used)+' de '+bs(cap)+').');else if(pc>=80)lines.push('En '+GNAME[c]+' ya usaste el '+pc+'% de tu tope ('+bs(used)+' de '+bs(cap)+').');else if(out.some(a=>a.kind==='cap'&&a.cat===c))lines.push('Este mes llevas '+bs(used)+' en '+GNAME[c]+'.')}}
+ if(out.some(a=>a.kind==='places'))lines.push('Lo guardé en Casa › Lugares. Pronto podrás ver también los lugares que recomiendan otras mamás.');
+ if(out.some(a=>a.med)){lines.push('Te aviso en cada dosis. La dosis siempre la indica el pediatra; yo solo te recuerdo.')}
+ if(out.some(a=>a.warn)){lines.push('Con 39 °C o más, o si la notas decaída, con dificultad para respirar o sin tomar líquidos, llama al pediatra o ve a emergencias.')}
+ const buy=out.find(a=>a.buy);
+ if(buy){const nm=shopMarks.filter(m=>m.startsWith('c:')).length;if(nm)lines.push('Marqué '+nm+' cosa'+(nm>1?'s':'')+' de tu lista de compras.');
+  for(const it of buy.buy.slice(0,2)){const prev=S.purchases.filter(p=>p.id!==buy.obj.id&&p.items.some(x=>norm(x)===norm(it))).sort((a,b)=>b.ts-a.ts)[0];
+   if(prev){const d=Math.round((now-prev.ts)/864e5);lines.push('La última vez que compraste '+it.toLowerCase()+' fue hace '+d+' día'+(d===1?'':'s')+'.')}}}
+ if(out.some(a=>a.kind==='events'&&a.obj.cat==='salud'))lines.push('Te aviso 1 hora antes.');
+ if(out.some(a=>a.kind==='dislike'))lines.push('Toca "Nuevo menú" en Comidas para aplicar el cambio.');
+ S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:msg,cards:out.filter(a=>!a.report).map(a=>({label:a.label,detail:a.detail,cls:a.cls})),extra:lines.join('\n'),refs,prevChecked,prevDis,billPrev,medPrev,capPrev,undo:real.length>0&&undoable});
+ save();
+}
+function undoMsg(id){const m=S.chat.find(x=>x.id===id);if(!m||!m.refs)return;
+ for(const r of m.refs)S[r.k]=S[r.k].filter(o=>o.id!==r.id);S.shopChecked=m.prevChecked||S.shopChecked;for(const cp of (m.capPrev||[])){if(cp.v==null)delete S.caps[cp.c];else S.caps[cp.c]=cp.v}for(const id of (m.medPrev||[])){const md=S.meds.find(x=>x.id===id);if(md)md.stopped=false}for(const bp of (m.billPrev||[])){const b=S.bills.find(x=>x.id===bp.id);if(b)b.due=bp.due}S.profile.dislikes=m.prevDis||S.profile.dislikes;
+ m.undone=true;m.undo=false;save();render();toast('Deshecho')}
+
+/* ====================== agenda: cálculos ====================== */
+function eventsOn(ds){const dw=fromYmd(ds).getDay();return S.events.filter(e=>e.recur?(e.recur.includes(dw)&&(!e.created||e.created<=ds)):e.date===ds).sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'))}
+function medEnd(m){return m.days?m.start+m.days*864e5:Infinity}
+function medNext(m){const last=m.given.length?Math.max(...m.given):null;const nx=last?last+m.every*36e5:m.start;return nx>=medEnd(m)?null:nx}
+function medActive(m){return !m.stopped&&medNext(m)!==null}
+function medDosesOn(m,ds){const d0=fromYmd(ds).getTime(),d1=d0+864e5;const res=[];
+ for(const g of m.given)if(g>=d0&&g<d1)res.push({t:g,done:true});
+ let nx=medNext(m);if(m.stopped)nx=null;while(nx&&nx<d1&&nx<medEnd(m)){if(nx>=d0)res.push({t:nx,done:false});nx+=m.every*36e5}
+ return res.sort((a,b)=>a.t-b.t)}
+function dayItems(ds){const items=[];
+ for(const e of eventsOn(ds))items.push({time:e.time,type:'ev',cat:e.cat,title:e.title,sub:{salud:'Salud',clase:'Clase',familia:'Familia y amigos',mama:'Para ti'}[e.cat]+(e.who==='kid'&&S.profile.kid?' · '+S.profile.kid:''),id:e.id});
+ for(const m of S.meds)for(const d of medDosesOn(m,ds))items.push({time:hm(new Date(d.t)),type:'med',cat:'med',title:m.name+(m.dose?' · '+m.dose:''),sub:d.done?'Dosis dada':'Dosis'+(m.forKid&&S.profile.kid?' de '+S.profile.kid:''),done:d.done,id:m.id,ts:d.t});
+ const md=menuDay(ds);if(md)for(const [id,lab,time] of SLOTS){const r=RECBY[md[id]];if(r)items.push({time,type:'meal',cat:'comida',title:r.n,sub:lab})}
+ for(const t of S.tasks)if(t.due&&ymd(new Date(t.due))===ds)items.push({time:hm(new Date(t.due)),type:'task',cat:'tarea',title:t.text,sub:'Pendiente',done:t.done,id:t.id});
+ return items.sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'))}
+function menuDay(ds){if(!S.menu)return null;const w=fromYmd(S.menu.week);const i=Math.round((fromYmd(ds)-w)/864e5);return i>=0&&i<7?S.menu.days[i]:null}
+
+/* ====================== recordatorios ====================== */
+function dueAlerts(){const now=Date.now();const res=[];
+ for(const m of S.meds){if(!medActive(m))continue;const nx=medNext(m);if(nx<=now+5*60000)res.push({id:'med:'+m.id+':'+nx,kind:'med',ref:m.id,title:'Hora de '+m.name+(m.dose?' · '+m.dose:''),sub:nx<now-5*60000?'Tocaba '+rel(nx):'Ahora',ts:nx})}
+ const ds=ymd(new Date());for(const e of eventsOn(ds)){if(!e.time)continue;const t=at(ds,e.time).getTime();const r=t-(e.remind||30)*60000;if(now>=r&&now<t+30*60000)res.push({id:'ev:'+e.id+':'+ds,kind:'ev',title:e.title,sub:(t>now?'Empieza '+rel(t):'Empezó '+rel(t))+' · '+e.time,ts:t})}
+ for(const it of S.items){const l=itemLeft(it);if(l<=3)res.push({id:'it:'+it.id+':'+it.last,kind:'item',ref:it.id,title:'Se está acabando: '+it.name,sub:l<=0?'Ya debería haberse acabado':'Quedan unos '+l+' día'+(l===1?'':'s'),ts:Date.now()})}
+ const lim2=ymd(addDays(new Date(),2));for(const b of S.bills)if(b.due<=lim2)res.push({id:'bill:'+b.id+':'+b.due,kind:'bill',ref:b.id,title:'Pagar '+b.name+' · '+bs(b.amount),sub:cap(billDueTxt(b)),ts:fromYmd(b.due).getTime()});
+ for(const t of S.tasks){if(t.done||!t.due)continue;if(t.due<=now&&t.due>now-12*36e5)res.push({id:'tk:'+t.id,kind:'task',ref:t.id,title:t.text,sub:'Pendiente para '+hm(new Date(t.due)),ts:t.due})}
+ return res.filter(a=>!S.notified['x'+a.id]);}
+async function tick(){if(!S||!S.profile.mom)return;const al=dueAlerts();let changed=false;
+ for(const a of al){if(!S.notified[a.id]){S.notified[a.id]=1;changed=true;notify('Mamá al Día',a.title+' · '+a.sub)}}
+ if(changed){save();if(S.tab==='hoy')render()}}
+async function notify(title,body){try{if(!('Notification' in window)||Notification.permission!=='granted')return;const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)r.showNotification(title,{body,icon:'icon-192.png',badge:'icon-192.png',tag:body});else new Notification(title,{body,icon:'icon-192.png'})}catch(e){}}
+function dismissAlert(id){S.notified['x'+id]=1;save();render()}
+function giveDose(mid,aid){const m=S.meds.find(x=>x.id===mid);if(!m)return;m.given.push(Date.now());S.health.push({id:uid(),ts:Date.now(),type:'dosis',text:'Dosis de '+m.name+(m.dose?' '+m.dose:'')});if(aid)S.notified['x'+aid]=1;save();render();const nx=medNext(m);toast(nx?'Anotado. Próxima dosis '+hm(new Date(nx)):'Tratamiento terminado')}
+
+/* ====================== render ====================== */
+let selDay=ymd(new Date()),foodSeg='menu',menuDayIdx=null,recog=null;
+function render(){
+ if(!S||!S.profile.mom){renderWelcome();return}
+ const tab=S.tab||'hoy';
+ $('#root').innerHTML=`<div class="app">
+ <header class="top"><div class="brand"><img src="icon-192.png" alt="">Mamá al Día</div><div class="sp"></div><button class="iconbtn" aria-label="Ajustes" onclick="openSettings()">${IC.gear}</button></header>
+ <main>${tab==='hoy'?vHoy():tab==='agenda'?vAgenda():tab==='lia'?vLia():tab==='salud'?vSalud():vComidas()}</main>
+ <nav class="tabs"><div class="in">
+  ${navBtn('hoy','Hoy',IC.home)}${navBtn('agenda','Agenda',IC.cal)}
+  <button class="lia ${tab==='lia'?'on':''}" onclick="go('lia')" aria-label="Hablar con Lía"><span class="face">${LIA}</span>Lía</button>
+  ${navBtn('salud','Salud',IC.heart)}${navBtn('comidas','Casa',IC.basket)}
+ </div></nav></div>`;
+ if(tab==='lia'){const m=$('.msgs');if(m)window.scrollTo(0,document.body.scrollHeight)}
+}
+const navBtn=(id,l,ic)=>`<button class="${S.tab===id?'on':''}" onclick="go('${id}')">${ic}${l}</button>`;
+function go(t){S.tab=t;save();window.scrollTo(0,0);render()}
+function greet(){const h=new Date().getHours();return h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches'}
+
+function vHoy(){
+ const ds=ymd(new Date());const items=dayItems(ds);const now=hm(new Date());
+ const al=dueAlerts();
+ const nEv=items.filter(i=>i.type==='ev').length,nMed=items.filter(i=>i.type==='med'&&!i.done).length;
+ const pend=S.tasks.filter(t=>!t.done&&!t.due);
+ const nextIdx=items.findIndex(i=>i.time&&i.time>=now&&!i.done);
+ const act=S.meds.filter(medActive);
+ return `
+ ${installBanner()}
+ <div class="hello"><div class="muted small">${fmtDate(new Date())}</div><h1>${greet()}, ${esc(S.profile.mom)}</h1></div>
+ <form class="ask" onsubmit="event.preventDefault();quickAsk()"><input id="qa" placeholder="Cuéntale a Lía lo que pasó o lo que viene…" autocomplete="off"><button aria-label="Enviar">${IC.send}</button></form>
+ <div class="tiny muted" style="margin:0 4px 8px">Ej.: "a ${esc(S.profile.kid||'la niña')} le dio fiebre, paracetamol 5 ml cada 6 h"</div>
+ ${al.map(a=>`<div class="alert ${a.kind==='med'?'':'ev'}"><div class="b"><b>${esc(a.title)}</b><div class="small muted">${esc(a.sub)}</div></div>${a.kind==='med'?`<button class="btn sm" onclick="giveDose('${a.ref}','${a.id}')">Ya se la di</button>`:a.kind==='bill'?`<button class="btn sm" onclick="payBill('${a.ref}','${a.id}')">Pagado</button>`:a.kind==='item'?`<div style="display:flex;flex-direction:column;gap:6px"><button class="btn sm" onclick="itemToList('${a.ref}','${a.id}')">A la lista</button><button class="btn sm ghost" onclick="boughtItem('${a.ref}','${a.id}')">Ya compré</button></div>`:a.kind==='task'?`<button class="btn sm ghost" onclick="toggleTask('${a.ref}');dismissAlert('${a.id}')">Hecho</button>`:`<button class="btn sm ghost" onclick="dismissAlert('${a.id}')">Ok</button>`}</div>`).join('')}
+ <div class="stats">
+  <div class="stat"><b>${nEv}</b><span class="small muted">compromisos</span></div>
+  <div class="stat"><b>${nMed}</b><span class="small muted">dosis por dar</span></div>
+  <div class="stat"><b>${S.tasks.filter(t=>!t.done).length}</b><span class="small muted">pendientes</span></div>
+ </div>
+ <div class="sect"><h2>Tu día</h2><button class="btn sm soft" onclick="go('agenda')">Ver agenda</button></div>
+ <div class="card">${items.length?`<ul class="tl">${items.map((i,ix)=>tlItem(i,ix===nextIdx)).join('')}</ul>`:`<div class="empty">Nada para hoy todavía. Escríbele a Lía y ella lo ordena.</div>`}</div>
+ ${act.length?`<div class="sect"><h2>Medicamentos activos</h2></div>${act.map(medCard).join('')}`:''}
+ ${(()=>{const lim=ymd(addDays(new Date(),7));const up=S.bills.filter(b=>b.due<=lim).sort((a,b)=>a.due.localeCompare(b.due));return up.length?`<div class="sect"><h2>Pagos de la semana</h2><button class="btn sm soft" onclick="foodSeg='gastos';go('comidas')">Ver gastos</button></div><div class="card"><ul class="tl">${up.map(b=>`<li><div class="b"><div class="ttl">${esc(b.name)} · ${bs(b.amount)}</div><span class="small muted">${cap(billDueTxt(b))}</span></div><button class="btn sm ghost" onclick="payBill('${b.id}')">Pagado</button></li>`).join('')}</ul></div>`:''})()}
+ <div class="sect"><h2>Pendientes sin hora</h2><button class="btn sm soft" onclick="addTaskDlg()">+ Agregar</button></div>
+ <div class="card">${pend.length?`<ul class="tl">${pend.map(t=>`<li class="${t.done?'done':''}"><button class="check ${t.done?'on':''}" onclick="toggleTask('${t.id}')" aria-label="Marcar">${t.done?IC.ok:''}</button><div class="b"><div class="ttl">${esc(t.text)}</div></div></li>`).join('')}</ul>`:`<div class="empty">Sin pendientes. ¡Bien!</div>`}</div>`;
+}
+function tlItem(i,isNext){
+ const chip={ev:`<span class="chip c-${i.cat}">${esc(i.sub)}</span>`,med:`<span class="chip c-med">${esc(i.sub)}</span>`,meal:`<span class="chip c-comida">${esc(i.sub)}</span>`,task:`<span class="chip c-tarea">Pendiente</span>`}[i.type];
+ const btn=i.type==='med'&&!i.done&&isNext?`<button class="btn sm" onclick="giveDose('${i.id}')">Dar</button>`:i.type==='task'?`<button class="check ${i.done?'on':''}" onclick="toggleTask('${i.id}')" aria-label="Marcar">${i.done?IC.ok:''}</button>`:'';
+ return `<li class="${i.done?'done':''} ${isNext?'now':''}"><div class="t">${i.time||'—'}</div><div class="b"><div class="ttl">${esc(i.title)}</div>${chip}</div>${btn}</li>`}
+function medCard(m){const nx=medNext(m);const tot=m.days?Math.round(m.days*24/m.every):null;const p=tot?Math.min(100,Math.round(m.given.length/tot*100)):Math.min(100,m.given.length*10);
+ return `<div class="card med"><div class="ring" style="--p:${p}"><span>${tot?m.given.length+'/'+tot:m.given.length}</span></div><div style="flex:1;min-width:0"><b>${esc(m.name)}${m.dose?' · '+esc(m.dose):''}</b><div class="small muted">Cada ${m.every} h${m.days?' · '+m.days+' días':''}${m.forKid&&S.profile.kid?' · '+esc(S.profile.kid):''}</div><div class="small"><b style="color:var(--sage)">Próxima: ${hm(new Date(nx))}</b> <span class="muted">(${rel(nx)})</span></div></div><div style="display:flex;flex-direction:column;gap:6px"><button class="btn sm" onclick="giveDose('${m.id}')">Dar</button><button class="btn sm ghost" onclick="stopMed('${m.id}')">Terminar</button></div></div>`}
+function stopMed(id){confirmInline('¿Terminar este tratamiento? Se quita de tu día.',()=>{const m=S.meds.find(x=>x.id===id);if(m){m.stopped=true;S.health.push({id:uid(),ts:Date.now(),type:'nota',text:'Terminó '+m.name})}save();render()})}
+function toggleTask(id){const t=S.tasks.find(x=>x.id===id);if(t){t.done=!t.done;save();render()}}
+function quickAsk(){const v=$('#qa').value.trim();if(!v)return;S.chat.push({id:uid(),from:'me',text:v,ts:Date.now()});liaReply(v);S.tab='lia';render()}
+
+function vAgenda(){
+ const ws=weekStart(fromYmd(selDay));const today=ymd(new Date());
+ const days=[...Array(7)].map((_,i)=>addDays(ws,i));
+ const items=dayItems(selDay).filter(i=>i.type!=='meal');
+ const up=[];for(let i=1;i<=30&&up.length<5;i++){const d=ymd(addDays(new Date(),i));for(const e of eventsOn(d))if(!e.recur&&up.length<5)up.push({d,e})}
+ return `<div class="row between"><h1 style="font-size:24px">Agenda</h1><div class="row"><button class="iconbtn" onclick="shiftWeek(-7)" aria-label="Semana anterior">‹</button><button class="iconbtn" onclick="shiftWeek(7)" aria-label="Semana siguiente">›</button></div></div>
+ <div class="muted small" style="margin-top:2px">${MON[ws.getMonth()].replace(/^./,c=>c.toUpperCase())} ${ws.getFullYear()}</div>
+ <div class="week">${days.map(d=>{const s=ymd(d);const has=eventsOn(s).length||S.meds.some(m=>medDosesOn(m,s).length);return `<button class="${s===selDay?'on':''} ${s===today?'today':''}" onclick="selDay='${s}';render()">${DSH[d.getDay()]}<b>${d.getDate()}</b>${has?'<i></i>':''}</button>`}).join('')}</div>
+ <div class="sect" style="margin-top:4px"><h2>${fmtDate(fromYmd(selDay))}</h2></div>
+ <div class="card">${items.length?`<ul class="tl">${items.map(i=>`<li class="${i.done?'done':''}"><div class="t">${i.time||'—'}</div><div class="b"><div class="ttl">${esc(i.title)}</div><span class="chip ${i.type==='med'?'c-med':i.type==='task'?'c-tarea':'c-'+i.cat}">${esc(i.sub)}</span></div>${i.type==='ev'?`<button class="btn sm ghost" onclick="delEvent('${i.id}')" aria-label="Borrar">✕</button>`:''}</li>`).join('')}</ul>`:'<div class="empty">Día libre.</div>'}</div>
+ <div class="sect"><h2>Próximas citas</h2></div>
+ <div class="card">${up.length?`<ul class="tl">${up.map(({d,e})=>`<li><div class="t" style="width:62px;font-size:13px">${DSH[fromYmd(d).getDay()]} ${fromYmd(d).getDate()}</div><div class="b"><div class="ttl">${esc(e.title)}</div><span class="chip c-${e.cat}">${e.time||'Sin hora'}</span></div></li>`).join('')}</ul>`:'<div class="empty">No hay citas próximas.</div>'}</div>
+ <div class="sect"><h2>Clases y rutinas</h2></div>
+ <div class="card">${S.events.filter(e=>e.recur).length?`<ul class="tl">${S.events.filter(e=>e.recur).map(e=>`<li><div class="b"><div class="ttl">${esc(e.title)}</div><span class="chip c-${e.cat}">${e.recur.map(i=>DSH[i]).join(', ')}${e.time?' · '+e.time:''}</span></div><button class="btn sm ghost" onclick="delEvent('${e.id}')" aria-label="Borrar">✕</button></li>`).join('')}</ul>`:'<div class="empty">Dile a Lía: "natación los martes y jueves a las 16:00".</div>'}</div>
+ <button class="btn fab" onclick="addEventDlg()">+ Nueva cita</button>`}
+function shiftWeek(n){selDay=ymd(addDays(fromYmd(selDay),n));render()}
+function delEvent(id){if(!confirmInline('¿Borrar este compromiso?',()=>{S.events=S.events.filter(e=>e.id!==id);save();render()}))return}
+
+function vLia(){
+ const msgs=S.chat.slice(-60);
+ const sug=[`Cita con el pediatra el jueves a las 10`,`Natación los martes y jueves a las 16`,`Compré verduras y frutas, 45 Bs`,`Se acabó la leche y los pañales`,`${S.profile.kid||'La niña'} tiene fiebre 38.5, paracetamol 5 ml cada 6 h por 3 días`,`Recuérdame pagar la luz mañana`,`Pre kínder 1800 Bs cada mes el día 5`,`Pagué el internet 150 Bs`,`Guarda lugar: parque con juegos para bebés`,`¿Cómo voy esta semana?`,`Tope de comida 1200 Bs al mes`,`La crema de Sofi le dura 2 meses, cuesta 330 Bs`,`No le gustó el brócoli`,`Cumpleaños de la abuela el 30 de noviembre`];
+ return `<div class="chatwrap"><div class="msgs">
+ <div class="lia-row"><div class="av">${LIA}</div><div class="msg lia">Hola, ${esc(S.profile.mom)}. Soy Lía 🌱 Escríbeme o díctame como te salga, todo junto si quieres, y yo lo ordeno en tu agenda, medicamentos, menú, compras y gastos. Pídeme "¿cómo voy esta semana?" y te doy tu resumen.</div></div>
+ ${msgs.map(m=>m.from==='me'?`<div class="msg me">${esc(m.text)}</div>`:`<div class="lia-row"><div class="av">${LIA}</div><div class="msg lia">${esc(m.text)}${m.cards&&m.cards.length?`<div class="org">${m.cards.map(c=>`<div class="it"><span class="chip ${c.cls}">${esc(c.label)}</span><span>${esc(c.detail)}</span></div>`).join('')}</div>`:''}${m.extra?`<div class="small muted" style="margin-top:8px">${esc(m.extra)}</div>`:''}${m.undone?'<div class="tiny muted" style="margin-top:6px">(Deshecho)</div>':m.undo?`<button class="undo" onclick="undoMsg('${m.id}')">Deshacer</button>`:''}</div></div>`).join('')}
+ </div>
+ <div class="composer"><div class="sugs">${sug.map(s=>`<button onclick="sendChat(this.textContent)">${esc(s)}</button>`).join('')}</div>
+ <form class="ask" onsubmit="event.preventDefault();sendChat()"><input id="ci" placeholder="Escribe o dicta…" autocomplete="off"><button type="button" class="mic" id="mic" aria-label="Dictar" onclick="dictar()">${IC.mic}</button><button aria-label="Enviar">${IC.send}</button></form>
+ <div class="tiny muted" style="text-align:center;margin-top:4px">Versión de prueba: Lía entiende frases comunes. La versión final usará IA.</div></div></div>`}
+function sendChat(t){const v=(t||$('#ci').value).trim();if(!v)return;S.chat.push({id:uid(),from:'me',text:v,ts:Date.now()});liaReply(v);render()}
+function dictar(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('Usa el micrófono de tu teclado para dictar');$('#ci').focus();return}
+ if(recog){recog.stop();return}recog=new SR();recog.lang='es-BO';recog.interimResults=true;const b=$('#mic');b.classList.add('rec');
+ recog.onresult=e=>{$('#ci').value=[...e.results].map(r=>r[0].transcript).join(' ')};recog.onend=()=>{b.classList.remove('rec');recog=null};recog.onerror=()=>{toast('No pude escuchar. Revisa el permiso del micrófono')};recog.start()}
+
+function vSalud(){
+ const act=S.meds.filter(medActive);const past=S.meds.filter(m=>!medActive(m));
+ const log=[...S.health].sort((a,b)=>b.ts-a.ts).slice(0,25);
+ return `<h1 style="font-size:24px">Salud${S.profile.kid?' de '+esc(S.profile.kid):''}</h1>
+ <div class="muted small" style="margin:2px 0 12px">${ageText()}${(S.profile.allergies||[]).length?' · Alergias: '+S.profile.allergies.map(a=>ALLERG.find(x=>x[0]===a)[1]).join(', '):''}</div>
+ <div class="note"><b>Importante:</b> esta app no calcula dosis ni diagnostica. Anota la dosis que indicó el pediatra y consulta ante cualquier duda.</div>
+ <div class="row" style="gap:8px;margin-bottom:6px"><button class="btn block" onclick="addMedDlg()">+ Medicamento</button><button class="btn ghost block" onclick="addTempDlg()">Anotar temperatura</button></div>
+ <div class="sect"><h2>Tratamientos activos</h2></div>
+ ${act.length?act.map(medCard).join(''):'<div class="card empty">Ningún tratamiento activo.</div>'}
+ ${past.length?`<div class="sect"><h2>Terminados</h2></div><div class="card"><ul class="tl">${past.map(m=>`<li><div class="b"><div class="ttl">${esc(m.name)} ${esc(m.dose)}</div><div class="small muted">${m.given.length} dosis · inició ${new Date(m.start).toLocaleDateString('es-BO')}</div></div></li>`).join('')}</ul></div>`:''}
+ <div class="sect"><h2>Historial</h2></div>
+ <div class="card">${log.length?`<ul class="tl">${log.map(h=>`<li><div class="t" style="width:70px;font-size:12.5px;font-weight:700">${new Date(h.ts).toLocaleDateString('es-BO',{day:'numeric',month:'short'})}<br>${hm(new Date(h.ts))}</div><div class="b"><div class="ttl">${esc(h.text)}</div></div></li>`).join('')}</ul>`:'<div class="empty">Aquí se guardan fiebres, síntomas y dosis dadas, para mostrarle al pediatra.</div>'}</div>
+ <div class="danger-note"><b>Ve a emergencias</b> si tiene dificultad para respirar, convulsiones, está muy decaída o no despierta bien, no toma líquidos, o tiene manchas en la piel que no desaparecen al presionarlas.</div>`}
+
+function vComidas(){
+ if(!S.menu||S.menu.week!==ymd(weekStart())){makeMenu();save()}
+ if(foodSeg==='despensa')foodSeg='gastos';
+ const sb=(id,l)=>`<button class="${foodSeg===id?'on':''}" onclick="foodSeg='${id}';render()">${l}</button>`;
+ return `<h1 style="font-size:24px">Casa</h1>
+ <div class="seg">${sb('menu','Menú')}${sb('compras','Compras')}${sb('gastos','Gastos')}${sb('lugares','Lugares')}</div>
+ ${foodSeg==='menu'?vMenu():foodSeg==='compras'?vCompras():foodSeg==='gastos'?vGastos():vLugares()}`}
+function vGastos(){
+ const now=Date.now(),ms=monthStart(),ws=weekStart().getTime();const mon=spentBetween(ms,now+1),tw=spentBetween(ws,now+1),lw=spentBetween(ws-7*864e5,ws);
+ const mb=Number(S.profile.mbudget)||0;const fixed=S.bills.reduce((a,b)=>a+perMonthly(b),0);
+ const byC={};for(const m of moves())if(m.ts>=ms)byC[m.cat]=(byC[m.cat]||0)+m.amount;const cats=Object.entries(byC).sort((a,b)=>b[1]-a[1]);const max=cats.length?cats[0][1]:1;
+ const bills=[...S.bills].sort((a,b)=>a.due.localeCompare(b.due));const mv=moves().slice(0,15);const today=ymd(new Date());
+ return `<div class="card"><div class="row between"><b>Gastado este mes</b><button class="btn sm ghost" onclick="mbudgetDlg()">Presupuesto</button></div>
+ <div style="font-size:26px;font-weight:800;margin-top:4px">${bs(mon)}</div>
+ ${mb?`<div class="bar ${mon>mb?'over':''}"><i style="width:${Math.min(100,mon/mb*100)}%"></i></div><div class="small muted">de ${bs(mb)} · te quedan ${bs(Math.max(0,mb-mon))}</div>`:'<div class="small muted">Ponle un presupuesto mensual para ver cuánto te queda.</div>'}
+ ${fixed?`<div class="small" style="margin-top:6px">Pagos fijos y periódicos: <b>${bs(fixed)}</b> al mes en promedio</div>`:''}</div>
+ <div class="card" style="background:var(--surface2)"><div class="row between"><b>Informe de la semana</b><button class="btn sm soft" onclick="S.chat.push({id:uid(),from:'me',text:'¿Cómo voy esta semana?',ts:Date.now()});liaReply('informe');go('lia')">Pedírselo a Lía</button></div>
+ <div class="row" style="gap:16px;margin-top:8px"><div><div class="tiny muted">Esta semana</div><b style="font-size:19px">${bs(tw)}</b></div><div><div class="tiny muted">Semana pasada</div><b style="font-size:19px;color:var(--sub)">${bs(lw)}</b></div></div>
+ ${lw?`<div class="small" style="margin-top:6px;color:${tw>lw?'var(--danger)':'var(--sage)'}">${tw>lw?'Vas '+bs(tw-lw)+' más arriba que la semana pasada.':'Vas '+bs(lw-tw)+' por debajo de la semana pasada. ¡Bien!'}</div>`:''}</div>
+ ${(()=>{const byW={};for(const m of moves())if(m.ts>=ms)byW[m.who]=(byW[m.who]||0)+m.amount;const fixW={};for(const b of S.bills)fixW[b.who||'Familia']=(fixW[b.who||'Familia']||0)+perMonthly(b);const ws2=members().filter(w=>byW[w]||fixW[w]);return ws2.length?`<div class="sect"><h2>Por persona</h2></div><div class="card"><ul class="tl">${ws2.map(w=>`<li><div class="b"><div class="ttl">${esc(w)}</div><div class="small muted">Este mes ${bs(byW[w]||0)} · fijos ${bs(fixW[w]||0)} al mes</div></div></li>`).join('')}</ul></div>`:''})()}
+ <div class="sect"><h2>Por categoría (este mes)</h2><button class="btn sm soft" onclick="capsDlg()">Topes</button></div>
+ ${(()=>{for(const c of Object.keys(S.caps))if(!cats.some(x=>x[0]===c))cats.push([c,0]);return ''})()}
+ <div class="card">${cats.length?cats.map(([k,v])=>{const cap=S.caps[k];const pc=cap?v/cap*100:v/max*100;const col=cap?(pc>=100?'var(--danger)':pc>=80?'var(--sun)':'var(--sage)'):'var(--accent)';return `<div style="margin:8px 0"><div class="row between small"><span>${GCAT.find(g=>g[0]===k)[2]} ${GNAME[k]}</span><b>${bs(v)}${cap?` <span class="muted" style="font-weight:600">de ${bs(cap)}</span>`:''}</b></div><div class="bar" style="margin:4px 0 0;height:8px"><i style="width:${Math.min(100,pc)}%;background:${col}"></i></div>${cap&&pc>=80?`<div class="tiny" style="color:${col};margin-top:2px">${pc>=100?'Pasaste tu tope del mes':'Usaste el '+Math.round(pc)+'% de tu tope'}</div>`:''}</div>`}).join(''):'<div class="empty">Dile a Lía: "pagué la luz 120 Bs" o "gasté 30 Bs en pasajes".</div>'}</div>
+ <div class="sect"><h2>Pagos fijos y periódicos</h2><button class="btn sm soft" onclick="billDlg()">+ Agregar</button></div>
+ <div class="card">${bills.length?`<ul class="tl">${bills.map(b=>`<li><div class="b"><div class="ttl">${esc(b.name)} · ${bs(b.amount)}</div><span class="chip ${b.due<=today?'c-mama':'c-tarea'}">${cap(billDueTxt(b))}</span> <span class="tiny muted">${PER[b.per][0]} · ${esc(b.who||'Familia')}</span></div><button class="btn sm" onclick="payBill('${b.id}')">Pagado</button><button class="p" style="border:0;background:transparent;color:var(--sub)" onclick="delBill('${b.id}')" aria-label="Quitar">✕</button></li>`).join('')}</ul>`:'<div class="empty">Pre kínder, internet, expensas, pediatra cada 3 meses… Dile a Lía: "pre kínder 1800 Bs cada mes el día 5".</div>'}</div>
+ <div class="sect"><h2>Movimientos</h2><button class="btn sm soft" onclick="expDlg()">+ Gasto</button></div>
+ <div class="card">${mv.length?`<ul class="tl">${mv.map(m=>`<li><div class="t" style="width:58px;font-size:12.5px">${new Date(m.ts).toLocaleDateString('es-BO',{day:'numeric',month:'short'})}</div><div class="b"><div class="ttl">${esc(m.text)}</div><span class="tiny muted">${GNAME[m.cat]} · ${esc(m.who)}</span></div><b class="small">${bs(m.amount)}</b></li>`).join('')}</ul>`:'<div class="empty">Aún no hay gastos.</div>'}</div>
+ ${vDespensa(true)}`}
+function vLugares(){const by={};for(const p of S.places)(by[p.type]=by[p.type]||[]).push(p);
+ return `<div class="note"><b>Tus lugares.</b> Guarda los parques, pediatras y especialistas que te gustan. Pronto podrás ver también los que recomiendan otras mamás de tu ciudad.</div>
+ <button class="btn block" onclick="placeDlg()">+ Guardar un lugar</button>
+ ${Object.keys(PTYPE).filter(k=>by[k]).map(k=>`<div class="sect"><h2>${PTYPE[k][1]} ${PTYPE[k][0]}</h2></div><div class="card"><ul class="tl">${by[k].map(p=>`<li><div class="b"><div class="ttl">${esc(p.name)}</div><div class="small muted">${esc([p.city,p.age,p.note].filter(Boolean).join(' · '))}</div></div><a class="btn sm ghost" style="text-decoration:none;display:grid;place-items:center" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name+' '+(p.city||''))}">Mapa</a><button class="p" style="border:0;background:transparent;color:var(--sub)" onclick="delPlace('${p.id}')" aria-label="Quitar">✕</button></li>`).join('')}</ul></div>`).join('')||'<div class="empty" style="margin-top:10px">Dile a Lía: "guarda lugar: parque con juegos para bebés en el Equipetrol".</div>'}
+ <div class="tiny muted" style="margin-top:10px;text-align:center">Las recomendaciones de salud de otras mamás son experiencias, no consejo médico.</div>`}
+function delBill(id){confirmInline('¿Quitar este pago?',()=>{S.bills=S.bills.filter(b=>b.id!==id);save();render()})}
+function delPlace(id){S.places=S.places.filter(p=>p.id!==id);save();render()}
+const catOpts=sel=>GCAT.map(g=>`<option value="${g[0]}" ${g[0]===sel?'selected':''}>${g[2]} ${g[1]}</option>`).join('');
+function billDlg(){dlg(`<h3>Pago fijo o periódico</h3><label class="f">Qué</label><input class="inp" id="bN" placeholder="Pre kínder">
+ <div class="row"><div style="flex:1"><label class="f">Monto (Bs)</label><input class="inp" id="bM" type="number" inputmode="decimal"></div><div style="flex:1"><label class="f">Cada cuánto</label><select class="inp" id="bP">${Object.entries(PER).map(([k,v])=>`<option value="${k}" ${k==='mes'?'selected':''}>${cap(v[0])}</option>`).join('')}</select></div></div>
+ <div class="row"><div style="flex:1"><label class="f">Próximo pago</label><input class="inp" id="bD" type="date" value="${ymd(new Date())}"></div><div style="flex:1"><label class="f">Categoría</label><select class="inp" id="bC">${catOpts('educacion')}</select></div></div>
+ <label class="f">Para quién</label><select class="inp" id="bW">${members().map(w=>`<option>${esc(w)}</option>`).join('')}</select>
+ <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="saveBill()">Guardar</button></div>`)}
+function saveBill(){const n=$('#bN').value.trim(),m=parseFloat($('#bM').value);if(!n||!m){toast('Escribe qué es y el monto');return}S.bills.push({id:uid(),name:cap(n),amount:m,per:$('#bP').value,cat:$('#bC').value,who:$('#bW').value,due:$('#bD').value||ymd(new Date()),created:Date.now()});save();closeDlg();render()}
+function expDlg(){dlg(`<h3>Nuevo gasto</h3><label class="f">Qué</label><input class="inp" id="xN" placeholder="Pasajes a la guardería" oninput="$('#xC').value=gcat(this.value)">
+ <div class="row"><div style="flex:1"><label class="f">Monto (Bs)</label><input class="inp" id="xM" type="number" inputmode="decimal"></div><div style="flex:1"><label class="f">Categoría</label><select class="inp" id="xC">${catOpts('otros')}</select></div></div>
+ <label class="f">Para quién</label><select class="inp" id="xW">${members().map(w=>`<option>${esc(w)}</option>`).join('')}</select>
+ <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="saveExp()">Guardar</button></div>`)}
+function saveExp(){const n=$('#xN').value.trim(),m=parseFloat($('#xM').value);if(!n||!m){toast('Escribe qué es y el monto');return}S.expenses.push({id:uid(),ts:Date.now(),amount:m,cat:$('#xC').value,who:$('#xW').value,text:cap(n)});save();closeDlg();render()}
+function capsDlg(){dlg(`<h3>Topes por categoría</h3><div class="small muted">Cuánto quieres gastar como máximo al mes en cada cosa. Deja vacío lo que no quieras limitar.</div>
+ ${GCAT.map(g=>`<div class="row" style="margin-top:8px"><span style="flex:1">${g[2]} ${g[1]}</span><input class="inp capI" data-c="${g[0]}" type="number" inputmode="numeric" style="width:110px" value="${S.caps[g[0]]||''}" placeholder="Bs"></div>`).join('')}
+ <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="document.querySelectorAll('.capI').forEach(i=>{const v=+i.value;if(v)S.caps[i.dataset.c]=v;else delete S.caps[i.dataset.c]});save();closeDlg();render()">Guardar</button></div>`)}
+function itemDlg(){dlg(`<h3>Producto que se acaba</h3><div class="small muted">Cremas, pañales, leche en polvo… Te aviso unos días antes de que se acabe.</div><label class="f">Qué</label><input class="inp" id="iN" placeholder="Crema para piel atópica">
+ <div class="row"><div style="flex:1"><label class="f">Me dura (días)</label><input class="inp" id="iD" type="number" inputmode="numeric" value="30"></div><div style="flex:1"><label class="f">Precio (Bs)</label><input class="inp" id="iP" type="number" inputmode="decimal"></div></div>
+ <div class="row"><div style="flex:1"><label class="f">Lo compré el</label><input class="inp" id="iL" type="date" value="${ymd(new Date())}"></div><div style="flex:1"><label class="f">Para quién</label><select class="inp" id="iW">${members().map(w=>`<option>${esc(w)}</option>`).join('')}</select></div></div>
+ <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="saveItem()">Guardar</button></div>`)}
+function saveItem(){const n=$('#iN').value.trim(),d=+$('#iD').value;if(!n||!d){toast('Escribe qué es y cuánto dura');return}S.items.push({id:uid(),name:cap(n),days:d,price:parseFloat($('#iP').value)||null,cat:gcat(n)==='otros'?'higiene':gcat(n),who:$('#iW').value,last:$('#iL').value||ymd(new Date())});save();closeDlg();render()}
+function delItem(id){S.items=S.items.filter(x=>x.id!==id);save();render()}
+function mbudgetDlg(){dlg(`<h3>Presupuesto del mes</h3><label class="f">Total para gastos del mes (Bs)</label><input class="inp" id="mbB" type="number" inputmode="numeric" value="${S.profile.mbudget||''}" placeholder="6000"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.profile.mbudget=+$('#mbB').value||0;save();closeDlg();render()">Guardar</button></div>`)}
+function placeDlg(){dlg(`<h3>Guardar un lugar</h3><label class="f">Nombre</label><input class="inp" id="lN" placeholder="Parque de juegos para bebés">
+ <div class="row"><div style="flex:1"><label class="f">Tipo</label><select class="inp" id="lT">${Object.entries(PTYPE).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('')}</select></div><div style="flex:1"><label class="f">Ciudad</label><input class="inp" id="lC" value="${esc(S.profile.city||'')}"></div></div>
+ <label class="f">Para qué edad (opcional)</label><input class="inp" id="lA" placeholder="Bebés, 3 a 5 años…"><label class="f">Nota (opcional)</label><input class="inp" id="lO" placeholder="Tiene sombra y baños limpios">
+ <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="savePlace()">Guardar</button></div>`)}
+function savePlace(){const n=$('#lN').value.trim();if(!n){toast('Escribe el nombre');return}S.places.push({id:uid(),name:cap(n),type:$('#lT').value,city:$('#lC').value.trim(),age:$('#lA').value.trim(),note:$('#lO').value.trim(),ts:Date.now()});save();closeDlg();render()}
+function budgetCard(){const c=menuCost(),b=Number(S.profile.budget)||0;const p=b?Math.min(100,c/b*100):0;
+ return `<div class="card"><div class="row between"><b>Costo estimado de la semana</b><button class="btn sm ghost" onclick="budgetDlg()">Presupuesto</button></div>
+ <div class="bar ${c>b?'over':''}"><i style="width:${p}%"></i></div>
+ <div class="small"><b>${bs(c)}</b> <span class="muted">de ${bs(b)} · ${S.profile.adults>0?'niña + '+S.profile.adults+' adulto'+(S.profile.adults>1?'s':''):'solo para '+esc(S.profile.kid||'la peque')}</span></div>
+ ${c>b?'<div class="small" style="color:var(--danger);margin-top:4px">Ya usé las opciones más económicas. Sube un poco el presupuesto o quita adultos.</div>':''}</div>`}
+function vMenu(){
+ const w=fromYmd(S.menu.week);const ti=Math.round((startDay(new Date())-w)/864e5);if(menuDayIdx==null)menuDayIdx=Math.max(0,Math.min(6,ti));
+ const d=S.menu.days[menuDayIdx];
+ return `${budgetCard()}
+ <div class="week">${S.menu.days.map((_,i)=>{const dd=addDays(w,i);return `<button class="${i===menuDayIdx?'on':''} ${i===ti?'today':''}" onclick="menuDayIdx=${i};render()">${DSH[dd.getDay()]}<b>${dd.getDate()}</b></button>`}).join('')}</div>
+ <div class="card">${SLOTS.map(([id,lab,time,k])=>{const r=RECBY[d[id]];return `<div class="meal"><div class="t">${time}</div><div style="flex:1;min-width:0"><div class="k">${lab}</div><div class="n">${r?esc(r.n):'—'}</div>${r&&Object.keys(r.i).length?`<div class="small muted">${Object.keys(r.i).map(k=>CAT[k].n.split(' (')[0]).join(', ')}</div>`:''}${r&&(k==='d'||k==='a'||k==='c')&&!r.cheap?(()=>{const g=groupsOf(r);const miss=Object.keys(GRPN).filter(x=>!g.has(x));return `<div class="tiny" style="margin:3px 0;color:${miss.length?'var(--sun)':'var(--sage)'}">${miss.length?'Tiene '+g.size+' de 5 grupos · agrega: '+miss.map(x=>GRPN[x].toLowerCase()).join(', ')+(miss.includes('grasa')?' (unas gotas de aceite de palta u oliva)':''):'✓ Los 5 grupos: cereal, grasa, fruta, verdura y proteína'}</div>`})():''}<div class="tiny muted">${portion(k)}</div><button class="swap" onclick="swapMeal(${menuDayIdx},'${id}')">Cambiar</button></div></div>`}).join('')}</div>
+ <div class="note"><b>Regla de los 5 grupos:</b> en desayuno, almuerzo y cena intenta que haya cereal, grasa buena, fruta, verdura y proteína. ${ageMonths()<24?'<b>Hasta los 2 años:</b> sin azúcar, poca sal y nada de golosinas con colorantes (como la tartracina). ':''}</div>
+ <div class="note"><b>Porciones orientativas generales.</b> Cada niño es distinto: consulta con tu pediatra o nutricionista, también para introducir alimentos que pueden dar alergia. Corta uvas, salchichas y frutas redondas en trocitos para evitar atragantamientos.</div>
+ <button class="btn ghost block" onclick="makeMenu();save();render();toast('Nuevo menú listo')">Nuevo menú</button>`}
+function swapMeal(di,slot){const k=SLOTS.find(s=>s[0]===slot)[3];const cur=S.menu.days[di][slot];const opts=REC.filter(r=>r.k===k&&okRec(r)&&r.id!==cur);if(!opts.length)return;
+ const used=new Set(S.menu.days.map(d=>d[slot]));const fresh=opts.filter(r=>!used.has(r.id));const pool=fresh.length?fresh:opts;S.menu.days[di][slot]=pool[Math.floor(Math.random()*pool.length)].id;save();render()}
+function vCompras(){
+ const L=shopList();const ex=S.extraShop;const left=L.filter(x=>!S.shopChecked[x.id]).reduce((a,x)=>a+x.cost,0);
+ const by={};for(const x of L)(by[x.s]=by[x.s]||[]).push(x);
+ const its=[...S.items].sort((a,b)=>itemLeft(a)-itemLeft(b));
+ const dur=`<div class="sect" style="margin-top:4px"><h2>Productos que se acaban</h2><button class="btn sm soft" onclick="itemDlg()">+ Agregar</button></div>
+ <div class="card">${its.length?`<ul class="tl">${its.map(it=>{const l=itemLeft(it);const pc=Math.max(0,Math.min(100,l/it.days*100));return `<li><div class="b"><div class="ttl">${esc(it.name)}</div><div class="bar" style="margin:5px 0 3px;height:7px"><i style="width:${pc}%;background:${l<=3?'var(--danger)':l<=7?'var(--sun)':'var(--sage)'}"></i></div><span class="tiny muted">${l<=0?'Ya se debe haber acabado':'Quedan unos '+l+' días'} · dura ${it.days} días${it.price?' · '+bs(it.price):''} · ${esc(it.who||'Familia')}</span></div><div style="display:flex;flex-direction:column;gap:6px"><button class="btn sm ghost" onclick="boughtItem('${it.id}')">Compré</button><button class="p" style="border:0;background:transparent;color:var(--sub)" onclick="delItem('${it.id}')" aria-label="Quitar">✕</button></div></li>`}).join('')}</ul>`:'<div class="empty">Dile a Lía: "la crema de Sofi le dura 2 meses, cuesta 330 Bs".</div>'}</div>`;
+ return `${dur}<div class="sect"><h2>Lista de la semana</h2></div><div class="card"><div class="row between"><div><b>Falta comprar: ${bs(left)}</b><div class="small muted">Precios estimados. Toca un precio para corregirlo.</div></div><button class="btn sm" onclick="shareList()">Enviar</button></div></div>
+ <form class="ask" style="border-color:var(--line)" onsubmit="event.preventDefault();addExtra()"><input id="exi" placeholder="Agregar algo (pañales, jabón…)"><button aria-label="Agregar">${IC.send}</button></form>
+ ${ex.length?`<div class="card"><div class="grp">Otros</div><ul class="shop">${ex.map(x=>`<li class="${x.checked?'on':''}"><button class="check ${x.checked?'on':''}" onclick="togExtra('${x.id}')" aria-label="Marcar">${x.checked?IC.ok:''}</button><span class="n">${esc(x.n)}</span><button class="p" onclick="delExtra('${x.id}')" aria-label="Quitar">✕</button></li>`).join('')}</ul></div>`:''}
+ ${SECT.filter(s=>by[s]).map(s=>`<div class="card"><div class="grp">${s}</div><ul class="shop">${by[s].map(x=>`<li class="${S.shopChecked[x.id]?'on':''}"><button class="check ${S.shopChecked[x.id]?'on':''}" onclick="togShop('${x.id}')" aria-label="Marcar">${S.shopChecked[x.id]?IC.ok:''}</button><span class="n">${esc(x.n)} <span class="small muted">· ${qtyTxt(x)}</span></span><button class="p" onclick="priceDlg('${x.id}')">${bs(x.cost)}</button></li>`).join('')}</ul></div>`).join('')}
+ <div class="tiny muted" style="text-align:center">Lista según el menú de la semana. En abarrotes se cuenta solo lo que se usa esta semana; si no tienes en tu alacena, compra un paquete. No incluye aceite, sal ni condimentos.</div>`}
+function togShop(k){S.shopChecked[k]=!S.shopChecked[k];save();render()}
+function togExtra(id){const x=S.extraShop.find(e=>e.id===id);x.checked=!x.checked;save();render()}
+function delExtra(id){S.extraShop=S.extraShop.filter(e=>e.id!==id);save();render()}
+function addExtra(){const v=$('#exi').value.trim();if(!v)return;S.extraShop.push({id:uid(),n:cap(v),checked:false});save();render()}
+function shareList(){const L=shopList().filter(x=>!S.shopChecked[x.id]);const ex=S.extraShop.filter(x=>!x.checked);
+ const txt='🛒 Lista de compras (Mamá al Día)\n'+[...L.map(x=>'• '+x.n+' – '+qtyTxt(x)),...ex.map(x=>'• '+x.n)].join('\n');
+ if(navigator.share)navigator.share({text:txt}).catch(()=>{});else window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank')}
+function vDespensa(sub){
+ const P=[...S.purchases].sort((a,b)=>b.ts-a.ts);const spent=P.filter(p=>p.ts>Date.now()-30*864e5).reduce((a,p)=>a+(p.amount||0),0);
+ const freq={};for(const p of S.purchases)for(const it of p.items){const k=norm(it);(freq[k]=freq[k]||{n:it,t:[]}).t.push(p.ts)}
+ const habits=Object.values(freq).filter(f=>f.t.length>=2).map(f=>{f.t.sort();const gaps=f.t.slice(1).map((t,i)=>(t-f.t[i])/864e5);return {n:f.n,avg:Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length),last:Math.round((Date.now()-f.t[f.t.length-1])/864e5)}});
+ if(sub)return habits.length?`<div class="sect"><h2>Cada cuánto compras</h2></div><div class="card"><ul class="tl">${habits.map(h=>`<li><div class="b"><div class="ttl">${esc(cap(h.n))}</div><div class="small muted">Cada ${h.avg} días aprox. · última vez hace ${h.last} día${h.last===1?'':'s'}</div></div>${h.last>=h.avg?'<span class="chip c-mama">Toca comprar</span>':''}</li>`).join('')}</ul></div>`:'';
+ return `<div class="card"><b>Gastado en 30 días: ${bs(spent)}</b><div class="small muted">Según lo que le contaste a Lía.</div></div>
+ ${habits.length?`<div class="sect"><h2>Cada cuánto compras</h2></div><div class="card"><ul class="tl">${habits.map(h=>`<li><div class="b"><div class="ttl">${esc(cap(h.n))}</div><div class="small muted">Cada ${h.avg} días aprox. · última vez hace ${h.last} día${h.last===1?'':'s'}</div></div>${h.last>=h.avg?'<span class="chip c-mama">Toca comprar</span>':''}</li>`).join('')}</ul></div>`:''}
+ <div class="sect"><h2>Compras registradas</h2></div>
+ <div class="card">${P.length?`<ul class="tl">${P.map(p=>`<li><div class="t" style="width:62px;font-size:13px">${new Date(p.ts).toLocaleDateString('es-BO',{day:'numeric',month:'short'})}</div><div class="b"><div class="ttl">${esc(p.items.join(', ')||'Compra')}</div>${p.amount?`<span class="small muted">${bs(p.amount)}</span>`:''}</div></li>`).join('')}</ul>`:'<div class="empty">Dile a Lía: "compré verduras y pollo, 60 Bs".</div>'}</div>`}
+
+/* ====================== diálogos ====================== */
+function dlg(html){$('#dlgIn').innerHTML=html;const d=$('#dlg');if(!d.open)d.showModal()}
+function closeDlg(){$('#dlg').close()}
+function confirmInline(q,fn){dlg(`<h3>${esc(q)}</h3><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" id="cOk">Sí</button></div>`);$('#cOk').onclick=()=>{closeDlg();fn()};return false}
+function addEventDlg(){dlg(`<h3>Nueva cita o compromiso</h3>
+ <label class="f">Qué</label><input class="inp" id="eT" placeholder="Control con la pediatra">
+ <label class="f">Tipo</label><select class="inp" id="eC"><option value="salud">Salud</option><option value="clase">Clase</option><option value="familia">Familia y amigos</option><option value="mama">Para mí</option></select>
+ <div class="row"><div style="flex:1"><label class="f">Día</label><input class="inp" type="date" id="eD" value="${selDay}"></div><div style="flex:1"><label class="f">Hora</label><input class="inp" type="time" id="eH"></div></div>
+ <label class="f">Se repite (opcional)</label><div class="chips">${[1,2,3,4,5,6,0].map(i=>`<label><input type="checkbox" value="${i}" class="eR">${DSH[i]}</label>`).join('')}</div>
+ <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="saveEvent()">Guardar</button></div>`)}
+function saveEvent(){const t=$('#eT').value.trim();if(!t){toast('Escribe qué es');return}const rec=[...document.querySelectorAll('.eR:checked')].map(x=>+x.value);const c=$('#eC').value;
+ S.events.push({id:uid(),title:cap(t),cat:c,who:c==='mama'?'mom':'kid',date:rec.length?null:$('#eD').value,time:$('#eH').value||null,recur:rec.length?rec.sort():null,remind:c==='salud'?60:30,created:ymd(new Date())});save();closeDlg();render();toast('Guardado')}
+function addTaskDlg(){dlg(`<h3>Nuevo pendiente</h3><input class="inp" id="tT" placeholder="Comprar regalo para el cumple"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="const v=$('#tT').value.trim();if(v){S.tasks.push({id:uid(),text:cap(v),due:null,done:false});save();closeDlg();render()}">Guardar</button></div>`)}
+function addMedDlg(){dlg(`<h3>Nuevo medicamento</h3><div class="small muted">Copia lo que indicó el pediatra en la receta.</div>
+ <label class="f">Nombre</label><input class="inp" id="mN" placeholder="Paracetamol jarabe">
+ <div class="row"><div style="flex:1"><label class="f">Dosis</label><input class="inp" id="mD" placeholder="5 ml"></div><div style="flex:1"><label class="f">Cada (horas)</label><input class="inp" id="mE" type="number" inputmode="numeric" value="8" min="1" max="48"></div></div>
+ <div class="row"><div style="flex:1"><label class="f">Primera dosis</label><input class="inp" id="mS" type="time" value="${hm(new Date())}"></div><div style="flex:1"><label class="f">Días (opcional)</label><input class="inp" id="mDays" type="number" inputmode="numeric" placeholder="5"></div></div>
+ <label class="chips" style="margin-top:10px"><label><input type="checkbox" id="mG" checked>Ya le di la primera dosis</label></label>
+ <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="saveMed()">Guardar</button></div>`)}
+function saveMed(){const n=$('#mN').value.trim();if(!n){toast('Escribe el nombre');return}const st=at(ymd(new Date()),$('#mS').value||hm(new Date())).getTime();const g=$('#mG').checked;
+ S.meds.push({id:uid(),name:cap(n),dose:$('#mD').value.trim(),every:Math.max(1,+$('#mE').value||8),start:st,days:+$('#mDays').value||null,given:g?[st]:[],forKid:true,created:Date.now()});askNotif();save();closeDlg();render()}
+function addTempDlg(){dlg(`<h3>Anotar temperatura</h3><label class="f">Temperatura (°C)</label><input class="inp" id="tp" type="number" step="0.1" inputmode="decimal" placeholder="38.2"><label class="f">Nota (opcional)</label><input class="inp" id="tn" placeholder="Con tos, comió poco"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="saveTemp()">Guardar</button></div>`)}
+function saveTemp(){const v=parseFloat($('#tp').value);if(!v){toast('Escribe la temperatura');return}const n=$('#tn').value.trim();S.health.push({id:uid(),ts:Date.now(),type:'temp',value:v,text:'Temperatura '+String(v).replace('.',',')+' °C'+(n?' · '+n:'')});save();closeDlg();render();if(v>=39)toast('39 °C o más: consulta con el pediatra')}
+function budgetDlg(){dlg(`<h3>Presupuesto de comida</h3><label class="f">Por semana (Bs)</label><input class="inp" id="bB" type="number" inputmode="numeric" value="${S.profile.budget}"><label class="f">Adultos que comen el mismo menú</label><select class="inp" id="bA">${[0,1,2,3,4].map(i=>`<option ${i==S.profile.adults?'selected':''} value="${i}">${i===0?'Ninguno (solo la peque)':i}</option>`).join('')}</select>
+ <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.profile.budget=+$('#bB').value||0;S.profile.adults=+$('#bA').value;makeMenu(S.menu&&S.menu.seed);save();closeDlg();render()">Guardar</button></div>`)}
+function priceDlg(k){dlg(`<h3>${esc(CAT[k].n)}</h3><label class="f">Precio por ${CAT[k].u==='u'?'unidad':CAT[k].u} (Bs)</label><input class="inp" id="pP" type="number" step="0.1" inputmode="decimal" value="${price(k)}"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.prices['${k}']=parseFloat($('#pP').value)||0;save();closeDlg();render()">Guardar</button></div>`)}
+function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3>
+ <label class="f">Tu nombre</label><input class="inp" id="sM" value="${esc(p.mom)}">
+ <div class="row"><div style="flex:1"><label class="f">Nombre de tu peque</label><input class="inp" id="sK" value="${esc(p.kid)}"></div><div style="flex:1"><label class="f">Nacimiento</label><input class="inp" type="date" id="sB" value="${p.birth}"></div></div>
+ <label class="f">Alergias (se quitan del menú)</label><div class="chips">${ALLERG.map(([k,l])=>`<label><input type="checkbox" class="sA" value="${k}" ${p.allergies.includes(k)?'checked':''}>${l}</label>`).join('')}</div>
+ <label class="f">Ciudad</label><input class="inp" id="sCity" value="${esc(p.city||'')}">
+ <label class="f">No le gusta</label><input class="inp" id="sD" value="${esc((p.dislikes||[]).join(', '))}" placeholder="brócoli, hígado">
+ <div class="dlg-act"><button class="btn" onclick="saveSettings()">Guardar</button></div>
+ <hr style="border:0;border-top:1px solid var(--line);margin:18px 0 6px">
+ <button class="btn ghost block" style="margin-top:8px" onclick="askNotif(true)">Activar avisos en este celular</button>
+ <button class="btn ghost block" style="margin-top:8px" onclick="exportData()">Descargar respaldo</button>
+ <label class="btn ghost block" style="margin-top:8px;display:grid;place-items:center">Cargar respaldo<input type="file" accept=".json" hidden onchange="importData(this.files[0])"></label>
+ <button class="btn ghost block" style="margin-top:8px;color:var(--danger)" onclick="confirmInline('¿Borrar todos tus datos de este celular?',()=>{localStorage.removeItem(KEY);S=null;render()})">Borrar todo</button>
+ <p class="tiny muted" style="margin-top:14px">Versión de prueba. Tus datos y los de tu peque se guardan solo en este celular: no se envían a internet. Si borras los datos del navegador se pierden, por eso descarga un respaldo cada semana. Las porciones y la información de salud son guía general y no reemplazan al pediatra.</p>
+ <button class="btn ghost block" onclick="closeDlg()">Cerrar</button>`)}
+function saveSettings(){const p=S.profile;p.mom=$('#sM').value.trim()||p.mom;p.kid=$('#sK').value.trim();p.birth=$('#sB').value;p.city=$('#sCity').value.trim();p.allergies=[...document.querySelectorAll('.sA:checked')].map(x=>x.value);p.dislikes=$('#sD').value.split(',').map(x=>norm(x.trim())).filter(Boolean);makeMenu(S.menu&&S.menu.seed);save();closeDlg();render();toast('Guardado')}
+function exportData(){const b=new Blob([JSON.stringify(S)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mamaaldia-respaldo-'+ymd(new Date())+'.json';a.click()}
+function importData(f){if(!f)return;f.text().then(t=>{const d=JSON.parse(t);if(!d.profile)throw 0;S=Object.assign(blank(),d);save();closeDlg();render();toast('Respaldo cargado')}).catch(()=>toast('Archivo no válido'))}
+async function askNotif(force){try{if(!('Notification' in window)){if(force)toast('Este navegador no permite avisos. Instala la app primero.');return}if(Notification.permission==='default'||force){const r=await Notification.requestPermission();if(force)toast(r==='granted'?'Avisos activados':'Avisos bloqueados en el navegador')}}catch(e){}}
+
+/* ====================== bienvenida ====================== */
+function renderWelcome(){
+ $('#root').innerHTML=`<div class="welcome" id="wel">
+ <img class="logo" src="icon-512.png" alt="">
+ <h1>Mamá al Día</h1>
+ <p>Escribe o dicta como te salga. Lía lo ordena por ti.</p>
+ <div style="margin:16px 0 8px">
+  <div class="feat"><div class="ic c-mama">💬</div><div><b>Un chat que organiza</b><div class="small muted">"Compré verduras", "cita el jueves a las 10": Lía lo pone en su lugar.</div></div></div>
+  <div class="feat"><div class="ic c-salud">💊</div><div><b>Medicamentos y citas</b><div class="small muted">Te recuerda cada dosis y cada cita, y guarda el historial para el pediatra.</div></div></div>
+  <div class="feat"><div class="ic c-familia">🥕</div><div><b>Menú y compras</b><div class="small muted">Menú semanal para tu peque y lista de compras según tu presupuesto.</div></div></div>
+ </div>
+ ${installBanner(true)}
+ <button class="btn block" onclick="startForm()">Empezar</button>
+ <button class="btn ghost block" style="margin-top:8px" onclick="loadDemo()">Ver con datos de ejemplo</button>
+ <p class="tiny muted" style="margin-top:14px;text-align:center">Versión de prueba. Tus datos quedan solo en este celular.</p></div>`}
+function startForm(){$('#root').innerHTML=`<div class="welcome" style="justify-content:flex-start">
+ <h1 style="font-size:26px;margin-top:10px">Cuéntame de ustedes</h1><p>Solo lo necesario para ordenar tu día.</p>
+ <label class="f">Tu nombre</label><input class="inp" id="fM" placeholder="Andrea">
+ <div class="row"><div style="flex:1"><label class="f">Nombre de tu peque</label><input class="inp" id="fK" placeholder="Sofi"></div><div style="flex:1"><label class="f">Fecha de nacimiento</label><input class="inp" type="date" id="fB"></div></div>
+ <label class="f">Ciudad</label><select class="inp" id="fCity">${['Santa Cruz','La Paz','Cochabamba','El Alto','Sucre','Tarija','Oruro','Potosí','Otra'].map(c=>`<option>${c}</option>`).join('')}</select>
+ <label class="f">Presupuesto de comida por semana (Bs)</label><input class="inp" id="fP" type="number" inputmode="numeric" value="150">
+ <label class="f">Adultos que comen el mismo menú</label><select class="inp" id="fA"><option value="0">Ninguno (solo la peque)</option><option>1</option><option>2</option><option>3</option></select>
+ <label class="f">Alergias</label><div class="chips">${ALLERG.map(([k,l])=>`<label><input type="checkbox" class="fAl" value="${k}">${l}</label>`).join('')}</div>
+ <label class="chips" style="margin-top:16px"><label style="border-radius:14px;align-items:flex-start"><input type="checkbox" id="fOk" style="margin-top:4px"><span class="small">Entiendo que es una versión de prueba, que las porciones y la información de salud son guía general y que siempre consulto al pediatra.</span></label></label>
+ <button class="btn block" style="margin-top:16px" onclick="finishForm()">Listo</button>
+ <button class="btn ghost block" style="margin-top:8px" onclick="render()">Volver</button></div>`}
+function finishForm(){const m=$('#fM').value.trim();if(!m){toast('Escribe tu nombre');return}if(!$('#fOk').checked){toast('Marca la casilla para continuar');return}
+ S=blank();Object.assign(S.profile,{mom:cap(m),kid:cap($('#fK').value.trim()),birth:$('#fB').value,budget:+$('#fP').value||150,adults:+$('#fA').value,city:$('#fCity').value,allergies:[...document.querySelectorAll('.fAl:checked')].map(x=>x.value)});
+ makeMenu();S.tab='lia';save();render()}
+function loadDemo(){
+ S=blank();const now=new Date();const t=ymd(now);const b=addDays(now,-(3*365+40));
+ Object.assign(S.profile,{mom:'Andrea',kid:'Sofi',birth:ymd(b),budget:150,adults:0,allergies:[],dislikes:[]});
+ makeMenu(7);
+ const msgs=['Natación los martes y jueves a las 16','Cita con la pediatra el '+DAYN[addDays(now,2).getDay()]+' a las 10:30','Cumpleaños de la abuela el '+addDays(now,5).getDate()+' de '+MON[addDays(now,5).getMonth()]+' a las 19',
+  'Sofi tiene tos y fiebre 38.2, le di paracetamol 5 ml cada 6 horas por 3 días','Se acabó la leche y los pañales','Recuérdame pagar la luz mañana a las 9'];
+ const past=new Date(now.getTime()-3*36e5);
+ for(const m of msgs){S.chat.push({id:uid(),from:'me',text:m,ts:past.getTime()});const r=organize(m,past);for(const a of r.out){if(a.obj&&S[a.kind])S[a.kind].push(a.obj)}S.chat.push({id:uid(),from:'lia',ts:past.getTime(),text:'Listo, ya lo ordené:',cards:r.out.map(a=>({label:a.label,detail:a.detail,cls:a.cls}))})}
+ S.purchases.push({id:uid(),ts:now.getTime()-13*864e5,items:['Verduras'],amount:40},{id:uid(),ts:now.getTime()-6*864e5,items:['Verduras','Pollo'],amount:65});
+ S.tasks.push({id:uid(),text:'Comprar regalo para la abuela',due:null,done:false},{id:uid(),text:'Lavar el uniforme de natación',due:null,done:true});
+ const dIn=n=>ymd(addDays(now,n));S.profile.mbudget=7000;
+ S.bills.push({id:uid(),name:'Pre kínder',amount:1800,per:'mes',cat:'educacion',who:'Sofi',due:dIn(12)},{id:uid(),name:'Natación',amount:400,per:'mes',cat:'educacion',who:'Sofi',due:dIn(4)},{id:uid(),name:'Internet',amount:150,per:'mes',cat:'servicios',due:dIn(1)},{id:uid(),name:'Expensas',amount:250,per:'mes',cat:'servicios',due:dIn(9)},{id:uid(),name:'Control con la pediatra',amount:300,per:'3meses',cat:'salud',who:'Sofi',due:dIn(2)},{id:uid(),name:'Vitaminas',amount:370,per:'3meses',cat:'salud',who:'Mamá',due:dIn(40)});
+ const ago=(d,h)=>now.getTime()-d*864e5-(h||0)*36e5;
+ S.expenses.push({id:uid(),ts:ago(1),amount:42,cat:'transporte',text:'Pasajes de la semana'},{id:uid(),ts:ago(2),amount:85,cat:'higiene',who:'Sofi',text:'Pasta dental y pañitos'},{id:uid(),ts:ago(8),amount:60,cat:'limpieza',text:'Detergente y lavavajilla'},{id:uid(),ts:ago(9),amount:200,cat:'educacion',who:'Sofi',text:'Material para el kínder'},{id:uid(),ts:ago(10),amount:42,cat:'transporte',text:'Pasajes de la semana'});
+ S.caps={comida:1200,higiene:400};S.items.push({id:uid(),name:'Crema para piel atópica',days:60,price:330,cat:'higiene',who:'Sofi',last:ymd(addDays(now,-58))},{id:uid(),name:'Pañitos húmedos',days:15,price:50,cat:'higiene',who:'Sofi',last:ymd(addDays(now,-5))},{id:uid(),name:'Protector solar',days:90,price:400,cat:'higiene',who:'Sofi',last:ymd(addDays(now,-30))});
+ S.places.push({id:uid(),name:'Parque con juegos para bebés (ejemplo)',type:'parque',city:'Santa Cruz',age:'1 a 3 años',note:'Tiene sombra y arenero'},{id:uid(),name:'Pediatra recomendada por Tribu Materna (ejemplo)',type:'medico',city:'Santa Cruz',note:'Atiende sábados'},{id:uid(),name:'Centro de terapia infantil (ejemplo)',type:'especialista',city:'La Paz',note:'Recomendado para niños dentro del espectro autista'});
+ S.tab='hoy';save();render();toast('Datos de ejemplo cargados')}
+
+/* ====================== instalación ====================== */
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;render()});
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent);
+function installBanner(w){if(standalone())return '';if(!deferredPrompt&&!isIOS())return '';
+ return `<div class="install"><img src="icon-192.png" alt="" style="width:36px;height:36px;border-radius:9px"><div class="b"><b>Instálala como app</b><br>${isIOS()?'En Safari toca Compartir y luego "Agregar a inicio".':'Queda en tu pantalla de inicio y te avisa.'}</div>${deferredPrompt?'<button class="btn sm" onclick="doInstall()">Instalar</button>':''}</div>`}
+async function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;render()}
+
+/* ====================== inicio ====================== */
+S=load();if(S)S=Object.assign(blank(),S);
+render();
+setInterval(()=>{if(S&&S.profile.mom){tick();if(S.tab==='hoy'&&!$('#dlg').open&&document.activeElement.tagName!=='INPUT')render()}},30000);
+setTimeout(tick,1500);
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
