@@ -23,10 +23,15 @@ async function modelos(key) {
   catalogoT = Date.now();
   return catalogo;
 }
-async function pedir(lista, cuerpo, key) {
+let limiteT = 0; // hora en que la función debe responder sí o sí (Vercel corta a los 60 s)
+async function pedir(lista, cuerpo, key, maxMs) {
   let r, mejor = null;
   for (let n = 0; n < lista.length; n++) {
-    r = await fetch(API + '/' + lista[n] + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: cuerpo });
+    const queda = (limiteT || Date.now() + 55000) - Date.now();
+    if (queda < 4000) break;
+    try {
+      r = await fetch(API + '/' + lista[n] + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: cuerpo, signal: AbortSignal.timeout(Math.min(maxMs || 30000, queda - 2000)) });
+    } catch (e) { r = { ok: false, status: 504, clone() { return this; }, json: async () => ({ error: { message: 'tiempo' } }) }; if (!mejor) mejor = r; continue; }
     if (r.ok) return r;
     if (r.status !== 404 && !mejor) mejor = r.clone();
     if ([400, 404, 429, 500, 503].indexOf(r.status) < 0) break;
@@ -51,8 +56,8 @@ async function guia(cat, key, ctx, consulta, img) {
   const parts = [{ text: 'Datos de la familia: ' + ctx }, { text: 'Consulta de la mamá: ' + consulta }];
   if (img) parts.push({ inlineData: { mimeType: img.mime, data: img.data } });
   const base = { systemInstruction: { parts: [{ text: GUIA }] }, contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.4, maxOutputTokens: 2500 } };
-  let r = await pedir(cat.texto.slice(0, 3), JSON.stringify(Object.assign({ tools: [{ google_search: {} }] }, base)), key);
-  if (!r || !r.ok) r = await pedir(cat.texto.slice(0, 3), JSON.stringify(base), key);
+  let r = await pedir(cat.texto.slice(0, 2), JSON.stringify(Object.assign({ tools: [{ google_search: {} }] }, base)), key, 32000);
+  if (!r || !r.ok) r = await pedir(cat.texto.slice(0, 3), JSON.stringify(base), key, 20000);
   if (!r || !r.ok) return null;
   const j = await r.json();
   const c = (j.candidates || [])[0] || {};
@@ -109,6 +114,7 @@ Responde SOLO con JSON: {"respuesta":"...","consulta":false,"tema":"","eventos":
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'metodo' });
+  limiteT = Date.now() + 56000;
   let b = req.body;
   if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } }
   b = b || {};
@@ -189,7 +195,7 @@ module.exports = async (req, res) => {
       contents: [{ role: 'user', parts }],
       generationConfig: { temperature: 0.5, maxOutputTokens: 2000, responseMimeType: 'application/json' }
     });
-    let r = await pedir(cat.texto, cuerpo, key);
+    let r = await pedir(cat.texto, cuerpo, key, 25000);
     if (!r.ok) {
       let d = '';
       try { const e = await r.json(); d = (e.error && (e.error.message || e.error.status)) || ''; } catch (x) {}
