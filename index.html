@@ -839,10 +839,10 @@ function recBar(){if(!rec)return;let b=$('#recbar');if(!b){b=document.createElem
  const s=Math.floor((Date.now()-rec.t0)/1000);if(s>=180&&!rec.done){finishRec(false);return}
  const live=(rec.final+' '+rec.interim).trim();
  b.className='recbar'+(rec.cancel?' cancel':'')+((aiCode()&&canAudio()&&!rec.ready)?' wait':'');
- b.innerHTML=`<span class="dot"></span><span class="tm">${Math.floor(s/60)}:${pad(s%60)}</span><span class="hint">${rec.cancel?'Suelta para cancelar':live?esc(live):(aiCode()&&canAudio()&&!rec.ready)?'Un segundito… espera la vibración y habla':rec.locked?'Te escucho… toca Enviar cuando termines':'Te escucho… suelta para enviar · desliza ← para cancelar'}</span>${rec.locked?'<button class="x" onclick="finishRec(true)">✕</button><button class="ok" onclick="finishRec(false)">Enviar</button>':''}`}
+ b.innerHTML=`<span class="dot"></span><span class="tm">${Math.floor(s/60)}:${pad(s%60)}</span><span class="hint">${rec.cancel?'Suelta para cancelar':live?esc(live):(aiCode()&&canAudio()&&!rec.ready)?'Un segundito… espera la vibración y habla':rec.auto?'Te escucho… cuando termines de hablar, lo envío':rec.locked?'Te escucho… toca Enviar cuando termines':'Te escucho… suelta para enviar · desliza ← para cancelar'}</span>${rec.locked?'<button class="x" onclick="finishRec(true)">✕</button><button class="ok" onclick="finishRec(false)">Enviar</button>':''}`}
 function stopUI(){if(rec){clearInterval(rec.timer);if(rec.btn)rec.btn.classList.remove('rec')}const b=$('#recbar');if(b)b.remove()}
 let micSt=null,micOff=null;
-function micKeep(){clearTimeout(micOff);micOff=setTimeout(()=>{if(micSt&&!rec){micSt.getTracks().forEach(t=>t.stop());micSt=null}},90000)}
+function micKeep(){clearTimeout(micOff);micOff=setTimeout(()=>{if(micSt&&!rec){micSt.getTracks().forEach(t=>t.stop());micSt=null}},S.wake?50:90000)}
 async function getMic(){if(micSt&&micSt.getAudioTracks().some(t=>t.readyState==='live'))return micSt;micSt=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});return micSt}
 async function startAudio(){const r=rec;
  try{const st=await getMic();
@@ -850,7 +850,7 @@ async function startAudio(){const r=rec;
   if(!r.held&&!r.locked&&Date.now()-r.t0>900){micKeep();stopUI();rec=null;toast('Listo. Ahora mantén apretado 🎤 mientras hablas');return}
   const mt=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t));
   const mr=new MediaRecorder(st,mt?{mimeType:mt,audioBitsPerSecond:32000}:undefined);r.mr=mr;r.st=st;r.chunks=[];r.tA=Date.now();
-  mr.ondataavailable=ev=>{if(ev.data&&ev.data.size)r.chunks.push(ev.data)};mr.start(250);r.ready=true;try{navigator.vibrate&&navigator.vibrate(25)}catch(x){}recBar();
+  mr.ondataavailable=ev=>{if(ev.data&&ev.data.size)r.chunks.push(ev.data)};mr.start(250);r.ready=true;if(r.auto)autoStop(r,st);try{navigator.vibrate&&navigator.vibrate(25)}catch(x){}recBar();
   if(r.pendingStop)finishRec(r.pendingCancel)}
  catch(err){stopUI();rec=null;if(SRc()){toast('Sin permiso de micrófono para notas de voz')}else toast('Activa el permiso del micrófono para hablar con Lía')}}
 function startSR(){const r=rec;const SR=SRc();
@@ -917,6 +917,29 @@ function orbLoop(now){requestAnimationFrame(orbLoop);if(document.hidden)return;c
  const st={o:ORB,amp:orbAmp,t:orbT,phase:0};
  document.querySelectorAll('canvas.orb').forEach(cv=>{const live=cv.closest('.face,.hi');if(!live){if(cv.dataset.d)return;cv.dataset.d=1;orbDraw(cv,{o:ORB,amp:0,t:orbT,phase:0},true);return}orbDraw(cv,st,true)})}
 requestAnimationFrame(orbLoop);
+
+/* ---- "Hola Lía": escucha la palabra de activación con la app abierta ---- */
+let wakeSR=null;
+function wakeStop(){const g=wakeSR;wakeSR=null;if(g){g.onend=null;try{g.abort()}catch(e){}}}
+function wakeOk(){return S&&S.wake&&SRc()&&!document.hidden&&!rec&&!busy&&!document.body.classList.contains('lia-talk')&&!($('#dlg')||{}).open}
+function wakeTick(){if(!wakeOk()){if(wakeSR&&(rec||busy||document.hidden||document.body.classList.contains('lia-talk')))wakeStop();return}if(wakeSR)return;
+ const g=new (SRc())();wakeSR=g;g.lang='es-BO';g.continuous=true;g.interimResults=true;
+ g.onresult=ev=>{let t='';for(let i=ev.resultIndex;i<ev.results.length;i++)t+=' '+ev.results[i][0].transcript;
+  if(/\b(hola|ola|oye|hey)\s*,?\s*(l[ií]a|lea|leah|lilia|l[ií]ah)\b/i.test(norm(t)))wakeHit()};
+ g.onerror=ev=>{if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){S.wake=false;save();toast('Sin permiso de micrófono para "Hola Lía"')}};
+ g.onend=()=>{if(wakeSR===g)wakeSR=null};
+ try{g.start()}catch(e){wakeSR=null}}
+function wakeHit(){wakeStop();if(rec||busy)return;try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}ctxOn();chime();if(S.tab!=='lia'){S.tab='lia';save();render()}
+ setTimeout(()=>{if(rec||busy)return;rec={src:'ci',btn:null,x0:0,t0:Date.now(),held:false,locked:true,auto:true,cancel:false,final:'',interim:''};recBar();rec.timer=setInterval(recBar,250);
+  if(aiCode()&&canAudio())startAudio();else{startSR();autoStopSR(rec)}},450)}
+function autoStop(r,st){try{const a=ctxOn();const src=a.createMediaStreamSource(st);const an=a.createAnalyser();an.fftSize=1024;src.connect(an);const buf=new Uint8Array(an.fftSize);
+ let heard=false,loud=Date.now();const t0=Date.now();
+ const iv=setInterval(()=>{if(rec!==r||r.done){clearInterval(iv);try{src.disconnect()}catch(e){}return}an.getByteTimeDomainData(buf);let q=0;for(let i=0;i<buf.length;i++){const v=(buf[i]-128)/128;q+=v*v}const rms=Math.sqrt(q/buf.length);
+  if(rms>0.035){if(Date.now()-t0>250)heard=true;loud=Date.now()}
+  if(heard&&Date.now()-loud>1800){clearInterval(iv);finishRec(false)}else if(!heard&&Date.now()-t0>8000){clearInterval(iv);finishRec(true)}},100)}catch(e){}}
+function autoStopSR(r){let last='',t=Date.now();const iv=setInterval(()=>{if(rec!==r||r.done){clearInterval(iv);return}const now=(r.final+' '+r.interim).trim();if(now!==last){last=now;t=Date.now()}
+ if(now&&Date.now()-t>1800){clearInterval(iv);finishRec(false)}else if(!now&&Date.now()-t>8000){clearInterval(iv);finishRec(true)}},200)}
+setInterval(wakeTick,1500);
 /* ---- voz de Lía ---- */
 function liaVoice(){let vs=[];try{vs=speechSynthesis.getVoices().filter(v=>/^es/i.test(v.lang))}catch(e){}
  const sc=v=>(/natural|neural|premium|enhanced|mejorad/i.test(v.name)?4:0)+(/paulina|m[oó]nica|marisol|ang[eé]lica|sabina|dalia|elena|helena|laura|luciana|francisca|camila|valentina|paloma|lupe|isabela|female|mujer/i.test(v.name)?3:0)+(/google/i.test(v.name)?1:0)+(/es[-_](419|MX|US|BO|AR|CO|PE|CL|EC|UY)/i.test(v.lang)?2:0)-(/jorge|diego|juan|carlos|pablo|enrique|alvaro|raul|male|hombre/i.test(v.name)?6:0);
@@ -1268,6 +1291,7 @@ function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3>
  <label class="f">No le gusta</label><input class="inp" id="sD" value="${esc((p.dislikes||[]).join(', '))}" placeholder="brócoli, hígado">
  <label class="f">Código de Lía con IA</label><input class="inp" id="sCode" value="${esc(aiCode())}" placeholder="MD-XXXXXX" autocapitalize="characters">
  <label class="chips" style="margin-top:10px"><label><input type="checkbox" id="sVoice" ${S.voice!==false?'checked':''}>Lía me saluda y responde con voz</label></label>
+ ${SRc()?`<label class="chips" style="margin-top:6px"><label><input type="checkbox" id="sWake" ${S.wake?'checked':''}>Escuchar "Hola Lía" (con la app abierta)</label></label><div class="tiny muted">Di "Hola Lía" y empieza a grabar sola; cuando terminas de hablar, lo envía. Deja el micrófono encendido y gasta algo más de batería.</div>`:''}
  <div class="dlg-act"><button class="btn" onclick="saveSettings()">Guardar</button></div>
  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0 6px">
  <button class="btn ghost block" style="margin-top:8px" onclick="askNotif(true)">Activar avisos en este celular</button>
@@ -1278,7 +1302,7 @@ function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3>
  <button class="btn ghost block" onclick="closeDlg()">Cerrar</button>`)}
 function kidRow(k){return `<div class="card kidrow" data-id="${k.id}" style="padding:10px;margin:6px 0"><div class="row"><div style="flex:1"><input class="inp kN" placeholder="Nombre" value="${esc(k.name)}"></div><div style="flex:1"><input class="inp kB" type="date" value="${k.birth||''}"></div>${kids().length>1||k.id.startsWith('n')?`<button class="btn sm ghost" onclick="this.closest('.kidrow').remove()" aria-label="Quitar">✕</button>`:''}</div><textarea class="inp kC" rows="2" style="margin-top:6px" placeholder="Condición o cuidado especial (opcional): autismo, síndrome de Down, asma, TDAH…">${esc(k.cond||'')}</textarea></div>`}
 function addKidRow(){const d=document.createElement('div');d.innerHTML=kidRow({id:'n'+uid(),name:'',birth:'',cond:''});$('#kidsEd').appendChild(d.firstElementChild)}
-function saveSettings(){const rows=[...document.querySelectorAll('.kidrow')].map(r=>({id:r.dataset.id.startsWith('n')?'k'+uid():r.dataset.id,name:cap(r.querySelector('.kN').value.trim()),birth:r.querySelector('.kB').value,cond:r.querySelector('.kC').value.trim()})).filter(k=>k.name||k.birth);if(rows.length)S.kids=rows;syncKid();const p=S.profile;const nc=$('#sCode').value.trim().toUpperCase().replace(/\s+/g,'');if(nc!==aiCode()){setCode(nc);if(nc)checkCode(nc)}S.voice=$('#sVoice').checked;p.mom=$('#sM').value.trim()||p.mom;p.city=$('#sCity').value.trim();p.allergies=[...document.querySelectorAll('.sA:checked')].map(x=>x.value);p.dislikes=$('#sD').value.split(',').map(x=>norm(x.trim())).filter(Boolean);makeMenu(S.menu&&S.menu.seed);save();closeDlg();render();toast('Guardado')}
+function saveSettings(){const rows=[...document.querySelectorAll('.kidrow')].map(r=>({id:r.dataset.id.startsWith('n')?'k'+uid():r.dataset.id,name:cap(r.querySelector('.kN').value.trim()),birth:r.querySelector('.kB').value,cond:r.querySelector('.kC').value.trim()})).filter(k=>k.name||k.birth);if(rows.length)S.kids=rows;syncKid();const p=S.profile;const nc=$('#sCode').value.trim().toUpperCase().replace(/\s+/g,'');if(nc!==aiCode()){setCode(nc);if(nc)checkCode(nc)}S.voice=$('#sVoice').checked;{const w=$('#sWake');if(w){const was=S.wake;S.wake=w.checked;if(S.wake&&!was)toast('Listo: di "Hola Lía" cuando quieras');if(!S.wake)wakeStop()}}p.mom=$('#sM').value.trim()||p.mom;p.city=$('#sCity').value.trim();p.allergies=[...document.querySelectorAll('.sA:checked')].map(x=>x.value);p.dislikes=$('#sD').value.split(',').map(x=>norm(x.trim())).filter(Boolean);makeMenu(S.menu&&S.menu.seed);save();closeDlg();render();toast('Guardado')}
 function exportData(){const b=new Blob([JSON.stringify(S)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mamaaldia-respaldo-'+ymd(new Date())+'.json';a.click()}
 function importData(f){if(!f)return;f.text().then(t=>{const d=JSON.parse(t);if(!d.profile)throw 0;S=Object.assign(blank(),d);save();closeDlg();render();toast('Respaldo cargado')}).catch(()=>toast('Archivo no válido'))}
 async function askNotif(force){try{if(!('Notification' in window)){if(force)toast('Este navegador no permite avisos. Instala la app primero.');return}if(Notification.permission==='default'||force){const r=await Notification.requestPermission();if(force)toast(r==='granted'?'Avisos activados':'Avisos bloqueados en el navegador')}}catch(e){}}
