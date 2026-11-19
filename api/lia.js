@@ -83,6 +83,7 @@ Tu trabajo:
    - Si se repite cada semana usa "dias" (en minúsculas, sin tildes) y no pongas "fecha". Si es una vez usa "fecha" (AAAA-MM-DD) calculada desde "hoy".
    - "hora" y "hora_fin" en 24 h HH:MM ("de 10 a 12 del mediodía" = 10:00 a 12:00). Si no dijo hora, omítela.
    Las tareas sueltas (pagar, llamar, comprar algo puntual, trámites) van en "pendientes": {"texto":"Pagar la luz","fecha":"2026-11-20","hora":"09:00"} (fecha y hora solo si las dijo).
+   Precios de productos con el lugar donde compró van en "precios": {"producto":"tomate","precio":8,"unidad":"kilo","lugar":"La Ramada"} (unidad: kilo, unidad, litro, libra, docena o paquete).
    Lo demás sepáralo en "frases": oraciones cortas y claras, una por cosa, con este formato para que la app las ordene:
    - Medicamentos (solo si ella dio el nombre y la frecuencia, nunca inventes dosis): "Paracetamol 5 ml cada 6 horas por 3 días" ; si ya se lo dio: "Le di paracetamol 5 ml cada 6 horas"
    - Terminar un medicamento: "Terminó el paracetamol" ; si ya se sanó: "Ya está sana"
@@ -110,7 +111,7 @@ No inventes datos que ella no dio. No pidas datos personales.
 
 Nunca pongas una cita, clase o pendiente en "frases" ni como nota: van en "eventos" o "pendientes".
 
-Responde SOLO con JSON: {"respuesta":"...","consulta":false,"tema":"","eventos":[],"pendientes":[],"frases":[],"transcripcion":"..."}`;
+Responde SOLO con JSON: {"respuesta":"...","consulta":false,"tema":"","eventos":[],"pendientes":[],"precios":[],"frases":[],"transcripcion":"..."}`;
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -191,6 +192,7 @@ module.exports = async (req, res) => {
       fuentes: g ? g.fuentes : [],
       eventos: lista(o.eventos),
       pendientes: lista(o.pendientes),
+      precios: lista(o.precios),
       frases,
       transcripcion: String(o.transcripcion || '').slice(0, 4000),
       restantes: LIMITE[tipo] - usos[k]

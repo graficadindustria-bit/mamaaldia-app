@@ -156,7 +156,7 @@ body.lia-talk nav.tabs .lia .face,body.lia-talk .lia-row .av.hi{animation:bob .4
 .week button.today:not(.on){border-color:var(--accent)}
 .week i{position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
 .week button.on i{background:var(--onaccent)}
-.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px;margin:6px 0 12px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(max-content,1fr);overflow-x:auto;scrollbar-width:none;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px;margin:6px 0 12px}
 .seg button{border:0;background:transparent;border-radius:10px;padding:8px 4px;font-weight:800;font-size:14px;color:var(--sub)}
 .seg button.on{background:var(--asoft);color:var(--accent)}
 .meal{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
@@ -247,7 +247,7 @@ const KEY='mamaaldia-v1';
 let S=null;
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function blank(){return {v:1,profile:{mom:'',kid:'',birth:'',allergies:[],dislikes:[],budget:150,adults:0,city:'Santa Cruz',mbudget:0},events:[],tasks:[],meds:[],health:[],chat:[],menu:null,shopChecked:{},extraShop:[],purchases:[],prices:{},notified:{},notes:[],bills:[],expenses:[],places:[],caps:{},items:[],tab:'hoy'}}
+function blank(){return {v:1,profile:{mom:'',kid:'',birth:'',allergies:[],dislikes:[],budget:150,adults:0,city:'Santa Cruz',mbudget:0},events:[],tasks:[],meds:[],health:[],chat:[],menu:null,shopChecked:{},extraShop:[],purchases:[],prices:{},notified:{},notes:[],bills:[],expenses:[],places:[],caps:{},items:[],priceLog:[],kids:null,tab:'hoy'}}
 
 /* Catálogo con precios estimados (Santa Cruz, Bs). Editables desde Compras. */
 const CAT={
@@ -286,6 +286,11 @@ const CAT={
  papaya:{n:'Papaya',u:'u',p:12,s:'Frutas',st:1},
  mandarina:{n:'Mandarina',u:'u',p:.6,s:'Frutas',st:1},
  frutilla:{n:'Frutilla',u:'kg',p:25,s:'Frutas',st:.25},
+ frejol:{n:'Frejol (poroto)',u:'kg',p:16,s:'Abarrotes',st:.5},
+ lechuga:{n:'Lechuga',u:'u',p:3,s:'Verduras',st:1},
+ pepino:{n:'Pepino',u:'u',p:2,s:'Verduras',st:1},
+ naranja:{n:'Naranja',u:'u',p:1,s:'Frutas',st:1},
+ pina:{n:'Piña',u:'u',p:12,s:'Frutas',st:1},
 };
 const SECT=['Verduras','Frutas','Carnes','Lácteos y huevos','Panadería','Abarrotes'];
 /* Recetas: k = momentos (d desayuno, s merienda/media mañana, a almuerzo, c cena). i = ingredientes por porción adulta. al = alérgenos */
@@ -325,9 +330,30 @@ const REC=[
  {id:'c_sobra',n:'Lo que sobró del almuerzo (porción pequeña)',k:'c',i:{},cheap:true},
  {id:'c_brocoli',n:'Arroz con brócoli y huevo',k:'c',i:{arroz:.05,brocoli:.25,huevo:1},al:['huevo']},
 ];
+/* Recetas agregadas siguiendo el "plato saludable" (OMS, UNICEF y Academia Americana de Pediatría): la mitad verduras y frutas, un cuarto proteína, un cuarto cereal o tubérculo, agua para tomar, poca sal y sin azúcar añadida. min = edad mínima en meses. */
+REC.push(
+ {id:'tostada_palta',n:'Tostada integral con palta, huevo y naranja',k:'d',i:{pan:1,palta:.2,huevo:1,naranja:1},al:['huevo','gluten'],min:24},
+ {id:'batido',n:'Batido de leche con banana y avena (sin azúcar)',k:'d',i:{leche:.25,banana:1,avena:.03},al:['leche'],min:12},
+ {id:'arepa_choclo',n:'Humintita de choclo con queso y fruta',k:'d',i:{choclo:1,queso:.03,papaya:.1},al:['leche'],min:12},
+ {id:'mote_quinua',n:'Pito de quinua con leche y manzana',k:'d',i:{quinua:.04,leche:.2,manzana:.5},al:['leche'],min:12},
+ {id:'s_pina',n:'Piña en cubitos',k:'s',i:{pina:.12},min:12},
+ {id:'s_naranja',n:'Naranja en gajos',k:'s',i:{naranja:1},min:12},
+ {id:'s_pepino',n:'Pepino y zanahoria en bastones con yogur',k:'s',i:{pepino:.3,zanahoria:.05,yogur:.05},al:['leche'],min:36},
+ {id:'s_mani',n:'Maní tostado sin sal (un puñado)',k:'s',i:{mani:.02},al:['mani'],min:60},
+ {id:'frejol',n:'Frejol con arroz, carne y ensalada de tomate',k:'a',i:{frejol:.05,arroz:.06,carne:.07,tomate:.08,cebolla:.02},min:24},
+ {id:'pollo_horno',n:'Pollo al horno con papa, zanahoria y ensalada',k:'a',i:{pollo:.12,papa:.15,zanahoria:.06,lechuga:.15},min:24},
+ {id:'saice',n:'Saice suave con arroz y papa',k:'a',i:{molida:.09,arroz:.06,papa:.1,arveja:.03,zanahoria:.04,cebolla:.03},min:18},
+ {id:'pescado_quinua',n:'Pescado a la plancha con quinua y verduras',k:'a',i:{pescado:.12,quinua:.05,zapallo:.06,brocoli:.15},al:['pescado'],min:12},
+ {id:'keperi_suave',n:'Carne al horno con yuca y ensalada fresca',k:'a',i:{carne:.11,yuca:.15,tomate:.06,pepino:.2},min:36},
+ {id:'lentejas_guiso',n:'Guiso de lentejas con zapallo y arroz',k:'a',i:{lentejas:.06,zapallo:.06,arroz:.05,cebolla:.03},min:12},
+ {id:'c_wrap',n:'Wrap casero de pollo con lechuga y tomate',k:'c',i:{pan:1,pollo:.07,lechuga:.12,tomate:.05},al:['gluten'],min:48},
+ {id:'c_sopa_lentejas',n:'Sopa de lentejas con verduras',k:'c',i:{lentejas:.04,zanahoria:.05,papa:.08,cebolla:.02},min:12},
+ {id:'c_omelette',n:'Omelette de verduras con pan',k:'c',i:{huevo:1.5,tomate:.05,espinaca:.2,pan:1},al:['huevo','gluten'],min:12},
+ {id:'c_quinua_ens',n:'Ensalada tibia de quinua, choclo y queso',k:'c',i:{quinua:.04,choclo:.5,queso:.03,tomate:.05},al:['leche'],min:24}
+);
 REC.push({id:'remolacha',n:'Panqueque de remolacha, avena, huevo y banana (con aceite de palta)',k:'d',i:{remolacha:.05,avena:.03,huevo:1,banana:.5},al:['huevo'],g:['grasa']});
 const RECBY=Object.fromEntries(REC.map(r=>[r.id,r]));
-const GRP={cereal:['arroz','fideo','avena','quinua','pan','almidon','papa','yuca','choclo','platano'],grasa:['palta','mani'],fruta:['banana','manzana','papaya','mandarina','frutilla'],verdura:['zanahoria','zapallo','brocoli','tomate','cebolla','arveja','espinaca','remolacha'],proteina:['pollo','carne','molida','higado','pescado','huevo','lentejas','queso','leche','yogur']};
+const GRP={cereal:['arroz','fideo','avena','quinua','pan','almidon','papa','yuca','choclo','platano'],grasa:['palta','mani'],fruta:['banana','manzana','papaya','mandarina','frutilla','naranja','pina'],verdura:['zanahoria','zapallo','brocoli','tomate','cebolla','arveja','espinaca','remolacha','lechuga','pepino'],proteina:['pollo','carne','molida','higado','pescado','huevo','lentejas','frejol','queso','leche','yogur']};
 const GRPN={cereal:'Cereal',grasa:'Grasa buena',fruta:'Fruta',verdura:'Verdura',proteina:'Proteína'};
 function groupsOf(r){const g=new Set(r.g||[]);for(const [k,list] of Object.entries(GRP))if(Object.keys(r.i).some(x=>list.includes(x)))g.add(k);return g}
 /* ====================== gastos ====================== */
@@ -345,8 +371,8 @@ function itemLeft(it){return Math.round((fromYmd(it.last).getTime()+it.days*864e
 function monthCat(c){const ms=monthStart();return moves().filter(m=>m.ts>=ms&&m.cat===c).reduce((a,m)=>a+m.amount,0)}
 function boughtItem(id,aid){const it=S.items.find(x=>x.id===id);if(!it)return;it.last=ymd(new Date());if(it.price)S.expenses.push({id:uid(),ts:Date.now(),amount:it.price,cat:it.cat,who:it.who||'Familia',text:it.name});S.extraShop=S.extraShop.filter(x=>norm(x.n)!==norm(it.name));if(aid)S.notified['x'+aid]=1;save();render();toast('Anotado. Te aviso cuando se esté acabando')}
 function itemToList(id,aid){const it=S.items.find(x=>x.id===id);if(!it)return;if(!S.extraShop.some(x=>norm(x.n)===norm(it.name)))S.extraShop.push({id:uid(),n:it.name,checked:false});if(aid)S.notified['x'+aid]=1;save();render();toast('Agregado a la lista de compras')}
-function members(){return [S.profile.kid||'Peque','Mamá','Papá','Familia']}
-function whoOf(n){const k=norm(S.profile.kid||'');if((k&&n.includes(k))||/\b(bebe|nena|nene|hija|hijo|wawa|kinder|guarderia|piscina|ballet|pediatra|odontopediatra|panales|pañales)\b/.test(n))return S.profile.kid||'Peque';if(/\b(papa|esposo|marido)\b/.test(n))return 'Papá';if(/\b(para mi|mis?|yo|ginecolog\w*|mamografia|gimnasio|peluqueria)\b/.test(n))return 'Mamá';return 'Familia'}
+function members(){return [...kids().map(k=>k.name||'Peque'),'Mamá','Papá','Familia']}
+function whoOf(n){const kk=kids().find(k=>k.name&&n.includes(norm(k.name)));if(kk)return kk.name;if(/\b(bebe|nena|nene|hija|hijo|wawa|kinder|guarderia|piscina|ballet|pediatra|odontopediatra|panales|pañales)\b/.test(n))return S.profile.kid||'Peque';if(/\b(papa|esposo|marido)\b/.test(n))return 'Papá';if(/\b(para mi|mis?|yo|ginecolog\w*|mamografia|gimnasio|peluqueria)\b/.test(n))return 'Mamá';return 'Familia'}
 function moves(){const a=S.expenses.map(e=>({ts:e.ts,amount:e.amount,cat:e.cat,text:e.text,who:e.who||'Familia'}));for(const p of S.purchases)if(p.amount)a.push({ts:p.ts,amount:p.amount,cat:p.items.length?(gcat(p.items.join(' '))==='otros'?'comida':gcat(p.items.join(' '))):'comida',text:'Compra: '+(p.items.join(', ')||'varios'),who:'Familia'});return a.sort((x,y)=>y.ts-x.ts)}
 function spentBetween(a,b){return moves().filter(m=>m.ts>=a&&m.ts<b).reduce((s,m)=>s+m.amount,0)}
 function monthStart(){const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1).getTime()}
@@ -374,6 +400,17 @@ const PTYPE={parque:['Parques y espacios','🌳'],medico:['Pediatras y médicos'
 const SLOTS=[['desayuno','Desayuno','08:00','d'],['mm','Media mañana','10:30','s'],['almuerzo','Almuerzo','12:30','a'],['merienda','Merienda','16:00','s'],['cena','Cena','19:30','c']];
 const ALLERG=[['leche','Leche'],['huevo','Huevo'],['gluten','Trigo (gluten)'],['mani','Maní'],['pescado','Pescado']];
 
+function kids(){if(!S.kids||!S.kids.length){S.kids=[{id:'k1',name:S.profile.kid||'',birth:S.profile.birth||'',cond:S.profile.cond||''}];S.profile.kidId='k1'}return S.kids}
+function activeKid(){const ks=kids();return ks.find(k=>k.id===S.profile.kidId)||ks[0]}
+function syncKid(){const k=activeKid();S.profile.kidId=k.id;S.profile.kid=k.name;S.profile.birth=k.birth;S.profile.cond=k.cond}
+function setKid(id){S.profile.kidId=id;syncKid();save();render()}
+function kidOf(x){return (x&&x.kid)||kids()[0].id}
+function kidName(id){const k=kids().find(k=>k.id===id);return k?k.name:''}
+function kidFromText(t){const n=norm(t||'');const ks=kids();if(ks.length<2)return ks[0].id;const hit=ks.find(k=>k.name&&n.includes(norm(k.name)));return (hit||activeKid()).id}
+function monthsOf(b){if(!b)return 36;const d=fromYmd(b),n=new Date();return (n.getFullYear()-d.getFullYear())*12+(n.getMonth()-d.getMonth())-(n.getDate()<d.getDate()?1:0)}
+function ageTextOf(b){const m=monthsOf(b);if(m<24)return m+' meses';const y=Math.floor(m/12);return y+' año'+(y>1?'s':'')}
+function factorOf(m){return m<24?.3:m<48?.45:m<96?.6:m<156?.8:1}
+function kidsFactor(){return kids().reduce((a,k)=>a+factorOf(monthsOf(k.birth)),0)}
 function ageMonths(){const b=S.profile.birth;if(!b)return 36;const d=fromYmd(b),n=new Date();return (n.getFullYear()-d.getFullYear())*12+(n.getMonth()-d.getMonth())-(n.getDate()<d.getDate()?1:0)}
 function ageText(){const m=ageMonths();if(m<24)return m+' meses';const y=Math.floor(m/12),r=m%12;return y+' años'+(r?' y '+r+(r>1?' meses':' mes'):'')}
 function kidFactor(){const m=ageMonths();return m<24?.3:m<48?.45:m<96?.6:m<156?.8:1}
@@ -388,9 +425,30 @@ function portion(k){const m=ageMonths();
 
 /* ====================== menú y compras ====================== */
 function rnd(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647}
-function okRec(r){const al=S.profile.allergies||[];if((r.al||[]).some(a=>al.includes(a)))return false;
+function youngest(){return Math.min(...kids().map(k=>monthsOf(k.birth)))}
+function okRec(r){if(r.min&&youngest()<r.min)return false;const al=S.profile.allergies||[];if((r.al||[]).some(a=>al.includes(a)))return false;
  const dis=(S.profile.dislikes||[]).map(norm);if(dis.some(d=>norm(r.n).includes(d)||Object.keys(r.i).some(k=>norm(CAT[k].n).includes(d))))return false;return true}
 function price(k){return S.prices[k]!=null?S.prices[k]:CAT[k].p}
+/* ---- planilla de precios ---- */
+const UNITS={kg:'kilo',u:'unidad',L:'litro',lb:'libra',doc:'docena',paq:'paquete'};
+function unitOf(t){t=norm(t||'');return /kilo|kg/.test(t)?'kg':/litro|\bl\b/.test(t)?'L':/libra|\blb\b/.test(t)?'lb':/docena/.test(t)?'doc':/paquete|bolsa|sobre/.test(t)?'paq':/unidad|pieza|c\/u/.test(t)?'u':''}
+function prodKey(name){const m=matchCat(name);return m.length===1?m[0]:norm(name).replace(/s$/,'')}
+function prodName(k){return CAT[k]?CAT[k].n.split(' (')[0]:cap(k)}
+function priceAdvice(o){const prev=(S.priceLog||[]).filter(x=>x.key===o.key&&x.id!==o.id&&(!o.unit||!x.unit||x.unit===o.unit));
+ const u=o.unit?' el '+UNITS[o.unit]:'';
+ if(!prev.length){const ref=CAT[o.key]&&(!o.unit||o.unit===CAT[o.key].u)?CAT[o.key].p:null;
+  if(ref)return o.price<=ref*0.95?{v:'ok',t:'Buen precio: está por debajo del precio de referencia (Bs '+ref+u+').'}:o.price>ref*1.15?{v:'caro',t:'Parece caro: el precio de referencia es Bs '+ref+u+'.'}:{v:'normal',t:'Precio normal (referencia Bs '+ref+u+').'};
+  return {v:'nuevo',t:'Primer precio que guardas de '+prodName(o.key).toLowerCase()+'. La próxima vez te digo si está económico.'}}
+ const min=prev.reduce((a,b)=>b.price<a.price?b:a);const avg=prev.reduce((a,b)=>a+b.price,0)/prev.length;
+ if(o.price<=min.price)return {v:'ok',t:'¡Buen precio! Es el más barato que registraste'+(o.store?' ('+o.store+')':'')+'. Promedio: Bs '+avg.toFixed(1)+u+'.'};
+ if(o.price<=avg*1.05)return {v:'normal',t:'Precio normal (promedio Bs '+avg.toFixed(1)+u+'). Lo más barato fue Bs '+min.price+(min.store?' en '+min.store:'')+'.'};
+ return {v:'caro',t:'Ojo, está caro: '+(min.store?'en '+min.store+' ':'')+'lo conseguiste a Bs '+min.price+u+' el '+new Date(min.ts).toLocaleDateString('es-BO',{day:'numeric',month:'short'})+'.'}}
+function mkPrice(name,price,unit,store,ts){const key=prodKey(name);const o={id:uid(),ts:ts||Date.now(),key,name:cap(name),price:+price,unit:unit||'',store:store?cap(store.trim()):''};o.adv=priceAdvice(o).v;return o}
+function applyPrice(o){if(CAT[o.key]&&(!o.unit||o.unit===CAT[o.key].u))S.prices[o.key]=o.price}
+function priceItems(orig){const out=[];const st=/\ben\s+(?:el\s+|la\s+|los\s+)?([a-z0-9áéíóúñ' ]{3,40})\s*$/i.exec(orig);const store=st?st[1].trim():'';const body=st?orig.slice(0,st.index):orig;
+ for(const seg of body.split(/,|\s+y\s+(?=[a-záéíóúñ]+\s+a\s+\d)/i)){const m=/^\s*(?:compr[eé]\s+|anota\s+(?:el\s+)?precio(?:\s+de)?\s+|precio\s+(?:de(?:l)?\s+)?)?(?:el|la|los|las)?\s*([a-záéíóúñ ]{3,30}?)\s+(?:a|en|por|cuesta|esta(?:ba)?|está)\s+(?:bs\.?\s*)?(\d+(?:[.,]\d+)?)\s*(?:bs\.?|bolivianos)?\s*(?:(?:el|la|por|cada)\s+)?(kilo|kg|unidad|litro|libra|docena|paquete|bolsa)?/i.exec(seg);
+  if(m)out.push(mkPrice(m[1].trim(),parseFloat(m[2].replace(',','.')),unitOf(m[3]||''),store))}
+ return out}
 function recCost(r){return Object.entries(r.i).reduce((a,[k,q])=>a+q*price(k),0)}
 function weekStart(d=new Date()){const x=startDay(d);const dw=(x.getDay()+6)%7;return addDays(x,-dw)}
 function makeMenu(seed){
@@ -430,7 +488,7 @@ function fitBudget(){
  }
 }
 function shopList(){
- const f=kidFactor()+Number(S.profile.adults||0);const tot={};
+ const f=kidsFactor()+Number(S.profile.adults||0);const tot={};
  if(S.menu)for(const d of S.menu.days)for(const [id] of SLOTS){const r=RECBY[d[id]];if(!r)continue;for(const [k,q] of Object.entries(r.i))tot[k]=(tot[k]||0)+q*f}
  return Object.entries(tot).map(([k,q])=>{const c=CAT[k];const qq=Math.max(c.st,Math.ceil(q/c.st-1e-9)*c.st);const ab=c.s==='Abarrotes';return {id:k,n:c.n,s:c.s,q:ab?Math.max(.01,Math.round(q*100)/100):qq,u:c.u,ab,cost:(ab?q:qq)*price(k)}});
 }
@@ -574,6 +632,9 @@ function organize(text,now=new Date()){
   if(/\b(pague|pagamos|gaste|gastamos|me costo|costo)\b/.test(n)){const bill=S.bills.find(b=>norm(b.name).split(' ').filter(w=>w.length>3).some(w=>n.includes(w)));const amt=amt0||(bill&&bill.amount);
    if(amt){const text=cleanMoney(orig)||(bill?bill.name:'Gasto');const o={id:uid(),ts:now.getTime(),amount:amt,cat:bill?bill.cat:gcat(n),who:bill?(bill.who||'Familia'):whoOf(n),text,bill:bill&&bill.id};
     out.push({kind:'expenses',obj:o,label:'Gasto',detail:text+' · '+bs(amt)+' · '+GNAME[o.cat]+(bill?' (marqué el pago como hecho)':''),cls:'c-mama',billPaid:bill&&bill.id});continue}}
+  // precios por producto y tienda
+  if(/\b(a|cuesta|esta|estaba)\s+(bs\.?\s*)?\d+([.,]\d+)?\s*(bs|bolivianos)?\s*(el|la|por|cada)\s+(kilo|kg|unidad|litro|libra|docena|paquete|bolsa)\b|\b(anota|guarda)\s+(el\s+)?precio\b/.test(n)){const ps=priceItems(orig);
+   if(ps.length){for(const o of ps){const ad=priceAdvice(o);out.push({kind:'priceLog',obj:o,label:'Precio',detail:o.name+' · Bs '+o.price+(o.unit?' el '+UNITS[o.unit]:'')+(o.store?' · '+o.store:'')+' — '+ad.t,cls:ad.v==='caro'?'c-salud':'c-comida'})}continue}}
   // compras realizadas
   if(BOUGHT_RE.test(n)){
    const m=BOUGHT_RE.exec(n);const items=cleanItems(orig.slice(orig.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').indexOf(m[0])+m[0].length));
@@ -625,6 +686,8 @@ function liaReply(text,lead,pre){
   if(a.kind==='cap'){capPrev.push({c:a.cat,v:S.caps[a.cat]});S.caps[a.cat]=a.amount;continue}
   if(a.kind==='medStop'){for(const id of a.ids){const m=S.meds.find(x=>x.id===id);if(m){m.stopped=true;medPrev.push(id)}}continue}
   if(a.billPaid){const b=S.bills.find(x=>x.id===a.billPaid);if(b){billPrev.push({id:b.id,due:b.due});b.due=nextDue(b.due,b.per)}}
+  if(a.kind==='priceLog'){S.priceLog=S.priceLog||[];applyPrice(a.obj)}
+  if(['health','meds'].includes(a.kind)||(a.kind==='events'&&a.obj.who==='kid'))a.obj.kid=a.obj.kid||kidFromText(a.obj.raw||a.obj.title||a.obj.text||text);
   S[a.kind].push(a.obj);refs.push({k:a.kind,id:a.obj.id});
  }
  for(const m of shopMarks){if(m.startsWith('x:')){const x=S.extraShop.find(e=>e.id===m.slice(2));if(x)x.checked=true}else S.shopChecked[m.slice(2)]=true}
@@ -664,8 +727,8 @@ function medDosesOn(m,ds){const d0=fromYmd(ds).getTime(),d1=d0+864e5;const res=[
  let nx=medNext(m);if(m.stopped)nx=null;while(nx&&nx<d1&&nx<medEnd(m)){if(nx>=d0)res.push({t:nx,done:false});nx+=m.every*36e5}
  return res.sort((a,b)=>a.t-b.t)}
 function dayItems(ds){const items=[];
- for(const e of eventsOn(ds))items.push({time:e.time,type:'ev',cat:e.cat,title:e.title+(e.end?' (hasta '+e.end+')':''),sub:{salud:'Salud',clase:'Clase',familia:'Familia y amigos',mama:'Para ti'}[e.cat]+(e.who==='kid'&&S.profile.kid?' · '+S.profile.kid:''),id:e.id});
- for(const m of S.meds)for(const d of medDosesOn(m,ds))items.push({time:hm(new Date(d.t)),type:'med',cat:'med',title:m.name+(m.dose?' · '+m.dose:''),sub:d.done?'Dosis dada':'Dosis'+(m.forKid&&S.profile.kid?' de '+S.profile.kid:''),done:d.done,id:m.id,ts:d.t});
+ for(const e of eventsOn(ds))items.push({time:e.time,type:'ev',cat:e.cat,title:e.title+(e.end?' (hasta '+e.end+')':''),sub:{salud:'Salud',clase:'Clase',familia:'Familia y amigos',mama:'Para ti'}[e.cat]+(e.who==='kid'&&kidName(kidOf(e))?' · '+kidName(kidOf(e)):''),id:e.id});
+ for(const m of S.meds)for(const d of medDosesOn(m,ds))items.push({time:hm(new Date(d.t)),type:'med',cat:'med',title:m.name+(m.dose?' · '+m.dose:''),sub:d.done?'Dosis dada':'Dosis'+(m.forKid&&kidName(kidOf(m))?' de '+kidName(kidOf(m)):''),done:d.done,id:m.id,ts:d.t});
  const md=menuDay(ds);if(md)for(const [id,lab,time] of SLOTS){const r=RECBY[md[id]];if(r)items.push({time,type:'meal',cat:'comida',title:r.n,sub:lab})}
  for(const t of S.tasks)if(t.due&&ymd(new Date(t.due))===ds)items.push({time:hm(new Date(t.due)),type:'task',cat:'tarea',title:t.text,sub:'Pendiente',done:t.done,id:t.id});
  return items.sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'))}
@@ -684,7 +747,7 @@ async function tick(){if(!S||!S.profile.mom)return;const al=dueAlerts();let chan
  if(changed){save();if(S.tab==='hoy')render()}}
 async function notify(title,body){try{if(!('Notification' in window)||Notification.permission!=='granted')return;const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)r.showNotification(title,{body,icon:'icon-192.png',badge:'icon-192.png',tag:body});else new Notification(title,{body,icon:'icon-192.png'})}catch(e){}}
 function dismissAlert(id){S.notified['x'+id]=1;save();render()}
-function giveDose(mid,aid){const m=S.meds.find(x=>x.id===mid);if(!m)return;m.given.push(Date.now());S.health.push({id:uid(),ts:Date.now(),type:'dosis',text:'Dosis de '+m.name+(m.dose?' '+m.dose:'')});if(aid)S.notified['x'+aid]=1;save();render();const nx=medNext(m);toast(nx?'Anotado. Próxima dosis '+hm(new Date(nx)):'Tratamiento terminado')}
+function giveDose(mid,aid){const m=S.meds.find(x=>x.id===mid);if(!m)return;m.given.push(Date.now());S.health.push({id:uid(),kid:kidOf(m),ts:Date.now(),type:'dosis',text:'Dosis de '+m.name+(m.dose?' '+m.dose:'')});if(aid)S.notified['x'+aid]=1;save();render();const nx=medNext(m);toast(nx?'Anotado. Próxima dosis '+hm(new Date(nx)):'Tratamiento terminado')}
 
 
 /* ====================== Lía con IA ====================== */
@@ -696,8 +759,8 @@ async function checkCode(c){try{const r=await fetch('/api/lia',{method:'POST',he
  const j=await r.json();toast(j.ia?'✨ Lía con IA activada':'Código guardado. La IA se activa en cuanto esté lista en el servidor');render()}catch(e){}}
 function liaCtx(){const now=new Date();
  return {hoy:now.toLocaleDateString('es-BO',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),hora:hm(now),mama:S.profile.mom,
-  peque:{nombre:S.profile.kid||'',edad:S.profile.birth?ageText():'',condicion:S.profile.cond||''},ciudad:S.profile.city||'',
-  contexto:{medicamentos_activos:S.meds.filter(medActive).map(m=>m.name+(m.dose?' '+m.dose:'')+' cada '+m.every+' h'),pagos_fijos:S.bills.map(b=>b.name+' Bs '+b.amount),productos:S.items.map(i=>i.name),no_le_gusta:S.profile.dislikes||[],alergias:S.profile.allergies||[]},
+  peque:{nombre:S.profile.kid||'',edad:S.profile.birth?ageText():'',condicion:S.profile.cond||''},hijos:kids().map(k=>({nombre:k.name,edad:k.birth?ageTextOf(k.birth):'',condicion:k.cond||''})),ciudad:S.profile.city||'',
+  contexto:{tiendas_guardadas:[...new Set((S.priceLog||[]).map(x=>x.store).filter(Boolean))].slice(0,15),medicamentos_activos:S.meds.filter(medActive).map(m=>m.name+(m.dose?' '+m.dose:'')+' cada '+m.every+' h'),pagos_fijos:S.bills.map(b=>b.name+' Bs '+b.amount),productos:S.items.map(i=>i.name),no_le_gusta:S.profile.dislikes||[],alergias:S.profile.allergies||[]},
   historial:S.chat.filter(m=>!m.typing).slice(-6).map(m=>(m.from==='me'?'Mamá: ':'Lía: ')+String(m.text||'').slice(0,300))}}
 async function liaAsk(body){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),75000);
  try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(Object.assign({codigo:aiCode(),ctx:liaCtx()},body)),signal:ctl.signal});
@@ -710,15 +773,16 @@ function aiActions(j){const out=[];const now=new Date();const DN=['domingo','lun
  for(const e of (j.eventos||[])){if(!e||!e.titulo)continue;const cat=['salud','clase','familia','mama'].includes(e.tipo)?e.tipo:'familia';
   let recur=Array.isArray(e.dias)&&e.dias.length?[...new Set(e.dias.map(dayIx).filter(x=>x>=0&&x<=6))].sort():null;if(recur&&!recur.length)recur=null;
   const date=!recur&&/^\d{4}-\d{2}-\d{2}$/.test(e.fecha||'')?e.fecha:(!recur?ymd(now):null);const time=hhmm(e.hora),end=hhmm(e.hora_fin);
-  const o={id:uid(),title:cap(String(e.titulo).slice(0,80)),cat,who:e.para==='mama'?'mom':(e.para==='peque'||cat==='clase'?'kid':'mom'),date,time,end,recur,remind:+e.aviso_min||(cat==='salud'?60:30),created:ymd(now)};
+  const kHit=kids().find(k=>k.name&&norm(String(e.para||'')+' '+e.titulo).includes(norm(k.name)));const o={id:uid(),kid:kHit?kHit.id:undefined,title:cap(String(e.titulo).slice(0,80)),cat,who:e.para==='mama'?'mom':(kHit||e.para==='peque'||cat==='clase'?'kid':'mom'),date,time,end,recur,remind:+e.aviso_min||(cat==='salud'?60:30),created:ymd(now)};
   const when=recur?('Cada '+recur.map(i=>DAYS[i].toLowerCase()).join(', ')):fmtDate(fromYmd(date));
   out.push({kind:'events',obj:o,label:{salud:'Cita',clase:'Clase',familia:'Compromiso',mama:'Para ti'}[cat],detail:o.title+' · '+when+(time?(end?' de '+time+' a '+end:' a las '+time):''),cls:'c-'+cat})}
+ for(const pr of (j.precios||[])){if(!pr||!pr.producto||!(+pr.precio))continue;const o=mkPrice(String(pr.producto).slice(0,40),+pr.precio,unitOf(pr.unidad||''),String(pr.lugar||'').slice(0,40));const ad=priceAdvice(o);out.push({kind:'priceLog',obj:o,label:'Precio',detail:o.name+' · Bs '+o.price+(o.unit?' el '+UNITS[o.unit]:'')+(o.store?' · '+o.store:'')+' — '+ad.t,cls:ad.v==='caro'?'c-salud':'c-comida'})}
  for(const t of (j.pendientes||[])){if(!t||!t.texto)continue;let due=null;if(/^\d{4}-\d{2}-\d{2}$/.test(t.fecha||'')){const d=fromYmd(t.fecha);const h=hhmm(t.hora)||'09:00';d.setHours(+h.slice(0,2),+h.slice(3),0,0);due=d.getTime()}
   const o={id:uid(),text:cap(String(t.texto).slice(0,100)),due,done:false,created:now.getTime()};
   out.push({kind:'tasks',obj:o,label:'Pendiente',detail:o.text+(due?' · '+fmtDate(new Date(due))+(t.hora?' a las '+hhmm(t.hora):''):''),cls:'c-tarea'})}
  return out}
 function applyAI(j,fallbackText){
- const fr=(j.frases||[]).map(x=>x.trim()).filter(Boolean);const lead=(j.respuesta||'').trim();const pre=aiActions(j);
+ const fr=(j.frases||[]).map(x=>x.trim()).filter(Boolean);const lead=(j.respuesta||'').trim();const pre=aiActions(j);S.priceLog=S.priceLog||[];
  if(fr.length||pre.length)liaReply(fr.join('\n'),lead||null,pre);
  else if(lead){S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:lead});save()}
  else if(fallbackText)liaReply(fallbackText);
@@ -888,7 +952,7 @@ function tlItem(i,isNext){
  const btn=i.type==='med'&&!i.done&&isNext?`<button class="btn sm" onclick="giveDose('${i.id}')">Dar</button>`:i.type==='task'?`<button class="check ${i.done?'on':''}" onclick="toggleTask('${i.id}')" aria-label="Marcar">${i.done?IC.ok:''}</button>`:'';
  return `<li class="${i.done?'done':''} ${isNext?'now':''}"><div class="t">${i.time||'—'}</div><div class="b"><div class="ttl">${esc(i.title)}</div>${chip}</div>${btn}</li>`}
 function medCard(m){const nx=medNext(m);const tot=m.days?Math.round(m.days*24/m.every):null;const p=tot?Math.min(100,Math.round(m.given.length/tot*100)):Math.min(100,m.given.length*10);
- return `<div class="card med"><div class="ring" style="--p:${p}"><span>${tot?m.given.length+'/'+tot:m.given.length}</span></div><div style="flex:1;min-width:0"><b>${esc(m.name)}${m.dose?' · '+esc(m.dose):''}</b><div class="small muted">Cada ${m.every} h${m.days?' · '+m.days+' días':''}${m.forKid&&S.profile.kid?' · '+esc(S.profile.kid):''}</div><div class="small"><b style="color:var(--sage)">Próxima: ${hm(new Date(nx))}</b> <span class="muted">(${rel(nx)})</span></div></div><div style="display:flex;flex-direction:column;gap:6px"><button class="btn sm" onclick="giveDose('${m.id}')">Dar</button><button class="btn sm ghost" onclick="stopMed('${m.id}')">Terminar</button></div></div>`}
+ return `<div class="card med"><div class="ring" style="--p:${p}"><span>${tot?m.given.length+'/'+tot:m.given.length}</span></div><div style="flex:1;min-width:0"><b>${esc(m.name)}${m.dose?' · '+esc(m.dose):''}</b><div class="small muted">Cada ${m.every} h${m.days?' · '+m.days+' días':''}${m.forKid&&kidName(kidOf(m))?' · '+esc(kidName(kidOf(m))):''}</div><div class="small"><b style="color:var(--sage)">Próxima: ${hm(new Date(nx))}</b> <span class="muted">(${rel(nx)})</span></div></div><div style="display:flex;flex-direction:column;gap:6px"><button class="btn sm" onclick="giveDose('${m.id}')">Dar</button><button class="btn sm ghost" onclick="stopMed('${m.id}')">Terminar</button></div></div>`}
 function stopMed(id){confirmInline('¿Terminar este tratamiento? Se quita de tu día.',()=>{const m=S.meds.find(x=>x.id===id);if(m){m.stopped=true;S.health.push({id:uid(),ts:Date.now(),type:'nota',text:'Terminó '+m.name})}save();render()})}
 function toggleTask(id){const t=S.tasks.find(x=>x.id===id);if(t){t.done=!t.done;save();render()}}
 function quickAsk(){const v=$('#qa').value.trim();if(!v)return;S.tab='lia';talk(v)}
@@ -924,10 +988,11 @@ function vLia(){
 function sendChat(t){const v=(t||$('#ci').value).trim();if(!v&&!pendImg)return;talk(v||'📷 Mira esta foto')}
 
 
-function vSalud(){
- const act=S.meds.filter(medActive);const past=S.meds.filter(m=>!medActive(m));
- const log=[...S.health].sort((a,b)=>b.ts-a.ts).slice(0,25);
- return `<h1 style="font-size:24px">Salud${S.profile.kid?' de '+esc(S.profile.kid):''}</h1>${S.profile.birth?`<div class="small muted">${ageText()}</div>`:''}${S.profile.cond?`<div class="note" style="margin-top:8px"><b>Cuidado especial:</b> ${esc(S.profile.cond)}. Lía lo tiene en cuenta en sus guías. <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Cambiar</a></div>`:`<div class="tiny muted" style="margin:4px 0 8px">¿Tiene alguna condición o cuidado especial (autismo, síndrome de Down, asma…)? <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Anótala en Ajustes</a> y Lía la tendrá en cuenta.</div>`}
+function kidTabs(){const ks=kids();if(ks.length<2)return '';return `<div class="seg" style="margin:6px 0 4px">${ks.map(k=>`<button class="${k.id===activeKid().id?'on':''}" onclick="setKid('${k.id}')">${esc(k.name||'Peque')}</button>`).join('')}</div>`}
+function vSalud(){syncKid();const kid=activeKid().id;const mine=x=>kidOf(x)===kid;
+ const act=S.meds.filter(m=>medActive(m)&&mine(m));const past=S.meds.filter(m=>!medActive(m)&&mine(m));
+ const log=[...S.health].filter(mine).sort((a,b)=>b.ts-a.ts).slice(0,25);
+ return `<h1 style="font-size:24px">Salud${S.profile.kid?' de '+esc(S.profile.kid):''}</h1>${kidTabs()}${S.profile.cond?`<div class="note" style="margin-top:8px"><b>Cuidado especial:</b> ${esc(S.profile.cond)}. Lía lo tiene en cuenta en sus guías. <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Cambiar</a></div>`:`<div class="tiny muted" style="margin:4px 0 8px">¿Tiene alguna condición o cuidado especial (autismo, síndrome de Down, asma…)? <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Anótala en Ajustes</a> y Lía la tendrá en cuenta.</div>`}
  <div class="muted small" style="margin:2px 0 12px">${ageText()}${(S.profile.allergies||[]).length?' · Alergias: '+S.profile.allergies.map(a=>ALLERG.find(x=>x[0]===a)[1]).join(', '):''}</div>
  <div class="note"><b>Importante:</b> esta app no calcula dosis ni diagnostica. Anota la dosis que indicó el pediatra y consulta ante cualquier duda.</div>
  <div class="row" style="gap:8px;margin-bottom:6px"><button class="btn block" onclick="addMedDlg()">+ Medicamento</button><button class="btn ghost block" onclick="addTempDlg()">Anotar temperatura</button></div>
@@ -943,8 +1008,8 @@ function vComidas(){
  if(foodSeg==='despensa')foodSeg='gastos';
  const sb=(id,l)=>`<button class="${foodSeg===id?'on':''}" onclick="foodSeg='${id}';render()">${l}</button>`;
  return `<h1 style="font-size:24px">Menú y casa</h1>
- <div class="seg">${sb('menu','Menú')}${sb('mes','Mes')}${sb('compras','Compras')}${sb('gastos','Gastos')}${sb('lugares','Lugares')}</div>
- ${foodSeg==='menu'?vMenu():foodSeg==='mes'?vMes():foodSeg==='compras'?vCompras():foodSeg==='gastos'?vGastos():vLugares()}`}
+ <div class="seg">${sb('menu','Menú')}${sb('mes','Mes')}${sb('compras','Compras')}${sb('precios','Precios')}${sb('gastos','Gastos')}${sb('lugares','Lugares')}</div>
+ ${foodSeg==='menu'?vMenu():foodSeg==='mes'?vMes():foodSeg==='precios'?vPrecios():foodSeg==='compras'?vCompras():foodSeg==='gastos'?vGastos():vLugares()}`}
 function vGastos(){
  const now=Date.now(),ms=monthStart(),ws=weekStart().getTime();const mon=spentBetween(ms,now+1),tw=spentBetween(ws,now+1),lw=spentBetween(ws-7*864e5,ws);
  const mb=Number(S.profile.mbudget)||0;const fixed=S.bills.reduce((a,b)=>a+perMonthly(b),0);
@@ -1014,6 +1079,23 @@ function vMenu(){
  <div class="note"><b>Regla de los 5 grupos:</b> en desayuno, almuerzo y cena intenta que haya cereal, grasa buena, fruta, verdura y proteína. ${ageMonths()<24?'<b>Hasta los 2 años:</b> sin azúcar, poca sal y nada de golosinas con colorantes (como la tartracina). ':''}</div>
  <div class="note"><b>Porciones orientativas generales.</b> Cada niño es distinto: consulta con tu pediatra o nutricionista, también para introducir alimentos que pueden dar alergia. Corta uvas, salchichas y frutas redondas en trocitos para evitar atragantamientos.</div>
  <button class="btn ghost block" onclick="makeMenu();save();render();toast('Nuevo menú listo')">Nuevo menú</button>`}
+function vPrecios(){const L=S.priceLog||[];const by={};for(const x of L)(by[x.key]=by[x.key]||[]).push(x);
+ const keys=Object.keys(by).sort((a,b)=>Math.max(...by[b].map(x=>x.ts))-Math.max(...by[a].map(x=>x.ts)));
+ const vc={ok:['Económico','c-comida'],normal:['Normal','c-tarea'],caro:['Caro','c-salud'],nuevo:['Primero','c-tarea']};
+ return `<div class="note"><b>Planilla de precios.</b> Guarda cuánto pagaste y dónde. Te digo si el precio está económico comparando con tus compras anteriores. También puedes decirle a Lía: "tomate a 8 bs el kilo en La Ramada".</div>
+ <button class="btn block" onclick="priceLogDlg()">+ Anotar precio</button>
+ ${keys.length?keys.map(k=>{const xs=by[k].sort((a,b)=>b.ts-a.ts);const last=xs[0];const best=xs.reduce((a,b)=>b.price<a.price?b:a);const v=vc[priceAdvice(last).v];
+  return `<div class="card"><div class="row between"><b>${esc(prodName(k))}</b><span class="chip ${v[1]}">${v[0]}</span></div>
+  <div class="small" style="margin-top:4px">Último: <b>Bs ${last.price}${last.unit?' / '+UNITS[last.unit]:''}</b>${last.store?' · '+esc(last.store):''} <span class="muted">(${new Date(last.ts).toLocaleDateString('es-BO',{day:'numeric',month:'short'})})</span></div>
+  ${xs.length>1?`<div class="small muted">Más barato: Bs ${best.price}${best.store?' en '+esc(best.store):''} · ${xs.length} registros</div><div class="small muted">${xs.slice(0,5).map(x=>'Bs '+x.price+(x.store?' '+esc(x.store):'')).join(' · ')}</div>`:''}
+  </div>`}).join(''):'<div class="card empty">Todavía no guardaste precios.</div>'}`}
+function priceLogDlg(){const stores=[...new Set((S.priceLog||[]).map(x=>x.store).filter(Boolean))];
+ dlg(`<h3>Anotar precio</h3><label class="f">Producto</label><input class="inp" id="plN" list="plNl" placeholder="Tomate"><datalist id="plNl">${Object.values(CAT).map(c=>`<option value="${esc(c.n.split(' (')[0])}">`).join('')}</datalist>
+ <div class="row"><div style="flex:1"><label class="f">Precio (Bs)</label><input class="inp" id="plP" type="number" step="0.1" inputmode="decimal"></div><div style="flex:1"><label class="f">Por</label><select class="inp" id="plU"><option value="kg">Kilo</option><option value="u">Unidad</option><option value="L">Litro</option><option value="lb">Libra</option><option value="doc">Docena</option><option value="paq">Paquete</option></select></div></div>
+ <label class="f">Dónde</label><input class="inp" id="plS" list="plSl" placeholder="Mercado Los Pozos, Hipermaxi…"><datalist id="plSl">${stores.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
+ <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="savePriceLog()">Guardar</button></div>`)}
+function savePriceLog(){const n=$('#plN').value.trim(),p=parseFloat($('#plP').value);if(!n||!p){toast('Escribe el producto y el precio');return}
+ const o=mkPrice(n,p,$('#plU').value,$('#plS').value);const ad=priceAdvice(o);S.priceLog=S.priceLog||[];S.priceLog.push(o);applyPrice(o);save();closeDlg();foodSeg='precios';render();toast(ad.t)}
 function vMes(){if(!S.plan||!S.plan[S.menu.week]||Object.keys(S.plan).length<4)makeMonth();S.plan[S.menu.week]=JSON.parse(JSON.stringify(S.menu));
  const ws=Object.keys(S.plan).sort().slice(0,4);const ti=ymd(new Date());
  return `<div class="note"><b>Menú del mes.</b> 4 semanas armadas con tu presupuesto, alergias y lo que no le gusta. Cada lunes la semana nueva pasa sola a "Menú" y a la lista de compras.</div>
@@ -1070,16 +1152,16 @@ function addMedDlg(){dlg(`<h3>Nuevo medicamento</h3><div class="small muted">Cop
  <label class="chips" style="margin-top:10px"><label><input type="checkbox" id="mG" checked>Ya le di la primera dosis</label></label>
  <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="saveMed()">Guardar</button></div>`)}
 function saveMed(){const n=$('#mN').value.trim();if(!n){toast('Escribe el nombre');return}const st=at(ymd(new Date()),$('#mS').value||hm(new Date())).getTime();const g=$('#mG').checked;
- S.meds.push({id:uid(),name:cap(n),dose:$('#mD').value.trim(),every:Math.max(1,+$('#mE').value||8),start:st,days:+$('#mDays').value||null,given:g?[st]:[],forKid:true,created:Date.now()});askNotif();save();closeDlg();render()}
+ S.meds.push({id:uid(),kid:activeKid().id,name:cap(n),dose:$('#mD').value.trim(),every:Math.max(1,+$('#mE').value||8),start:st,days:+$('#mDays').value||null,given:g?[st]:[],forKid:true,created:Date.now()});askNotif();save();closeDlg();render()}
 function addTempDlg(){dlg(`<h3>Anotar temperatura</h3><label class="f">Temperatura (°C)</label><input class="inp" id="tp" type="number" step="0.1" inputmode="decimal" placeholder="38.2"><label class="f">Nota (opcional)</label><input class="inp" id="tn" placeholder="Con tos, comió poco"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="saveTemp()">Guardar</button></div>`)}
-function saveTemp(){const v=parseFloat($('#tp').value);if(!v){toast('Escribe la temperatura');return}const n=$('#tn').value.trim();S.health.push({id:uid(),ts:Date.now(),type:'temp',value:v,text:'Temperatura '+String(v).replace('.',',')+' °C'+(n?' · '+n:'')});save();closeDlg();render();if(v>=39)toast('39 °C o más: consulta con el pediatra')}
+function saveTemp(){const v=parseFloat($('#tp').value);if(!v){toast('Escribe la temperatura');return}const n=$('#tn').value.trim();S.health.push({id:uid(),kid:activeKid().id,ts:Date.now(),type:'temp',value:v,text:'Temperatura '+String(v).replace('.',',')+' °C'+(n?' · '+n:'')});save();closeDlg();render();if(v>=39)toast('39 °C o más: consulta con el pediatra')}
 function budgetDlg(){dlg(`<h3>Presupuesto de comida</h3><label class="f">Por semana (Bs)</label><input class="inp" id="bB" type="number" inputmode="numeric" value="${S.profile.budget}"><label class="f">Adultos que comen el mismo menú</label><select class="inp" id="bA">${[0,1,2,3,4].map(i=>`<option ${i==S.profile.adults?'selected':''} value="${i}">${i===0?'Ninguno (solo la peque)':i}</option>`).join('')}</select>
  <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.profile.budget=+$('#bB').value||0;S.profile.adults=+$('#bA').value;makeMenu(S.menu&&S.menu.seed);save();closeDlg();render()">Guardar</button></div>`)}
 function priceDlg(k){dlg(`<h3>${esc(CAT[k].n)}</h3><label class="f">Precio por ${CAT[k].u==='u'?'unidad':CAT[k].u} (Bs)</label><input class="inp" id="pP" type="number" step="0.1" inputmode="decimal" value="${price(k)}"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.prices['${k}']=parseFloat($('#pP').value)||0;save();closeDlg();render()">Guardar</button></div>`)}
 function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3>
  <label class="f">Tu nombre</label><input class="inp" id="sM" value="${esc(p.mom)}">
- <div class="row"><div style="flex:1"><label class="f">Nombre de tu hijo o hija</label><input class="inp" id="sK" value="${esc(p.kid)}"></div><div style="flex:1"><label class="f">Nacimiento</label><input class="inp" type="date" id="sB" value="${p.birth}"></div></div>
- <label class="f">Condición o cuidado especial (opcional)</label><textarea class="inp" id="sCond" rows="2" placeholder="Ej.: autismo, síndrome de Down, asma, diabetes, TDAH… escríbelo como quieras">${esc(p.cond||'')}</textarea>
+ <label class="f" style="margin-top:14px">Tus hijos (0 a 18 años)</label><div id="kidsEd">${kids().map(kidRow).join('')}</div>
+ <button class="btn ghost sm" style="margin-top:6px" onclick="addKidRow()">+ Agregar hijo o hija</button>
  <label class="f">Alergias (se quitan del menú)</label><div class="chips">${ALLERG.map(([k,l])=>`<label><input type="checkbox" class="sA" value="${k}" ${p.allergies.includes(k)?'checked':''}>${l}</label>`).join('')}</div>
  <label class="f">Ciudad</label><input class="inp" id="sCity" value="${esc(p.city||'')}">
  <label class="f">No le gusta</label><input class="inp" id="sD" value="${esc((p.dislikes||[]).join(', '))}" placeholder="brócoli, hígado">
@@ -1093,7 +1175,9 @@ function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3>
  <button class="btn ghost block" style="margin-top:8px;color:var(--danger)" onclick="confirmInline('¿Borrar todos tus datos de este celular?',()=>{localStorage.removeItem(KEY);S=null;render()})">Borrar todo</button>
  <p class="tiny muted" style="margin-top:14px">Versión de prueba. Tus datos y los de tu peque se guardan solo en este celular. Con Lía con IA, lo que le escribes o le dices se envía a la IA de Google (Gemini) solo para entenderlo y responderte; no lo guardamos en ningún servidor. Si borras los datos del navegador se pierden, por eso descarga un respaldo cada semana. Las porciones y la información de salud son guía general y no reemplazan al pediatra.</p>
  <button class="btn ghost block" onclick="closeDlg()">Cerrar</button>`)}
-function saveSettings(){const p=S.profile;const nc=$('#sCode').value.trim().toUpperCase().replace(/\s+/g,'');if(nc!==aiCode()){setCode(nc);if(nc)checkCode(nc)}S.voice=$('#sVoice').checked;p.mom=$('#sM').value.trim()||p.mom;p.kid=$('#sK').value.trim();p.birth=$('#sB').value;p.city=$('#sCity').value.trim();p.cond=$('#sCond').value.trim();p.allergies=[...document.querySelectorAll('.sA:checked')].map(x=>x.value);p.dislikes=$('#sD').value.split(',').map(x=>norm(x.trim())).filter(Boolean);makeMenu(S.menu&&S.menu.seed);save();closeDlg();render();toast('Guardado')}
+function kidRow(k){return `<div class="card kidrow" data-id="${k.id}" style="padding:10px;margin:6px 0"><div class="row"><div style="flex:1"><input class="inp kN" placeholder="Nombre" value="${esc(k.name)}"></div><div style="flex:1"><input class="inp kB" type="date" value="${k.birth||''}"></div>${kids().length>1||k.id.startsWith('n')?`<button class="btn sm ghost" onclick="this.closest('.kidrow').remove()" aria-label="Quitar">✕</button>`:''}</div><textarea class="inp kC" rows="2" style="margin-top:6px" placeholder="Condición o cuidado especial (opcional): autismo, síndrome de Down, asma, TDAH…">${esc(k.cond||'')}</textarea></div>`}
+function addKidRow(){const d=document.createElement('div');d.innerHTML=kidRow({id:'n'+uid(),name:'',birth:'',cond:''});$('#kidsEd').appendChild(d.firstElementChild)}
+function saveSettings(){const rows=[...document.querySelectorAll('.kidrow')].map(r=>({id:r.dataset.id.startsWith('n')?'k'+uid():r.dataset.id,name:cap(r.querySelector('.kN').value.trim()),birth:r.querySelector('.kB').value,cond:r.querySelector('.kC').value.trim()})).filter(k=>k.name||k.birth);if(rows.length)S.kids=rows;syncKid();const p=S.profile;const nc=$('#sCode').value.trim().toUpperCase().replace(/\s+/g,'');if(nc!==aiCode()){setCode(nc);if(nc)checkCode(nc)}S.voice=$('#sVoice').checked;p.mom=$('#sM').value.trim()||p.mom;p.city=$('#sCity').value.trim();p.allergies=[...document.querySelectorAll('.sA:checked')].map(x=>x.value);p.dislikes=$('#sD').value.split(',').map(x=>norm(x.trim())).filter(Boolean);makeMenu(S.menu&&S.menu.seed);save();closeDlg();render();toast('Guardado')}
 function exportData(){const b=new Blob([JSON.stringify(S)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mamaaldia-respaldo-'+ymd(new Date())+'.json';a.click()}
 function importData(f){if(!f)return;f.text().then(t=>{const d=JSON.parse(t);if(!d.profile)throw 0;S=Object.assign(blank(),d);save();closeDlg();render();toast('Respaldo cargado')}).catch(()=>toast('Archivo no válido'))}
 async function askNotif(force){try{if(!('Notification' in window)){if(force)toast('Este navegador no permite avisos. Instala la app primero.');return}if(Notification.permission==='default'||force){const r=await Notification.requestPermission();if(force)toast(r==='granted'?'Avisos activados':'Avisos bloqueados en el navegador')}}catch(e){}}
@@ -1127,7 +1211,7 @@ function startForm(){$('#root').innerHTML=`<div class="welcome" style="justify-c
  <button class="btn ghost block" style="margin-top:8px" onclick="render()">Volver</button></div>`}
 function finishForm(){const m=$('#fM').value.trim();if(!m){toast('Escribe tu nombre');return}if(!$('#fOk').checked){toast('Marca la casilla para continuar');return}
  S=blank();Object.assign(S.profile,{mom:cap(m),kid:cap($('#fK').value.trim()),birth:$('#fB').value,budget:+$('#fP').value||150,adults:+$('#fA').value,city:$('#fCity').value,cond:$('#fCond').value.trim(),allergies:[...document.querySelectorAll('.fAl:checked')].map(x=>x.value)});
- makeMenu();S.tab='lia';save();render()}
+ kids();makeMenu();S.tab='lia';save();render()}
 function loadDemo(){
  S=blank();const now=new Date();const t=ymd(now);const b=addDays(now,-(3*365+40));
  Object.assign(S.profile,{mom:'Andrea',kid:'Sofi',birth:ymd(b),budget:150,adults:0,allergies:[],dislikes:[]});
@@ -1156,7 +1240,7 @@ function installBanner(w){if(standalone())return '';if(!deferredPrompt&&!isIOS()
 async function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;render()}
 
 /* ====================== inicio ====================== */
-S=load();if(S){S=Object.assign(blank(),S);S.chat=S.chat.filter(m=>!m.typing)}
+S=load();if(S){S=Object.assign(blank(),S);S.chat=S.chat.filter(m=>!m.typing);if(S.profile.mom)syncKid()}
 (()=>{try{const q=new URLSearchParams(location.search).get('c');if(q){setCode(q.toUpperCase().replace(/\s+/g,''));history.replaceState(null,'',location.pathname);setTimeout(()=>checkCode(aiCode()),800)}}catch(e){}})();
 render();
 window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEventListener('pointercancel',e=>{if(rec&&rec.held)micUp(e)});
