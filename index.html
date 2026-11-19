@@ -121,6 +121,20 @@ nav.tabs .lia .face{width:58px;height:58px;border-radius:50%;background:var(--ac
 .composer{position:sticky;bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--bg);padding:8px 0 4px}
 .composer .ask{margin:0}
 .mic.rec{background:var(--danger)!important;animation:pulse 1s infinite}
+.mic{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.recbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 24px));background:var(--surface);border:1.5px solid var(--danger);border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px var(--shadow);z-index:60}
+.recbar .dot{width:12px;height:12px;border-radius:50%;background:var(--danger);animation:pulse 1s infinite;flex:none}
+.recbar .tm{font-variant-numeric:tabular-nums;font-weight:700;flex:none}
+.recbar .hint{flex:1;min-width:0;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recbar.cancel{border-color:var(--muted)}.recbar.cancel .hint{color:var(--danger)}
+.recbar button{border:0;border-radius:12px;height:38px;padding:0 12px;font-weight:600;flex:none}
+.recbar .x{background:var(--line);color:var(--ink)}.recbar .ok{background:var(--accent);color:var(--onaccent)}
+.typing span{display:inline-block;width:7px;height:7px;margin:0 2px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+body.lia-talk nav.tabs .lia .face,body.lia-talk .lia-row .av.hi{animation:bob .45s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(-4px) scale(1.04)}}
+.aibadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--accent2);color:var(--ink)}
 @keyframes pulse{50%{opacity:.6}}
 .sugs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
 .sugs button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600}
@@ -578,7 +592,7 @@ function organize(text,now=new Date()){
  }
  return {out,shopMarks};
 }
-function liaReply(text){
+function liaReply(text,lead){
  const now=new Date();const {out,shopMarks}=organize(text,now);
  const prevChecked=JSON.parse(JSON.stringify(S.shopChecked));const prevDis=[...(S.profile.dislikes||[])];const refs=[];const billPrev=[];const medPrev=[];const capPrev=[];
  const lines=[];
@@ -594,8 +608,9 @@ function liaReply(text){
  for(const m of shopMarks){if(m.startsWith('x:')){const x=S.extraShop.find(e=>e.id===m.slice(2));if(x)x.checked=true}else S.shopChecked[m.slice(2)]=true}
  const real=out.filter(a=>!a.note&&!a.report);const undoable=out.some(a=>a.obj||a.keys||a.ids||a.cat);
  let msg;
- if(!out.length)msg='No entendí bien. Prueba con algo como "cita con el pediatra el jueves a las 10".';
- else if(!real.length)msg='Lo guardé en tus notas. Si tiene fecha u hora, dímelo y lo paso a tu agenda.';
+ if(!out.length)msg=lead||'No entendí bien. Prueba con algo como "cita con el pediatra el jueves a las 10".';
+ else if(!real.length)msg=lead||'Lo guardé en tus notas. Si tiene fecha u hora, dímelo y lo paso a tu agenda.';
+ else if(lead)msg=lead;
  else msg=['Listo, ya lo ordené:','Anotado, quedó así:','Hecho, lo organicé así:'][Math.floor(Math.random()*3)];
  if(out.some(a=>a.report)){msg=(real.length?msg+'\n\n':'')+'Tu resumen de la semana:\n'+weeklyReport();if(!real.length){const ix=out.findIndex(a=>a.report);out.splice(ix,1)}}
  if(out.some(a=>a.kind==='bills'))lines.push('Te aviso 2 días antes de cada pago.');
@@ -649,8 +664,122 @@ async function notify(title,body){try{if(!('Notification' in window)||Notificati
 function dismissAlert(id){S.notified['x'+id]=1;save();render()}
 function giveDose(mid,aid){const m=S.meds.find(x=>x.id===mid);if(!m)return;m.given.push(Date.now());S.health.push({id:uid(),ts:Date.now(),type:'dosis',text:'Dosis de '+m.name+(m.dose?' '+m.dose:'')});if(aid)S.notified['x'+aid]=1;save();render();const nx=medNext(m);toast(nx?'Anotado. Próxima dosis '+hm(new Date(nx)):'Tratamiento terminado')}
 
+
+/* ====================== Lía con IA ====================== */
+const CODE_KEY='mamaaldia-codigo';
+function aiCode(){try{return localStorage.getItem(CODE_KEY)||''}catch(e){return ''}}
+function setCode(c){try{if(c)localStorage.setItem(CODE_KEY,c);else localStorage.removeItem(CODE_KEY)}catch(e){}}
+async function checkCode(c){try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:c,modo:'probar'})});
+ if(r.status===401){setCode('');toast('Ese código no es válido');render();return}
+ const j=await r.json();toast(j.ia?'✨ Lía con IA activada':'Código guardado. La IA se activa en cuanto esté lista en el servidor');render()}catch(e){}}
+function liaCtx(){const now=new Date();
+ return {hoy:now.toLocaleDateString('es-BO',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),hora:hm(now),mama:S.profile.mom,
+  peque:{nombre:S.profile.kid||'',edad:S.profile.birth?ageText():''},ciudad:S.profile.city||'',
+  contexto:{medicamentos_activos:S.meds.filter(medActive).map(m=>m.name+(m.dose?' '+m.dose:'')+' cada '+m.every+' h'),pagos_fijos:S.bills.map(b=>b.name+' Bs '+b.amount),productos:S.items.map(i=>i.name),no_le_gusta:S.profile.dislikes||[],alergias:S.profile.allergies||[]},
+  historial:S.chat.filter(m=>!m.typing).slice(-6).map(m=>(m.from==='me'?'Mamá: ':'Lía: ')+String(m.text||'').slice(0,300))}}
+async function liaAsk(body){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),45000);
+ try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(Object.assign({codigo:aiCode(),ctx:liaCtx()},body)),signal:ctl.signal});
+  const j=await r.json().catch(()=>({}));if(r.status===401){setCode('');throw new Error('codigo')}if(!r.ok)throw new Error(j.error||'ia');return j}finally{clearTimeout(to)}}
+function typingOn(){S.chat.push({id:'typing',from:'lia',typing:true,ts:Date.now()});render()}
+function typingOff(){S.chat=S.chat.filter(m=>!m.typing)}
+function applyAI(j,fallbackText){
+ const fr=(j.frases||[]).map(x=>x.trim()).filter(Boolean);const lead=(j.respuesta||'').trim();
+ if(fr.length)liaReply(fr.join('\n'),lead||null);
+ else if(lead){S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:lead});save()}
+ else if(fallbackText)liaReply(fallbackText);
+ return lead}
+let busy=false;
+async function talk(v,opts={}){
+ S.chat.push({id:uid(),from:'me',text:v,ts:Date.now()});const inp=$('#ci');if(inp)inp.value='';const qa=$('#qa');if(qa)qa.value='';
+ if(!aiCode()){liaReply(v);render();if(opts.speak)speakLast();return}
+ typingOn();busy=true;
+ try{const j=await liaAsk({texto:v});typingOff();applyAI(j,v)}
+ catch(e){typingOff();liaReply(v);const m=S.chat[S.chat.length-1];if(m&&e.message!=='codigo')m.extra=(m.extra?m.extra+'\n':'')+'(Sin conexión con la IA: lo ordené con la Lía básica.)';if(e.message==='codigo')toast('Tu código de IA ya no es válido');save()}
+ busy=false;render();if(opts.speak)speakLast()}
+async function talkVoice(blob,secs){
+ const me={id:uid(),from:'me',text:'🎤 Nota de voz ('+secs+' s)',ts:Date.now()};S.chat.push(me);S.tab='lia';typingOn();
+ try{const b64=await new Promise((ok,ko)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(',')[1]);fr.onerror=ko;fr.readAsDataURL(blob)});
+  const j=await liaAsk({audio:b64,mime:blob.type||'audio/webm'});typingOff();
+  if(j.transcripcion)me.text='🎤 '+j.transcripcion;applyAI(j,j.transcripcion||'');}
+ catch(e){typingOff();me.text='🎤 Nota de voz ('+secs+' s)';S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:'Ay, no pude escuchar tu nota de voz'+(e.message==='codigo'?' porque tu código de IA no es válido.':'. Revisa tu internet e inténtalo de nuevo, o escríbemelo.')});}
+ save();render();speakLast()}
+
+/* ---- botón de grabar estilo WhatsApp ---- */
+const micBtn=src=>`<button type="button" class="mic" aria-label="Mantén apretado para hablar" onpointerdown="micDown(event,'${src}')" onpointermove="micMove(event)" onpointerup="micUp(event)" onpointercancel="micUp(event)" oncontextmenu="return false">${IC.mic}</button>`;
+let rec=null;
+const SRc=()=>window.SpeechRecognition||window.webkitSpeechRecognition;
+const canAudio=()=>!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder);
+function micDown(e,src){e.preventDefault();
+ if(rec){if(rec.locked)finishRec(false);return}
+ if(busy){toast('Lía está pensando, un momentito…');return}
+ try{e.currentTarget.setPointerCapture(e.pointerId)}catch(x){}
+ try{speechSynthesis.cancel()}catch(x){}
+ rec={src,btn:e.currentTarget,x0:e.clientX,t0:Date.now(),held:true,locked:false,cancel:false,final:'',interim:''};
+ rec.btn.classList.add('rec');recBar();rec.timer=setInterval(recBar,250);
+ if(aiCode()&&canAudio())startAudio();else if(SRc())startSR();else{stopUI();rec=null;toast('Tu navegador no graba aquí. Usa el micrófono de tu teclado.');const i=$('#'+src);if(i)i.focus()}}
+function micMove(e){if(!rec||!rec.held)return;const c=e.clientX-rec.x0<-70;if(c!==rec.cancel){rec.cancel=c;recBar()}}
+function micUp(e){if(!rec||!rec.held)return;rec.held=false;
+ if(rec.cancel){finishRec(true);return}
+ if(Date.now()-rec.t0<400){rec.locked=true;recBar();return} // un toque: manos libres
+ finishRec(false)}
+function recBar(){if(!rec)return;let b=$('#recbar');if(!b){b=document.createElement('div');b.id='recbar';b.className='recbar';document.body.appendChild(b)}
+ const s=Math.floor((Date.now()-rec.t0)/1000);if(s>=180&&!rec.done){finishRec(false);return}
+ const live=(rec.final+' '+rec.interim).trim();
+ b.className='recbar'+(rec.cancel?' cancel':'');
+ b.innerHTML=`<span class="dot"></span><span class="tm">${Math.floor(s/60)}:${pad(s%60)}</span><span class="hint">${rec.cancel?'Suelta para cancelar':live?esc(live):rec.locked?'Te escucho… toca Enviar cuando termines':'Te escucho… suelta para enviar · desliza ← para cancelar'}</span>${rec.locked?'<button class="x" onclick="finishRec(true)">✕</button><button class="ok" onclick="finishRec(false)">Enviar</button>':''}`}
+function stopUI(){if(rec){clearInterval(rec.timer);if(rec.btn)rec.btn.classList.remove('rec')}const b=$('#recbar');if(b)b.remove()}
+async function startAudio(){const r=rec;
+ try{const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+  if(rec!==r||r.done){st.getTracks().forEach(t=>t.stop());return}
+  if(!r.held&&!r.locked&&Date.now()-r.t0>900){st.getTracks().forEach(t=>t.stop());stopUI();rec=null;toast('Listo. Ahora mantén apretado 🎤 mientras hablas');return}
+  const mt=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t));
+  const mr=new MediaRecorder(st,mt?{mimeType:mt,audioBitsPerSecond:32000}:undefined);r.mr=mr;r.st=st;r.chunks=[];r.tA=Date.now();
+  mr.ondataavailable=ev=>{if(ev.data&&ev.data.size)r.chunks.push(ev.data)};mr.start(1000);
+  if(r.pendingStop)finishRec(r.pendingCancel)}
+ catch(err){stopUI();rec=null;if(SRc()){toast('Sin permiso de micrófono para notas de voz')}else toast('Activa el permiso del micrófono para hablar con Lía')}}
+function startSR(){const r=rec;const SR=SRc();
+ const go=()=>{if(rec!==r||r.done)return;const g=new SR();r.sr=g;g.lang='es-BO';g.continuous=true;g.interimResults=true;g.maxAlternatives=1;
+  g.onresult=ev=>{let it='';for(let i=ev.resultIndex;i<ev.results.length;i++){const t=ev.results[i][0].transcript;if(ev.results[i].isFinal)r.final=(r.final+' '+t).trim();else it+=t}r.interim=it;recBar()};
+  g.onerror=ev=>{if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){r.denied=true;toast('Activa el permiso del micrófono para hablar con Lía')}};
+  g.onend=()=>{if(r.interim){r.final=(r.final+' '+r.interim).trim();r.interim=''}
+   if(!r.done&&!r.denied&&(r.held||r.locked)){setTimeout(go,60);return} // sigue escuchando aunque haya silencio
+   if(r.done&&r.onDone)r.onDone();else if(r.denied){stopUI();rec=null}};
+  try{g.start()}catch(x){}};
+ go()}
+function finishRec(cancel){const r=rec;if(!r||r.done)return;
+ if(r.mr===undefined&&aiCode()&&canAudio()&&!r.sr){r.pendingStop=true;r.pendingCancel=cancel;if(cancel){r.done=true;stopUI();rec=null}return}
+ r.done=true;stopUI();rec=null;const secs=Math.max(1,Math.round((Date.now()-(r.tA||r.t0))/1000));
+ if(r.mr){r.mr.onstop=()=>{r.st.getTracks().forEach(t=>t.stop());if(cancel){toast('Nota cancelada');return}
+   if(Date.now()-(r.tA||r.t0)<800){toast('Muy cortita. Mantén apretado 🎤 mientras hablas');return}
+   const blob=new Blob(r.chunks,{type:(r.mr.mimeType||'audio/webm').split(';')[0]});talkVoice(blob,secs)};
+  try{r.mr.stop()}catch(x){}return}
+ if(r.sr){const done=()=>{if(r.fin)return;r.fin=true;const t=(r.final+' '+r.interim).trim();if(cancel)return toast('Cancelado');
+   if(!t){toast('No te escuché. Acércate al micrófono e inténtalo otra vez');return}if(r.src==='qa')S.tab='lia';talk(t,{speak:true})};
+  r.onDone=done;try{r.sr.stop()}catch(x){done()}setTimeout(done,1500)}}
+
+/* ---- voz de Lía ---- */
+function liaVoice(){let vs=[];try{vs=speechSynthesis.getVoices().filter(v=>/^es/i.test(v.lang))}catch(e){}
+ const sc=v=>(/natural|neural|premium|enhanced|mejorad/i.test(v.name)?4:0)+(/paulina|m[oó]nica|marisol|ang[eé]lica|sabina|dalia|elena|helena|laura|luciana|francisca|camila|valentina|paloma|lupe|isabela|female|mujer/i.test(v.name)?3:0)+(/google/i.test(v.name)?1:0)+(/es[-_](419|MX|US|BO|AR|CO|PE|CL|EC|UY)/i.test(v.lang)?2:0)-(/jorge|diego|juan|carlos|pablo|enrique|alvaro|raul|male|hombre/i.test(v.name)?6:0);
+ return vs.sort((a,b)=>sc(b)-sc(a))[0]||null}
+let actx=null;
+function chime(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const t0=actx.currentTime+.02;
+ [[784,0],[988,.13],[1319,.26]].forEach(([f,d])=>{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.07,t0+d+.03);g.gain.exponentialRampToValueAtTime(.0001,t0+d+.9);o.connect(g).connect(actx.destination);o.start(t0+d);o.stop(t0+d+1)})}catch(e){}}
+function speak(text,withChime){if(S.voice===false||!('speechSynthesis' in window))return;
+ const clean=String(text).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\bBs\b\.?/g,'bolivianos').replace(/\s+/g,' ').trim().slice(0,400);if(!clean)return;
+ try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(clean);const v=liaVoice();if(v){u.voice=v;u.lang=v.lang}else u.lang='es-MX';
+  u.rate=.94;u.pitch=1.12;u.volume=.9;u.onstart=()=>document.body.classList.add('lia-talk');u.onend=u.onerror=()=>document.body.classList.remove('lia-talk');
+  if(withChime){chime();setTimeout(()=>speechSynthesis.speak(u),480)}else speechSynthesis.speak(u)}catch(e){}}
+function speakLast(){const m=[...S.chat].reverse().find(x=>x.from==='lia'&&!x.typing);if(m)speak(m.text)}
+function liaHello(){const h=new Date().getHours();const n=S.profile.mom||'';const k=S.profile.kid;
+ const hi=h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches';
+ const al=dueAlerts().length;const items=dayItems(ymd(new Date())).filter(i=>i.type==='ev'&&i.time&&i.time>=hm(new Date()));
+ const opts=[`¡${hi}, ${n}! Qué lindo verte. Cuéntame, ¿en qué te ayudo hoy?`,`Hola, ${n}. Aquí estoy contigo. ¿Qué tenemos para hoy?`,`¡${hi}, ${n}! Respira un ratito. Dime qué necesitas y yo lo ordeno.`,`Hola, ${n}${k?', ¿cómo está '+k+'?':''}. Mantén apretado el micrófono y cuéntame lo que quieras.`];
+ let t=opts[Math.floor(Math.random()*opts.length)];
+ if(al)t+=` Tienes ${al===1?'un aviso':al+' avisos'} pendiente${al===1?'':'s'} en Hoy.`;else if(items[0])t+=` Lo próximo es ${items[0].title} a las ${items[0].time}.`;
+ speak(t,true)}
+
 /* ====================== render ====================== */
-let selDay=ymd(new Date()),foodSeg='menu',menuDayIdx=null,recog=null;
+let selDay=ymd(new Date()),foodSeg='menu',menuDayIdx=null;
 function render(){
  if(!S||!S.profile.mom){renderWelcome();return}
  const tab=S.tab||'hoy';
@@ -665,7 +794,7 @@ function render(){
  if(tab==='lia'){const m=$('.msgs');if(m)window.scrollTo(0,document.body.scrollHeight)}
 }
 const navBtn=(id,l,ic)=>`<button class="${S.tab===id?'on':''}" onclick="go('${id}')">${ic}${l}</button>`;
-function go(t){S.tab=t;save();window.scrollTo(0,0);render()}
+function go(t){const from=S.tab;S.tab=t;save();window.scrollTo(0,0);render();if(t==='lia'&&from!=='lia')liaHello()}
 function greet(){const h=new Date().getHours();return h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches'}
 
 function vHoy(){
@@ -678,7 +807,7 @@ function vHoy(){
  return `
  ${installBanner()}
  <div class="hello"><div class="muted small">${fmtDate(new Date())}</div><h1>${greet()}, ${esc(S.profile.mom)}</h1></div>
- <form class="ask" onsubmit="event.preventDefault();quickAsk()"><input id="qa" placeholder="Cuéntale a Lía lo que pasó o lo que viene…" autocomplete="off"><button aria-label="Enviar">${IC.send}</button></form>
+ <form class="ask" onsubmit="event.preventDefault();quickAsk()"><input id="qa" placeholder="Cuéntale a Lía lo que pasó o lo que viene…" autocomplete="off">${micBtn('qa')}<button aria-label="Enviar">${IC.send}</button></form>
  <div class="tiny muted" style="margin:0 4px 8px">Ej.: "a ${esc(S.profile.kid||'la niña')} le dio fiebre, paracetamol 5 ml cada 6 h"</div>
  ${al.map(a=>`<div class="alert ${a.kind==='med'?'':'ev'}"><div class="b"><b>${esc(a.title)}</b><div class="small muted">${esc(a.sub)}</div></div>${a.kind==='med'?`<button class="btn sm" onclick="giveDose('${a.ref}','${a.id}')">Ya se la di</button>`:a.kind==='bill'?`<button class="btn sm" onclick="payBill('${a.ref}','${a.id}')">Pagado</button>`:a.kind==='item'?`<div style="display:flex;flex-direction:column;gap:6px"><button class="btn sm" onclick="itemToList('${a.ref}','${a.id}')">A la lista</button><button class="btn sm ghost" onclick="boughtItem('${a.ref}','${a.id}')">Ya compré</button></div>`:a.kind==='task'?`<button class="btn sm ghost" onclick="toggleTask('${a.ref}');dismissAlert('${a.id}')">Hecho</button>`:`<button class="btn sm ghost" onclick="dismissAlert('${a.id}')">Ok</button>`}</div>`).join('')}
  <div class="stats">
@@ -701,7 +830,7 @@ function medCard(m){const nx=medNext(m);const tot=m.days?Math.round(m.days*24/m.
  return `<div class="card med"><div class="ring" style="--p:${p}"><span>${tot?m.given.length+'/'+tot:m.given.length}</span></div><div style="flex:1;min-width:0"><b>${esc(m.name)}${m.dose?' · '+esc(m.dose):''}</b><div class="small muted">Cada ${m.every} h${m.days?' · '+m.days+' días':''}${m.forKid&&S.profile.kid?' · '+esc(S.profile.kid):''}</div><div class="small"><b style="color:var(--sage)">Próxima: ${hm(new Date(nx))}</b> <span class="muted">(${rel(nx)})</span></div></div><div style="display:flex;flex-direction:column;gap:6px"><button class="btn sm" onclick="giveDose('${m.id}')">Dar</button><button class="btn sm ghost" onclick="stopMed('${m.id}')">Terminar</button></div></div>`}
 function stopMed(id){confirmInline('¿Terminar este tratamiento? Se quita de tu día.',()=>{const m=S.meds.find(x=>x.id===id);if(m){m.stopped=true;S.health.push({id:uid(),ts:Date.now(),type:'nota',text:'Terminó '+m.name})}save();render()})}
 function toggleTask(id){const t=S.tasks.find(x=>x.id===id);if(t){t.done=!t.done;save();render()}}
-function quickAsk(){const v=$('#qa').value.trim();if(!v)return;S.chat.push({id:uid(),from:'me',text:v,ts:Date.now()});liaReply(v);S.tab='lia';render()}
+function quickAsk(){const v=$('#qa').value.trim();if(!v)return;S.tab='lia';talk(v)}
 
 function vAgenda(){
  const ws=weekStart(fromYmd(selDay));const today=ymd(new Date());
@@ -725,16 +854,14 @@ function vLia(){
  const msgs=S.chat.slice(-60);
  const sug=[`Cita con el pediatra el jueves a las 10`,`Natación los martes y jueves a las 16`,`Compré verduras y frutas, 45 Bs`,`Se acabó la leche y los pañales`,`${S.profile.kid||'La niña'} tiene fiebre 38.5, paracetamol 5 ml cada 6 h por 3 días`,`Recuérdame pagar la luz mañana`,`Pre kínder 1800 Bs cada mes el día 5`,`Pagué el internet 150 Bs`,`Guarda lugar: parque con juegos para bebés`,`¿Cómo voy esta semana?`,`Tope de comida 1200 Bs al mes`,`La crema de Sofi le dura 2 meses, cuesta 330 Bs`,`No le gustó el brócoli`,`Cumpleaños de la abuela el 30 de noviembre`];
  return `<div class="chatwrap"><div class="msgs">
- <div class="lia-row"><div class="av">${LIA}</div><div class="msg lia">Hola, ${esc(S.profile.mom)}. Soy Lía 🌱 Escríbeme o díctame como te salga, todo junto si quieres, y yo lo ordeno en tu agenda, medicamentos, menú, compras y gastos. Pídeme "¿cómo voy esta semana?" y te doy tu resumen.</div></div>
- ${msgs.map(m=>m.from==='me'?`<div class="msg me">${esc(m.text)}</div>`:`<div class="lia-row"><div class="av">${LIA}</div><div class="msg lia">${esc(m.text)}${m.cards&&m.cards.length?`<div class="org">${m.cards.map(c=>`<div class="it"><span class="chip ${c.cls}">${esc(c.label)}</span><span>${esc(c.detail)}</span></div>`).join('')}</div>`:''}${m.extra?`<div class="small muted" style="margin-top:8px">${esc(m.extra)}</div>`:''}${m.undone?'<div class="tiny muted" style="margin-top:6px">(Deshecho)</div>':m.undo?`<button class="undo" onclick="undoMsg('${m.id}')">Deshacer</button>`:''}</div></div>`).join('')}
+ <div class="lia-row"><div class="av hi" onclick="liaHello()" role="button" aria-label="Saludar a Lía" style="cursor:pointer">${LIA}</div><div class="msg lia">Hola, ${esc(S.profile.mom)}. Soy Lía 🌱 Escríbeme o díctame como te salga, todo junto si quieres, y yo lo ordeno en tu agenda, medicamentos, menú, compras y gastos. Pídeme "¿cómo voy esta semana?" y te doy tu resumen.</div></div>
+ ${msgs.map(m=>m.from==='me'?`<div class="msg me">${esc(m.text)}</div>`:m.typing?`<div class="lia-row"><div class="av hi">${LIA}</div><div class="msg lia typing" aria-label="Lía está pensando"><span></span><span></span><span></span></div></div>`:`<div class="lia-row"><div class="av">${LIA}</div><div class="msg lia">${esc(m.text)}${m.cards&&m.cards.length?`<div class="org">${m.cards.map(c=>`<div class="it"><span class="chip ${c.cls}">${esc(c.label)}</span><span>${esc(c.detail)}</span></div>`).join('')}</div>`:''}${m.extra?`<div class="small muted" style="margin-top:8px">${esc(m.extra)}</div>`:''}${m.undone?'<div class="tiny muted" style="margin-top:6px">(Deshecho)</div>':m.undo?`<button class="undo" onclick="undoMsg('${m.id}')">Deshacer</button>`:''}</div></div>`).join('')}
  </div>
  <div class="composer"><div class="sugs">${sug.map(s=>`<button onclick="sendChat(this.textContent)">${esc(s)}</button>`).join('')}</div>
- <form class="ask" onsubmit="event.preventDefault();sendChat()"><input id="ci" placeholder="Escribe o dicta…" autocomplete="off"><button type="button" class="mic" id="mic" aria-label="Dictar" onclick="dictar()">${IC.mic}</button><button aria-label="Enviar">${IC.send}</button></form>
- <div class="tiny muted" style="text-align:center;margin-top:4px">Versión de prueba: Lía entiende frases comunes. La versión final usará IA.</div></div></div>`}
-function sendChat(t){const v=(t||$('#ci').value).trim();if(!v)return;S.chat.push({id:uid(),from:'me',text:v,ts:Date.now()});liaReply(v);render()}
-function dictar(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('Usa el micrófono de tu teclado para dictar');$('#ci').focus();return}
- if(recog){recog.stop();return}recog=new SR();recog.lang='es-BO';recog.interimResults=true;const b=$('#mic');b.classList.add('rec');
- recog.onresult=e=>{$('#ci').value=[...e.results].map(r=>r[0].transcript).join(' ')};recog.onend=()=>{b.classList.remove('rec');recog=null};recog.onerror=()=>{toast('No pude escuchar. Revisa el permiso del micrófono')};recog.start()}
+ <form class="ask" onsubmit="event.preventDefault();sendChat()"><input id="ci" placeholder="Escribe o mantén 🎤 para hablar" autocomplete="off">${micBtn('ci')}<button aria-label="Enviar">${IC.send}</button></form>
+ <div class="tiny muted" style="text-align:center;margin-top:4px">${aiCode()?'<span class="aibadge">✨ Lía con IA</span> Mantén apretado 🎤 para hablar, suelta para enviar. Un toque: graba manos libres.':'Lía básica: entiende frases comunes. Activa Lía con IA con tu código en Ajustes ⚙️.'}</div></div></div>`}
+function sendChat(t){const v=(t||$('#ci').value).trim();if(!v)return;talk(v)}
+
 
 function vSalud(){
  const act=S.meds.filter(medActive);const past=S.meds.filter(m=>!medActive(m));
@@ -888,15 +1015,17 @@ function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3>
  <label class="f">Alergias (se quitan del menú)</label><div class="chips">${ALLERG.map(([k,l])=>`<label><input type="checkbox" class="sA" value="${k}" ${p.allergies.includes(k)?'checked':''}>${l}</label>`).join('')}</div>
  <label class="f">Ciudad</label><input class="inp" id="sCity" value="${esc(p.city||'')}">
  <label class="f">No le gusta</label><input class="inp" id="sD" value="${esc((p.dislikes||[]).join(', '))}" placeholder="brócoli, hígado">
+ <label class="f">Código de Lía con IA</label><input class="inp" id="sCode" value="${esc(aiCode())}" placeholder="MD-XXXXXX" autocapitalize="characters">
+ <label class="chips" style="margin-top:10px"><label><input type="checkbox" id="sVoice" ${S.voice!==false?'checked':''}>Lía me saluda y responde con voz</label></label>
  <div class="dlg-act"><button class="btn" onclick="saveSettings()">Guardar</button></div>
  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0 6px">
  <button class="btn ghost block" style="margin-top:8px" onclick="askNotif(true)">Activar avisos en este celular</button>
  <button class="btn ghost block" style="margin-top:8px" onclick="exportData()">Descargar respaldo</button>
  <label class="btn ghost block" style="margin-top:8px;display:grid;place-items:center">Cargar respaldo<input type="file" accept=".json" hidden onchange="importData(this.files[0])"></label>
  <button class="btn ghost block" style="margin-top:8px;color:var(--danger)" onclick="confirmInline('¿Borrar todos tus datos de este celular?',()=>{localStorage.removeItem(KEY);S=null;render()})">Borrar todo</button>
- <p class="tiny muted" style="margin-top:14px">Versión de prueba. Tus datos y los de tu peque se guardan solo en este celular: no se envían a internet. Si borras los datos del navegador se pierden, por eso descarga un respaldo cada semana. Las porciones y la información de salud son guía general y no reemplazan al pediatra.</p>
+ <p class="tiny muted" style="margin-top:14px">Versión de prueba. Tus datos y los de tu peque se guardan solo en este celular. Con Lía con IA, lo que le escribes o le dices se envía a la IA de Google (Gemini) solo para entenderlo y responderte; no lo guardamos en ningún servidor. Si borras los datos del navegador se pierden, por eso descarga un respaldo cada semana. Las porciones y la información de salud son guía general y no reemplazan al pediatra.</p>
  <button class="btn ghost block" onclick="closeDlg()">Cerrar</button>`)}
-function saveSettings(){const p=S.profile;p.mom=$('#sM').value.trim()||p.mom;p.kid=$('#sK').value.trim();p.birth=$('#sB').value;p.city=$('#sCity').value.trim();p.allergies=[...document.querySelectorAll('.sA:checked')].map(x=>x.value);p.dislikes=$('#sD').value.split(',').map(x=>norm(x.trim())).filter(Boolean);makeMenu(S.menu&&S.menu.seed);save();closeDlg();render();toast('Guardado')}
+function saveSettings(){const p=S.profile;const nc=$('#sCode').value.trim().toUpperCase().replace(/\s+/g,'');if(nc!==aiCode()){setCode(nc);if(nc)checkCode(nc)}S.voice=$('#sVoice').checked;p.mom=$('#sM').value.trim()||p.mom;p.kid=$('#sK').value.trim();p.birth=$('#sB').value;p.city=$('#sCity').value.trim();p.allergies=[...document.querySelectorAll('.sA:checked')].map(x=>x.value);p.dislikes=$('#sD').value.split(',').map(x=>norm(x.trim())).filter(Boolean);makeMenu(S.menu&&S.menu.seed);save();closeDlg();render();toast('Guardado')}
 function exportData(){const b=new Blob([JSON.stringify(S)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mamaaldia-respaldo-'+ymd(new Date())+'.json';a.click()}
 function importData(f){if(!f)return;f.text().then(t=>{const d=JSON.parse(t);if(!d.profile)throw 0;S=Object.assign(blank(),d);save();closeDlg();render();toast('Respaldo cargado')}).catch(()=>toast('Archivo no válido'))}
 async function askNotif(force){try{if(!('Notification' in window)){if(force)toast('Este navegador no permite avisos. Instala la app primero.');return}if(Notification.permission==='default'||force){const r=await Notification.requestPermission();if(force)toast(r==='granted'?'Avisos activados':'Avisos bloqueados en el navegador')}}catch(e){}}
@@ -958,9 +1087,12 @@ function installBanner(w){if(standalone())return '';if(!deferredPrompt&&!isIOS()
 async function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;render()}
 
 /* ====================== inicio ====================== */
-S=load();if(S)S=Object.assign(blank(),S);
+S=load();if(S){S=Object.assign(blank(),S);S.chat=S.chat.filter(m=>!m.typing)}
+(()=>{try{const q=new URLSearchParams(location.search).get('c');if(q){setCode(q.toUpperCase().replace(/\s+/g,''));history.replaceState(null,'',location.pathname);setTimeout(()=>checkCode(aiCode()),800)}}catch(e){}})();
 render();
-setInterval(()=>{if(S&&S.profile.mom){tick();if(S.tab==='hoy'&&!$('#dlg').open&&document.activeElement.tagName!=='INPUT')render()}},30000);
+window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEventListener('pointercancel',e=>{if(rec&&rec.held)micUp(e)});
+try{if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
+setInterval(()=>{if(S&&S.profile.mom){tick();if(S.tab==='hoy'&&!rec&&!busy&&!$('#dlg').open&&document.activeElement.tagName!=='INPUT')render()}},30000);
 setTimeout(tick,1500);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
