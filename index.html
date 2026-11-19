@@ -431,8 +431,10 @@ const NEED_RE=/\b(hay que comprar|tengo que comprar|necesito comprar|tenemos que
 const TASK_RE=/\b(recordar|recuerdame|recordame|acordarme|no olvidar|no olvides|tengo que|tenemos que|debo|hay que|pagar|llamar|lavar|preparar|llevar|enviar|mandar|avisame|comprarle|inscribir|renovar)\b/;
 const FOOD_RE=/\b(no quiso|no le gusto|no le gusta|no comio|le encanto|le gusto|comio bien|comio todo|comio)\b/;
 
+function timeRange(n){const m=/\b(?:de|desde)\s+(?:las\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*(?:hs|h|am|pm)?\s+(?:a|hasta)\s+(?:las\s+)?(\d{1,2})(?:[:.](\d{2}))?\b/.exec(n);if(!m||+m[1]>23||+m[3]>23)return null;let h1=+m[1],h2=+m[3];const pmCtx=/(de|en|por) la (tarde|noche)/.test(n);if(pmCtx&&h1<12)h1+=12;if(pmCtx&&h2<12)h2+=12;if(h1>=1&&h1<=6&&!/manana/.test(n))h1+=12;if(h2<h1&&h2+12<=23)h2+=12;return {start:pad(h1)+':'+pad(m[2]?+m[2]:0),end:pad(h2)+':'+pad(m[4]?+m[4]:0)}}
 function parseTime(n){
  let h=null,mi=0,ap=null,m;
+ {const tr=timeRange(n);if(tr)return tr.start}
  if(/\bmediodia\b/.test(n))return '12:00';
  if((m=/\b(?:a las|a la|alas|las|tipo|como a las)\s*(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?\s*(am|pm|a\. ?m\.|p\. ?m\.|hs|hrs|h)?\b/.exec(n))){h=+m[1];mi=m[2]?+m[2]:0;ap=m[3]}
  else if((m=/\b(\d{1,2}):(\d{2})\s*(am|pm|hs)?\b/.exec(n))){h=+m[1];mi=+m[2];ap=m[3]}
@@ -451,7 +453,7 @@ function parseDate(n,now=new Date()){
  const wi=w=>DAYN.indexOf(w.replace(/(sabado|domingo)s$/,'$1'));
  if(/\btodos los dias\b|\bcada dia\b|\ba diario\b|\bdiariamente\b/.test(n))recur=[0,1,2,3,4,5,6];
  else if(/\bde lunes a viernes\b/.test(n))recur=[1,2,3,4,5];
- else if((m=new RegExp('\\b(?:los|todos los|cada)\\s+'+WD+'((?:\\s*(?:,|y|e)\\s*'+WD+')*)').exec(n))){
+ else if((m=new RegExp('\\b(?:los dias|todos los dias|los|todos los|cada)\\s+'+WD+'((?:\\s*(?:,|y|e)\\s*'+WD+')*)').exec(n))||(m=new RegExp('\\b'+WD+'((?:\\s*(?:,|y|e)\\s*'+WD+')+)').exec(n))){
   recur=[wi(m[1])];const rest=m[2]||'';const re=new RegExp(WD,'g');let x;while((x=re.exec(rest)))recur.push(wi(x[1]));recur=[...new Set(recur)].sort()}
  if(recur)return {date:null,recur,explicit:true};
  const nm=n.replace(/\b(de|en|por|esta|en la|por la|de la)\s+(la\s+)?manana\b/g,' ');
@@ -473,7 +475,8 @@ function stripDT(s){
   /\b(todos\s+los|los|cada|el|este|pr[oó]ximo|el\s+pr[oó]ximo|para\s+el)?\s*\b(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?|domingos?)\b(\s*(,|y|e)\s*(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?|domingos?)\b)*/gi,
   /\bde\s+lunes\s+a\s+viernes\b/gi,/\btodos\s+los\s+d[ií]as\b|\bcada\s+d[ií]a\b|\ba\s+diario\b/gi,
   /\b(el\s+|para\s+el\s+)?\d{1,2}\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/gi,/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/gi,
-  /\b(recu[eé]rdame|record[aá]me|recordar|acordarme|no\s+olvidar|no\s+olvides|av[ií]same)(\s+que)?(\s+de)?\b/gi];
+  /\b(recu[eé]rdame|record[aá]me|recordar|acordarme|no\s+olvidar|no\s+olvides|av[ií]same)(\s+que)?(\s+de)?\b/gi,
+  /\b(ay[uú]dame|ayudame)\s+(a\s+)?/gi,/\b(de|desde)\s+(las\s+)?\d{1,2}([:.]\d{2})?\s*(hs|h)?\s+(a|hasta)\s+(las\s+)?\d{1,2}([:.]\d{2})?\s*(hs|h)?(\s+del?\s+(mediod[ií]a|ma[nñ]ana|tarde|noche))?/gi,/\blos\s+d[ií]as\b/gi,/\b(del\s+)?mediod[ií]a\b/gi,/^\s*(que\s+)?(tengo|tiene|tenemos)\s+/gi];
  let t=' '+s+' ';for(const r of R)t=t.replace(r,' ');
  t=t.replace(/\s+/g,' ').trim();
  for(let i=0;i<4;i++)t=t.replace(/^(lia,?|tengo|tenemos|tiene|hay|anota|que|el|la|para|y|de|es)\s+/i,'').replace(/[\s,.;:]+(a|el|la|para|de|y|en|que|es)?\s*$/i,'');
@@ -502,6 +505,7 @@ function organize(text,now=new Date()){
  const kidN=norm(S.profile.kid||'');
  for(const orig of sentences){
   const n=norm(orig);let used=false;
+  if(/^nota\s*:/i.test(orig.trim())){const tx=cap(orig.replace(/^\s*nota\s*:\s*/i,''));if(tx)out.push({kind:'notes',obj:{id:uid(),ts:now.getTime(),text:tx},label:'Nota',detail:tx,cls:'c-tarea',note:true});continue}
   const isKid=(kidN&&n.includes(kidN))||/\b(bebe|nena|nene|nina|nino|hija|hijo|la peque|el peque|mi peque|wawa|guagua)\b/.test(n);
   // terminar tratamiento
   if(/\b(termino|terminamos|ya termino|terminaron|ya esta san[oa]|se curo|suspend\w*|deja de dar\w*|dejar de dar\w*|ya no le (doy|damos|des)|quita\w* (el|la|los) (remedio|medicamento|tratamiento))\b/.test(n)&&S.meds.some(medActive)){
@@ -573,15 +577,15 @@ function organize(text,now=new Date()){
   // eventos y tareas
   const pd=parseDate(n,now);const t=parseTime(n);
   const cat=EV_SALUD.test(n)?'salud':EV_CLASE.test(n)?'clase':EV_FAM.test(n)?'familia':EV_MAMA.test(n)?'mama':null;
-  const isTask=TASK_RE.test(n)&&!(/\b(cita|clase|consulta|control)\b/.test(n));
+  const isTask=TASK_RE.test(n)&&!((EV_SALUD.test(n)||EV_CLASE.test(n)||pd.recur)&&!/\b(pagar|llamar|comprar|comprarle|enviar|mandar|lavar|preparar)\b/.test(n));
   if(cat&&!isTask||(!isTask&&(pd.explicit||t)&&!cat)){
    let date=pd.date?ymd(pd.date):null;
    if(!date&&!pd.recur){const d=t?at(ymd(now),t):startDay(now);if(t&&d<now)d.setDate(d.getDate()+1);date=ymd(d)}
    let title=stripDT(orig);
    if(!title||title.length<3)title={salud:'Cita médica',clase:'Clase',familia:'Compromiso familiar',mama:'Compromiso'}[cat||'mama'];
-   const o={id:uid(),title,cat:cat||(isKid?'familia':'mama'),who:isKid||cat==='clase'||/pediatra|vacuna/.test(n)?'kid':'mom',date,time:t,recur:pd.recur,remind:cat==='salud'?60:30,created:ymd(now)};
+   const tr=timeRange(n);const o={id:uid(),title,cat:cat||(isKid?'familia':'mama'),who:isKid||cat==='clase'||/pediatra|vacuna/.test(n)?'kid':'mom',date,time:t,end:tr?tr.end:null,recur:pd.recur,remind:cat==='salud'?60:30,created:ymd(now)};
    const when=pd.recur?('Cada '+pd.recur.map(i=>DAYS[i].toLowerCase()).join(', ')):fmtDate(fromYmd(date));
-   out.push({kind:'events',obj:o,label:{salud:'Cita',clase:'Clase',familia:'Compromiso',mama:'Para ti'}[o.cat],detail:title+' · '+when+(t?' a las '+t:''),cls:'c-'+o.cat});continue}
+   out.push({kind:'events',obj:o,label:{salud:'Cita',clase:'Clase',familia:'Compromiso',mama:'Para ti'}[o.cat],detail:title+' · '+when+(t?(o.end?' de '+t+' a '+o.end:' a las '+t):''),cls:'c-'+o.cat});continue}
   if(isTask||pd.explicit||t){
    let due=null;if(t||pd.date){const d=pd.date?new Date(pd.date):startDay(now);if(t){const [h,mm]=t.split(':');d.setHours(+h,+mm,0,0)}else d.setHours(9,0,0,0);if(!pd.date&&d<now)d.setDate(d.getDate()+1);due=d.getTime()}
    const title=stripDT(orig)||cap(orig);
@@ -592,8 +596,8 @@ function organize(text,now=new Date()){
  }
  return {out,shopMarks};
 }
-function liaReply(text,lead){
- const now=new Date();const {out,shopMarks}=organize(text,now);
+function liaReply(text,lead,pre){
+ const now=new Date();const {out,shopMarks}=text?organize(text,now):{out:[],shopMarks:[]};if(pre&&pre.length)out.unshift(...pre);
  const prevChecked=JSON.parse(JSON.stringify(S.shopChecked));const prevDis=[...(S.profile.dislikes||[])];const refs=[];const billPrev=[];const medPrev=[];const capPrev=[];
  const lines=[];
  for(const a of out){
@@ -642,7 +646,7 @@ function medDosesOn(m,ds){const d0=fromYmd(ds).getTime(),d1=d0+864e5;const res=[
  let nx=medNext(m);if(m.stopped)nx=null;while(nx&&nx<d1&&nx<medEnd(m)){if(nx>=d0)res.push({t:nx,done:false});nx+=m.every*36e5}
  return res.sort((a,b)=>a.t-b.t)}
 function dayItems(ds){const items=[];
- for(const e of eventsOn(ds))items.push({time:e.time,type:'ev',cat:e.cat,title:e.title,sub:{salud:'Salud',clase:'Clase',familia:'Familia y amigos',mama:'Para ti'}[e.cat]+(e.who==='kid'&&S.profile.kid?' · '+S.profile.kid:''),id:e.id});
+ for(const e of eventsOn(ds))items.push({time:e.time,type:'ev',cat:e.cat,title:e.title+(e.end?' (hasta '+e.end+')':''),sub:{salud:'Salud',clase:'Clase',familia:'Familia y amigos',mama:'Para ti'}[e.cat]+(e.who==='kid'&&S.profile.kid?' · '+S.profile.kid:''),id:e.id});
  for(const m of S.meds)for(const d of medDosesOn(m,ds))items.push({time:hm(new Date(d.t)),type:'med',cat:'med',title:m.name+(m.dose?' · '+m.dose:''),sub:d.done?'Dosis dada':'Dosis'+(m.forKid&&S.profile.kid?' de '+S.profile.kid:''),done:d.done,id:m.id,ts:d.t});
  const md=menuDay(ds);if(md)for(const [id,lab,time] of SLOTS){const r=RECBY[md[id]];if(r)items.push({time,type:'meal',cat:'comida',title:r.n,sub:lab})}
  for(const t of S.tasks)if(t.due&&ymd(new Date(t.due))===ds)items.push({time:hm(new Date(t.due)),type:'task',cat:'tarea',title:t.text,sub:'Pendiente',done:t.done,id:t.id});
@@ -682,9 +686,22 @@ async function liaAsk(body){const ctl=new AbortController();const to=setTimeout(
   const j=await r.json().catch(()=>({}));if(r.status===401){setCode('');throw new Error('codigo')}if(!r.ok)throw new Error(j.error||'ia');return j}finally{clearTimeout(to)}}
 function typingOn(){S.chat.push({id:'typing',from:'lia',typing:true,ts:Date.now()});render()}
 function typingOff(){S.chat=S.chat.filter(m=>!m.typing)}
+function aiActions(j){const out=[];const now=new Date();const DN=['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+ const hhmm=x=>{const m=/^(\d{1,2})[:.](\d{2})/.exec(String(x||''));return m&&+m[1]<24?pad(+m[1])+':'+m[2]:null};
+ const dayIx=d=>typeof d==='number'?d:DN.indexOf(norm(String(d)).replace(/^(sabado|domingo)s$/,'$1'));
+ for(const e of (j.eventos||[])){if(!e||!e.titulo)continue;const cat=['salud','clase','familia','mama'].includes(e.tipo)?e.tipo:'familia';
+  let recur=Array.isArray(e.dias)&&e.dias.length?[...new Set(e.dias.map(dayIx).filter(x=>x>=0&&x<=6))].sort():null;if(recur&&!recur.length)recur=null;
+  const date=!recur&&/^\d{4}-\d{2}-\d{2}$/.test(e.fecha||'')?e.fecha:(!recur?ymd(now):null);const time=hhmm(e.hora),end=hhmm(e.hora_fin);
+  const o={id:uid(),title:cap(String(e.titulo).slice(0,80)),cat,who:e.para==='mama'?'mom':(e.para==='peque'||cat==='clase'?'kid':'mom'),date,time,end,recur,remind:+e.aviso_min||(cat==='salud'?60:30),created:ymd(now)};
+  const when=recur?('Cada '+recur.map(i=>DAYS[i].toLowerCase()).join(', ')):fmtDate(fromYmd(date));
+  out.push({kind:'events',obj:o,label:{salud:'Cita',clase:'Clase',familia:'Compromiso',mama:'Para ti'}[cat],detail:o.title+' · '+when+(time?(end?' de '+time+' a '+end:' a las '+time):''),cls:'c-'+cat})}
+ for(const t of (j.pendientes||[])){if(!t||!t.texto)continue;let due=null;if(/^\d{4}-\d{2}-\d{2}$/.test(t.fecha||'')){const d=fromYmd(t.fecha);const h=hhmm(t.hora)||'09:00';d.setHours(+h.slice(0,2),+h.slice(3),0,0);due=d.getTime()}
+  const o={id:uid(),text:cap(String(t.texto).slice(0,100)),due,done:false,created:now.getTime()};
+  out.push({kind:'tasks',obj:o,label:'Pendiente',detail:o.text+(due?' · '+fmtDate(new Date(due))+(t.hora?' a las '+hhmm(t.hora):''):''),cls:'c-tarea'})}
+ return out}
 function applyAI(j,fallbackText){
- const fr=(j.frases||[]).map(x=>x.trim()).filter(Boolean);const lead=(j.respuesta||'').trim();
- if(fr.length)liaReply(fr.join('\n'),lead||null);
+ const fr=(j.frases||[]).map(x=>x.trim()).filter(Boolean);const lead=(j.respuesta||'').trim();const pre=aiActions(j);
+ if(fr.length||pre.length)liaReply(fr.join('\n'),lead||null,pre);
  else if(lead){S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:lead});save()}
  else if(fallbackText)liaReply(fallbackText);
  return lead}
@@ -709,7 +726,7 @@ const micBtn=src=>`<button type="button" class="mic" aria-label="Mantén apretad
 let rec=null;
 const SRc=()=>window.SpeechRecognition||window.webkitSpeechRecognition;
 const canAudio=()=>!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder);
-function micDown(e,src){e.preventDefault();
+function micDown(e,src){e.preventDefault();ctxOn();try{if(vozSrc)vozSrc.stop()}catch(x){}
  if(rec){if(rec.locked)finishRec(false);return}
  if(busy){toast('Lía está pensando, un momentito…');return}
  try{e.currentTarget.setPointerCapture(e.pointerId)}catch(x){}
@@ -764,19 +781,34 @@ function liaVoice(){let vs=[];try{vs=speechSynthesis.getVoices().filter(v=>/^es/
 let actx=null;
 function chime(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const t0=actx.currentTime+.02;
  [[784,0],[988,.13],[1319,.26]].forEach(([f,d])=>{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.07,t0+d+.03);g.gain.exponentialRampToValueAtTime(.0001,t0+d+.9);o.connect(g).connect(actx.destination);o.start(t0+d);o.stop(t0+d+1)})}catch(e){}}
-function speak(text,withChime){if(S.voice===false||!('speechSynthesis' in window))return;
+function ctxOn(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume()}catch(e){}return actx}
+let vozSrc=null,vozSeq=0;
+async function vozIA(text){const key='/lia-voz/'+encodeURIComponent(text.slice(0,300));let j=null,cache=null;
+ try{cache=await caches.open('lia-voz-v1');const hit=await cache.match(key);if(hit)j=await hit.json()}catch(e){}
+ if(!j){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),15000);
+  try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:aiCode(),modo:'voz',texto:text}),signal:ctl.signal});if(!r.ok)return null;j=await r.json()}catch(e){return null}finally{clearTimeout(to)}
+  if(!j||!j.audio)return null;try{if(cache)await cache.put(key,new Response(JSON.stringify(j),{headers:{'content-type':'application/json'}}))}catch(e){}}
+ return j}
+function playPCM(j){const a=ctxOn();if(!a)return false;const bin=atob(j.audio);const n=bin.length>>1;const buf=a.createBuffer(1,n,j.rate||24000);const ch=buf.getChannelData(0);
+ for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;ch[i]=v/32768}
+ try{if(vozSrc)vozSrc.stop()}catch(e){}const src=a.createBufferSource();const g=a.createGain();g.gain.value=.95;src.buffer=buf;src.connect(g).connect(a.destination);vozSrc=src;
+ document.body.classList.add('lia-talk');src.onended=()=>{if(vozSrc===src)document.body.classList.remove('lia-talk')};src.start(a.currentTime+.05);return true}
+function speak(text,withChime){if(S.voice===false)return;const my=++vozSeq;ctxOn();if(withChime)chime();
+ if(aiCode()){const clean=String(text).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\s+/g,' ').trim().slice(0,400);const t0=Date.now();
+  vozIA(clean).then(j=>{if(my!==vozSeq)return;if(j&&playPCM(j))return;speakBrowser(text,false)});return}
+ speakBrowser(text,false)}
+function speakBrowser(text,withChime){if(!('speechSynthesis' in window))return;
  const clean=String(text).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\bBs\b\.?/g,'bolivianos').replace(/\s+/g,' ').trim().slice(0,400);if(!clean)return;
  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(clean);const v=liaVoice();if(v){u.voice=v;u.lang=v.lang}else u.lang='es-MX';
   u.rate=.94;u.pitch=1.12;u.volume=.9;u.onstart=()=>document.body.classList.add('lia-talk');u.onend=u.onerror=()=>document.body.classList.remove('lia-talk');
   if(withChime){chime();setTimeout(()=>speechSynthesis.speak(u),480)}else speechSynthesis.speak(u)}catch(e){}}
 function speakLast(){const m=[...S.chat].reverse().find(x=>x.from==='lia'&&!x.typing);if(m)speak(m.text)}
-function liaHello(){const h=new Date().getHours();const n=S.profile.mom||'';const k=S.profile.kid;
+function helloText(){const h=new Date().getHours();const n=S.profile.mom||'';const k=S.profile.kid;
  const hi=h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches';
- const al=dueAlerts().length;const items=dayItems(ymd(new Date())).filter(i=>i.type==='ev'&&i.time&&i.time>=hm(new Date()));
  const opts=[`¡${hi}, ${n}! Qué lindo verte. Cuéntame, ¿en qué te ayudo hoy?`,`Hola, ${n}. Aquí estoy contigo. ¿Qué tenemos para hoy?`,`¡${hi}, ${n}! Respira un ratito. Dime qué necesitas y yo lo ordeno.`,`Hola, ${n}${k?', ¿cómo está '+k+'?':''}. Mantén apretado el micrófono y cuéntame lo que quieras.`];
- let t=opts[Math.floor(Math.random()*opts.length)];
- if(al)t+=` Tienes ${al===1?'un aviso':al+' avisos'} pendiente${al===1?'':'s'} en Hoy.`;else if(items[0])t+=` Lo próximo es ${items[0].title} a las ${items[0].time}.`;
- speak(t,true)}
+ const d=new Date();return opts[(d.getDate()+d.getMonth())%opts.length]}
+function liaHello(){speak(helloText(),true)}
+function prefetchHello(){if(!aiCode()||!S||!S.profile.mom||S.voice===false)return;vozIA(helloText().replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\s+/g,' ').trim().slice(0,400))}
 
 /* ====================== render ====================== */
 let selDay=ymd(new Date()),foodSeg='menu',menuDayIdx=null;
@@ -845,7 +877,7 @@ function vAgenda(){
  <div class="sect"><h2>Próximas citas</h2></div>
  <div class="card">${up.length?`<ul class="tl">${up.map(({d,e})=>`<li><div class="t" style="width:62px;font-size:13px">${DSH[fromYmd(d).getDay()]} ${fromYmd(d).getDate()}</div><div class="b"><div class="ttl">${esc(e.title)}</div><span class="chip c-${e.cat}">${e.time||'Sin hora'}</span></div></li>`).join('')}</ul>`:'<div class="empty">No hay citas próximas.</div>'}</div>
  <div class="sect"><h2>Clases y rutinas</h2></div>
- <div class="card">${S.events.filter(e=>e.recur).length?`<ul class="tl">${S.events.filter(e=>e.recur).map(e=>`<li><div class="b"><div class="ttl">${esc(e.title)}</div><span class="chip c-${e.cat}">${e.recur.map(i=>DSH[i]).join(', ')}${e.time?' · '+e.time:''}</span></div><button class="btn sm ghost" onclick="delEvent('${e.id}')" aria-label="Borrar">✕</button></li>`).join('')}</ul>`:'<div class="empty">Dile a Lía: "natación los martes y jueves a las 16:00".</div>'}</div>
+ <div class="card">${S.events.filter(e=>e.recur).length?`<ul class="tl">${S.events.filter(e=>e.recur).map(e=>`<li><div class="b"><div class="ttl">${esc(e.title)}</div><span class="chip c-${e.cat}">${e.recur.map(i=>DSH[i]).join(', ')}${e.time?' · '+e.time+(e.end?'–'+e.end:''):''}</span></div><button class="btn sm ghost" onclick="delEvent('${e.id}')" aria-label="Borrar">✕</button></li>`).join('')}</ul>`:'<div class="empty">Dile a Lía: "natación los martes y jueves a las 16:00".</div>'}</div>
  <button class="btn fab" onclick="addEventDlg()">+ Nueva cita</button>`}
 function shiftWeek(n){selDay=ymd(addDays(fromYmd(selDay),n));render()}
 function delEvent(id){if(!confirmInline('¿Borrar este compromiso?',()=>{S.events=S.events.filter(e=>e.id!==id);save();render()}))return}
@@ -1093,7 +1125,7 @@ render();
 window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEventListener('pointercancel',e=>{if(rec&&rec.held)micUp(e)});
 try{if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
 setInterval(()=>{if(S&&S.profile.mom){tick();if(S.tab==='hoy'&&!rec&&!busy&&!$('#dlg').open&&document.activeElement.tagName!=='INPUT')render()}},30000);
-setTimeout(tick,1500);
+setTimeout(tick,1500);setTimeout(prefetchHello,2500);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>

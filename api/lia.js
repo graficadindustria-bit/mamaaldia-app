@@ -13,6 +13,34 @@ const CODIGOS = {
 const LIMITE = { creador: 300, invitada: 80 }; // mensajes por día (mejor esfuerzo)
 const usos = {};
 const MODELOS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
+const API = 'https://generativelanguage.googleapis.com/v1beta/models';
+let catalogo = null, catalogoT = 0;
+async function modelos(key) {
+  if (catalogo && Date.now() - catalogoT < 6 * 3600e3) return catalogo;
+  let nombres = [];
+  try {
+    const r = await fetch(API + '?pageSize=1000', { headers: { 'x-goog-api-key': key } });
+    if (r.ok) { const j = await r.json(); nombres = (j.models || []).filter(m => (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0).map(m => m.name.replace(/^models\//, '')); }
+  } catch (e) {}
+  const ver = n => { const m = /gemini-(\d+(?:\.\d+)?)/.exec(n); return m ? parseFloat(m[1]) : 0; };
+  const texto = nombres.filter(n => /flash/.test(n) && !/tts|image|live|audio|embed|thinking|exp|vision|native/.test(n))
+    .sort((a, b) => (/lite/.test(a) - /lite/.test(b)) || (/preview/.test(a) - /preview/.test(b)) || ver(b) - ver(a)).slice(0, 4);
+  const tts = nombres.filter(n => /tts/.test(n)).sort((a, b) => (/flash/.test(b) - /flash/.test(a)) || ver(b) - ver(a));
+  catalogo = { texto: [...new Set(MODELOS.concat(texto))], tts: [...new Set(tts.concat(['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts']))], todos: nombres };
+  catalogoT = Date.now();
+  return catalogo;
+}
+async function pedir(lista, cuerpo, key) {
+  let r, mejor = null;
+  for (let n = 0; n < lista.length; n++) {
+    r = await fetch(API + '/' + lista[n] + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: cuerpo });
+    if (r.ok) return r;
+    if (r.status !== 404 && !mejor) mejor = r.clone();
+    if ([400, 404, 429, 500, 503].indexOf(r.status) < 0) break;
+  }
+  return mejor || r;
+}
+const VOZ = process.env.LIA_VOZ || 'Sulafat';
 
 const SYS = `Eres Lía, la asistente de la app "Mamá al Día" para mamás de Bolivia con hijos pequeños.
 Hablas en español de Bolivia, tuteas, eres cálida, breve y práctica, como una amiga organizada. Nunca juzgas.
@@ -21,10 +49,14 @@ Recibirás un JSON con: "hoy" (fecha y día de la semana), "hora", "mama", "pequ
 
 Tu trabajo:
 1. Entender todo lo que dijo, aunque venga desordenado, con muletillas o varias cosas juntas.
-2. Separar cada cosa que hay que guardar en "frases": oraciones cortas y claras, una por cosa, con este formato para que la app las ordene:
-   - Citas: "Cita con la pediatra el 27 de noviembre a las 10:00"
-   - Clases o rutinas: "Natación los martes y jueves a las 16:00"
-   - Pendientes: "Recuérdame pagar la luz el 20 de noviembre a las 9:00" o "Recuérdame llamar a la abuela" (sin hora)
+2. Todo lo que va a la AGENDA (citas, clases, actividades, rutinas, cumpleaños, compromisos) ponlo en "eventos", aunque ella diga "recuérdame" o "ayúdame a recordar":
+   {"titulo":"Natación de Alya","tipo":"clase","dias":["lunes","miercoles","viernes"],"hora":"10:00","hora_fin":"12:00","para":"peque"}
+   {"titulo":"Control con la pediatra","tipo":"salud","fecha":"2026-11-27","hora":"10:00","para":"peque"}
+   - "tipo": salud (médico, vacuna, terapia), clase (natación, kínder, talleres), familia (cumpleaños, visitas, paseos), mama (cosas de ella: trabajo, gimnasio, trámites).
+   - Si se repite cada semana usa "dias" (en minúsculas, sin tildes) y no pongas "fecha". Si es una vez usa "fecha" (AAAA-MM-DD) calculada desde "hoy".
+   - "hora" y "hora_fin" en 24 h HH:MM ("de 10 a 12 del mediodía" = 10:00 a 12:00). Si no dijo hora, omítela.
+   Las tareas sueltas (pagar, llamar, comprar algo puntual, trámites) van en "pendientes": {"texto":"Pagar la luz","fecha":"2026-11-20","hora":"09:00"} (fecha y hora solo si las dijo).
+   Lo demás sepáralo en "frases": oraciones cortas y claras, una por cosa, con este formato para que la app las ordene:
    - Medicamentos (solo si ella dio el nombre y la frecuencia, nunca inventes dosis): "Paracetamol 5 ml cada 6 horas por 3 días" ; si ya se lo dio: "Le di paracetamol 5 ml cada 6 horas"
    - Terminar un medicamento: "Terminó el paracetamol" ; si ya se sanó: "Ya está sana"
    - Fiebre o síntomas: "Fiebre 38,5 grados" o "Tiene tos"
@@ -46,7 +78,9 @@ Tu trabajo:
 Salud: eres guía general, no médica. No diagnosticas ni indicas dosis. Con fiebre de 39 °C o más, dificultad para respirar, decaimiento fuerte, deshidratación o un bebé menor de 3 meses con fiebre, dile con calma que llame al pediatra o vaya a emergencias. Si la mamá se nota agotada o triste, respóndele con cariño y recuérdale que pedir ayuda está bien.
 No inventes datos que ella no dio. No pidas datos personales.
 
-Responde SOLO con JSON: {"respuesta":"...","frases":["..."],"transcripcion":"..."}`;
+Nunca pongas una cita, clase o pendiente en "frases" ni como nota: van en "eventos" o "pendientes".
+
+Responde SOLO con JSON: {"respuesta":"...","eventos":[],"pendientes":[],"frases":[],"transcripcion":"..."}`;
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -60,6 +94,24 @@ module.exports = async (req, res) => {
   if (b.modo === 'probar') return res.status(200).json({ ok: true, tipo, ia: !!process.env.GEMINI_API_KEY });
   const key = process.env.GEMINI_API_KEY;
   if (!key) return res.status(503).json({ error: 'sin-clave' });
+  const cat = await modelos(key);
+  if (b.modo === 'diag') return res.status(200).json({ texto: cat.texto, tts: cat.tts, total: cat.todos.length });
+  if (b.modo === 'voz') {
+    const frase = String(b.texto || '').slice(0, 500);
+    if (!frase) return res.status(400).json({ error: 'vacio' });
+    try {
+      const r = await pedir(cat.tts, JSON.stringify({
+        contents: [{ parts: [{ text: 'Dilo en español latinoamericano con voz femenina suave, cálida y melodiosa, sonriendo, con calma, como una amiga cariñosa: ' + frase }] }],
+        generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOZ } } } }
+      }), key);
+      if (!r || !r.ok) return res.status(502).json({ error: 'voz', estado: r && r.status });
+      const j = await r.json();
+      const part = ((((j.candidates || [])[0] || {}).content || {}).parts || []).find(p => p.inlineData);
+      if (!part) return res.status(502).json({ error: 'voz-vacia' });
+      const rate = +((/rate=(\d+)/.exec(part.inlineData.mimeType || '') || [])[1] || 24000);
+      return res.status(200).json({ audio: part.inlineData.data, mime: part.inlineData.mimeType, rate });
+    } catch (e) { return res.status(502).json({ error: 'red' }); }
+  }
 
   const texto = typeof b.texto === 'string' ? b.texto.slice(0, 4000) : '';
   const audio = typeof b.audio === 'string' ? b.audio : '';
@@ -80,20 +132,9 @@ module.exports = async (req, res) => {
     const cuerpo = JSON.stringify({
       systemInstruction: { parts: [{ text: SYS }] },
       contents: [{ role: 'user', parts }],
-      generationConfig: { temperature: 0.5, maxOutputTokens: 1500, responseMimeType: 'application/json' }
+      generationConfig: { temperature: 0.5, maxOutputTokens: 2000, responseMimeType: 'application/json' }
     });
-    let r, mejor = null;
-    const intentos = MODELOS.concat([MODELOS[0]]);
-    for (let n = 0; n < intentos.length; n++) {
-      if (n === intentos.length - 1) await new Promise(ok => setTimeout(ok, 1200));
-      r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + intentos[n] + ':generateContent', {
-        method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: cuerpo
-      });
-      if (r.ok) break;
-      if (r.status !== 404 && !mejor) mejor = r.clone();
-      if ([400, 404, 429, 500, 503].indexOf(r.status) < 0) break;
-    }
-    if (!r.ok && mejor) r = mejor;
+    let r = await pedir(cat.texto, cuerpo, key);
     if (!r.ok) {
       let d = '';
       try { const e = await r.json(); d = (e.error && (e.error.message || e.error.status)) || ''; } catch (x) {}
@@ -106,8 +147,11 @@ module.exports = async (req, res) => {
     let o;
     try { o = JSON.parse(t); } catch (e) { o = { respuesta: t.slice(0, 400), frases: [] }; }
     const frases = Array.isArray(o.frases) ? o.frases.filter(x => typeof x === 'string' && x.trim()).slice(0, 15) : [];
+    const lista = x => Array.isArray(x) ? x.filter(e => e && typeof e === 'object').slice(0, 12) : [];
     res.status(200).json({
       respuesta: String(o.respuesta || '').slice(0, 600),
+      eventos: lista(o.eventos),
+      pendientes: lista(o.pendientes),
       frases,
       transcripcion: String(o.transcripcion || '').slice(0, 4000),
       restantes: LIMITE[tipo] - usos[k]
