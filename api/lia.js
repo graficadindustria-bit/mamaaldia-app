@@ -2,14 +2,7 @@
 // La app manda el mensaje (texto o nota de voz) y recibe una respuesta cálida y frases ordenadas
 // que el organizador de la app convierte en agenda, medicamentos, compras y gastos.
 const crypto = require('crypto');
-const CODIGOS = {
-  'c6b231b8ad5fef167852607732839f6c21cc8acfbb4f19f3a41c0bcada16b171': 'creador',
-  '78749e367ce2622016ecc1c0bc93fb828b548b56922e9bfd234dfe26e2581b71': 'creador',
-  '09b692077df14e2b305f17ace152ee937fb2f896e5a0b99851026e3baa4ae4a5': 'invitada',
-  '49dd5f1bc4e5f936780a642662ab1b71c74ebce2748281852fd84e0670f96e19': 'invitada',
-  'ce6e24ba4269783e209fcfcb1f6b516b02acf72537b6c5018c630403731d19fc': 'invitada',
-  '661d490dda8d316a78fdb0b0c7782f6d3b84d1e2145cbac143b7ad1d02e993c4': 'invitada'
-};
+const { CODIGOS } = require('./_codigos');
 const LIMITE = { creador: 300, invitada: 80 }; // mensajes por día (mejor esfuerzo)
 const usos = {};
 const MODELOS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
@@ -127,6 +120,35 @@ module.exports = async (req, res) => {
   if (!key) return res.status(503).json({ error: 'sin-clave' });
   const cat = await modelos(key);
   if (b.modo === 'diag') return res.status(200).json({ texto: cat.texto, tts: cat.tts, total: cat.todos.length });
+  if (b.modo === 'buscar_lugares') {
+    const ciudad = String(b.ciudad || 'Santa Cruz').slice(0, 40);
+    const que = String(b.texto || 'parques infantiles').slice(0, 120);
+    const edad = String(b.edad || '').slice(0, 60);
+    const pedido = 'Busca en Google Maps ' + que + ' en ' + ciudad + ', Bolivia' + (edad ? ', buenos para niños de ' + edad : '') +
+      '. Dame hasta 8 lugares reales y bien valorados. Para cada uno escribe una línea con este formato exacto: ' +
+      '- **Nombre del lugar** | zona o dirección | por qué es bueno para familias con niños (máx. 15 palabras). ' +
+      'No inventes lugares. Responde en español, sin introducción ni cierre.';
+    const base = { contents: [{ role: 'user', parts: [{ text: pedido }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 1500 } };
+    try {
+      let r = await pedir(cat.texto.slice(0, 3), JSON.stringify(Object.assign({ tools: [{ googleMaps: {} }] }, base)), key);
+      if (!r || !r.ok) r = await pedir(cat.texto.slice(0, 3), JSON.stringify(Object.assign({ tools: [{ google_search: {} }] }, base)), key);
+      if (!r || !r.ok) return res.status(502).json({ error: 'ia', estado: r && r.status });
+      const j = await r.json();
+      const c = (j.candidates || [])[0] || {};
+      const texto = ((c.content || {}).parts || []).map(p => p.text || '').join('');
+      const chunks = ((c.groundingMetadata || {}).groundingChunks || []).map(g => g.maps).filter(Boolean);
+      const lugares = [];
+      for (const ln of texto.split('\n')) {
+        const m = /^\s*[-*•]\s*\*\*(.+?)\*\*\s*\|?\s*([^|]*)\|?\s*(.*)$/.exec(ln);
+        if (!m) continue;
+        const nombre = m[1].trim().slice(0, 80);
+        const ch = chunks.find(x => x.title && (x.title.toLowerCase().includes(nombre.toLowerCase()) || nombre.toLowerCase().includes(x.title.toLowerCase())));
+        lugares.push({ nombre, zona: m[2].trim().slice(0, 100), nota: m[3].trim().slice(0, 160),
+          maps: ch && ch.uri ? ch.uri : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(nombre + ', ' + ciudad + ', Bolivia') });
+      }
+      return res.status(200).json({ lugares: lugares.slice(0, 8) });
+    } catch (e) { return res.status(502).json({ error: 'red' }); }
+  }
   if (b.modo === 'voz') {
     const frase = String(b.texto || '').slice(0, 1500);
     if (!frase) return res.status(400).json({ error: 'vacio' });
