@@ -126,11 +126,11 @@ module.exports = async (req, res) => {
   const cat = await modelos(key);
   if (b.modo === 'diag') return res.status(200).json({ texto: cat.texto, tts: cat.tts, total: cat.todos.length });
   if (b.modo === 'voz') {
-    const frase = String(b.texto || '').slice(0, 500);
+    const frase = String(b.texto || '').slice(0, 1500);
     if (!frase) return res.status(400).json({ error: 'vacio' });
     try {
       const r = await pedir(cat.tts, JSON.stringify({
-        contents: [{ parts: [{ text: 'Dilo en español latinoamericano con voz femenina suave, cálida y melodiosa, sonriendo, con calma, como una amiga cariñosa: ' + frase }] }],
+        contents: [{ parts: [{ text: frase }] }],
         generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOZ } } } }
       }), key);
       if (!r || !r.ok) return res.status(502).json({ error: 'voz', estado: r && r.status });
