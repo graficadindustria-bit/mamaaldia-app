@@ -1458,6 +1458,8 @@ async function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();awa
 /* ====================== inicio ====================== */
 S=load();if(S){S=Object.assign(blank(),S);S.chat=S.chat.filter(m=>!m.typing);if(S.profile.mom)syncKid()}
 (()=>{try{const q=new URLSearchParams(location.search).get('c');if(q){setCode(q.toUpperCase().replace(/\s+/g,''));history.replaceState(null,'',location.pathname);setTimeout(()=>checkCode(aiCode()),800)}}catch(e){}})();
+if(!S.defs1){S.defs1=1;S.wake=true;save()}
+(function pidePermiso(){if(!('Notification' in window)||Notification.permission!=='default')return;const f=()=>{if(!S.profile||!S.profile.mom||($('#dlg')||{}).open)return;document.removeEventListener('pointerup',f,true);askNotif()};document.addEventListener('pointerup',f,true)})();
 render();calmaInicio();novAuto();
 window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEventListener('pointercancel',e=>{if(rec&&rec.held)micUp(e)});
 try{if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
