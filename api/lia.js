@@ -70,7 +70,7 @@ async function pedir(lista, cuerpo, key, maxMs) {
   }
   return mejor || r;
 }
-const VOZ = process.env.LIA_VOZ || 'Sulafat';
+const VOZ = process.env.LIA_VOZ || 'Despina';
 const ESTILOS = { calma: 'Say in a calm, warm, soothing and professional tone, at a natural pace: ' };
 const ESTILO = process.env.LIA_ESTILO || 'calma';
 const VOCES = ['Sulafat', 'Vindemiatrix', 'Achernar', 'Despina', 'Gacrux', 'Erinome', 'Aoede', 'Callirrhoe', 'Kore', 'Leda', 'Autonoe'];

@@ -961,7 +961,7 @@ function chime(){try{actx=actx||new (window.AudioContext||window.webkitAudioCont
 function ctxOn(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume()}catch(e){}return actx}
 let vozSrc=null,vozSeq=0;
 async function vozIA(text){const key='/lia-voz/'+encodeURIComponent(text.slice(0,1500));let j=null,cache=null;
- try{cache=await caches.open('lia-voz-v3');const hit=await cache.match(key);if(hit)j=await hit.json()}catch(e){}
+ try{cache=await caches.open('lia-voz-v4');const hit=await cache.match(key);if(hit)j=await hit.json()}catch(e){}
  if(!j){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),20000);
   try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:aiCode(),modo:'voz',texto:text}),signal:ctl.signal});if(!r.ok)return null;j=await r.json()}catch(e){return null}finally{clearTimeout(to)}
   if(!j||!j.audio)return null;try{if(cache)await cache.put(key,new Response(JSON.stringify(j),{headers:{'content-type':'application/json'}}))}catch(e){}}
@@ -997,7 +997,7 @@ function helloText(){const h=new Date().getHours();const n=S.profile.mom||'';con
  const opts=[`¡${hi}, ${n}! Qué lindo verte. Cuéntame, ¿en qué te ayudo hoy?`,`Hola, ${n}. Aquí estoy contigo. ¿Qué tenemos para hoy?`,`¡${hi}, ${n}! Respira un ratito. Dime qué necesitas y yo lo ordeno.`,`Hola, ${n}${k?', ¿cómo está '+k+'?':''}. Mantén apretado el micrófono y cuéntame lo que quieras.`];
  const d=new Date();return opts[(d.getDate()+d.getMonth())%opts.length]}
 function liaHello(){speak(helloText(),true)}
-function prefetchHello(){if(!aiCode()||!S||!S.profile.mom||S.voice===false)return;try{caches.delete('lia-voz-v1');caches.delete('lia-voz-v2')}catch(e){}vozIA(vozTxt(helloText()))}
+function prefetchHello(){if(!aiCode()||!S||!S.profile.mom||S.voice===false)return;try{caches.delete('lia-voz-v1');caches.delete('lia-voz-v2');caches.delete('lia-voz-v3')}catch(e){}vozIA(vozTxt(helloText()))}
 
 /* ====================== render ====================== */
 let selDay=ymd(new Date()),foodSeg='menu',menuDayIdx=null;
