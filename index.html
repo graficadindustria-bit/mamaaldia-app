@@ -1329,15 +1329,15 @@ function futureAlerts(){const now=Date.now(),out=[];const lim=now+8*864e5;
  return out.sort((a,b)=>a.at-b.at).slice(0,120)}
 let pushKey=null;
 async function pushSub(create){if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)||Notification.permission!=='granted')return null;
- const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();if(sub||!create&&!localStorage.getItem('md-push'))return sub;
+ const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();if(sub||!create&&!localStorage.getItem('md-push2'))return sub;
  if(!pushKey){const r=await fetch('/api/avisos?clave=1');pushKey=(await r.json()).clave}
  const raw=atob(pushKey.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-pushKey.length%4)%4));const key=new Uint8Array([...raw].map(c=>c.charCodeAt(0)));
  sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});return sub}
 async function pushSync(create){try{if(!S||!S.profile||!S.profile.mom)return false;const sub=await pushSub(create);if(!sub)return false;
- const av=futureAlerts();const h=JSON.stringify(av.map(a=>a.id+a.at+a.b))+sub.endpoint;let last={};try{last=JSON.parse(localStorage.getItem('md-push')||'{}')}catch(e){}
+ const av=futureAlerts();const h=JSON.stringify(av.map(a=>a.id+a.at+a.b))+sub.endpoint;let last={};try{last=JSON.parse(localStorage.getItem('md-push2')||'{}')}catch(e){}
  if(last.h===h&&Date.now()-(last.t||0)<12*36e5)return true;
  const r=await fetch('/api/avisos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'sync',sub:sub.toJSON(),avisos:av})});
- if(r.ok){try{localStorage.setItem('md-push',JSON.stringify({h,t:Date.now()}))}catch(e){}return true}return false}catch(e){return false}}
+ if(r.ok){try{localStorage.setItem('md-push2',JSON.stringify({h,t:Date.now()}))}catch(e){}return true}return false}catch(e){return false}}
 async function pushTest(){try{const sub=await pushSub(true);if(!sub){toast('Primero activa los avisos');return}await fetch('/api/avisos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'prueba',sub:sub.toJSON()})});toast('Te mandé un aviso de prueba')}catch(e){toast('No pude enviar la prueba')}}
 
 /* ====================== bienvenida ====================== */
