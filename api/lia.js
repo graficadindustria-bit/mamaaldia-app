@@ -71,8 +71,8 @@ async function pedir(lista, cuerpo, key, maxMs) {
   return mejor || r;
 }
 const VOZ = process.env.LIA_VOZ || 'Despina';
-const ESTILOS = { corto: 'Di con voz cálida y serena, en español latinoamericano: ', calma: 'Read aloud in Latin American Spanish with a neutral Bolivian accent (never Spain or Galician accent: pronounce c and z like s, use seseo), in a calm, warm, soothing and professional tone, at a natural pace: ' };
-const ESTILO = process.env.LIA_ESTILO || 'calma';
+const ESTILOS = { serena: 'Di con voz cálida, serena y profesional, con acento latinoamericano neutro: ', corto: 'Di con voz cálida y serena, en español latinoamericano: ', calma: 'Read aloud in Latin American Spanish with a neutral Bolivian accent (never Spain or Galician accent: pronounce c and z like s, use seseo), in a calm, warm, soothing and professional tone, at a natural pace: ' };
+const ESTILO = process.env.LIA_ESTILO || 'serena';
 const VOCES = ['Sulafat', 'Vindemiatrix', 'Achernar', 'Despina', 'Gacrux', 'Erinome', 'Aoede', 'Callirrhoe', 'Kore', 'Leda', 'Autonoe'];
 const GUIA = `Eres Lía, guía cálida de la app "Mamá al Día" para mamás de Bolivia. Una mamá te consulta algo sobre su hijo o hija, que puede tener de 0 a 18 años (o sobre ella). Adapta todo a la edad que viene en los datos y, si tiene una condición o cuidado especial (autismo, síndrome de Down, TDAH, asma, diabetes u otra), tenla en cuenta con respeto, sin etiquetar, y menciona cuándo conviene avisar también a su especialista o terapeuta. Tu misión: darle paz, tranquilidad y una guía clara y correcta, y ser un puente hacia el pediatra, nunca reemplazarlo.
 Busca en internet información de fuentes confiables (Asociación Americana de Pediatría/HealthyChildren.org, OMS, UNICEF, Mayo Clinic, MedlinePlus, sociedades de pediatría) y básate en ella. Si hay una foto, obsérvala con cuidado y describe lo que ves sin afirmar un diagnóstico.
@@ -118,7 +118,7 @@ Tu trabajo:
    Las tareas sueltas (pagar, llamar, comprar algo puntual, trámites) van en "pendientes": {"texto":"Pagar la luz","fecha":"2026-11-20","hora":"09:00"} (fecha y hora solo si las dijo).
    Precios de productos con el lugar donde compró van en "precios": {"producto":"tomate","precio":8,"unidad":"kilo","lugar":"La Ramada"} (unidad: kilo, unidad, litro, libra, docena o paquete).
    Lo demás sepáralo en "frases": oraciones cortas y claras, una por cosa, con este formato para que la app las ordene:
-   - Medicamentos (solo si ella dio el nombre y la frecuencia, nunca inventes dosis): "Paracetamol 5 ml cada 6 horas por 3 días" ; si ya se lo dio: "Le di paracetamol 5 ml cada 6 horas"
+   - Medicamentos (solo si ella dio el nombre y la frecuencia, nunca inventes dosis): "Paracetamol 5 ml cada 6 horas por 3 días" ; si dijo a qué hora empieza, agrégalo: "Amoxicilina 5 ml cada 8 horas por 7 días desde las 14:00" ; si ya se lo dio: "Le di paracetamol 5 ml cada 6 horas"
    - Terminar un medicamento: "Terminó el paracetamol" ; si ya se sanó: "Ya está sana"
    - Fiebre o síntomas: "Fiebre 38,5 grados" o "Tiene tos"
    - Compras hechas: "Compré verduras, pollo y leche Bs 120"
@@ -239,9 +239,17 @@ module.exports = async (req, res) => {
       let r = await pedir(lt, cuerpoVoz(b.lang === undefined ? 'es-US' : b.lang), key);
       if (r && r.status === 400) r = await pedir(lt, cuerpoVoz(''), key);
       if (!r || !r.ok) return res.status(502).json({ error: 'voz', estado: r && r.status });
-      const j = await r.json();
-      const part = ((((j.candidates || [])[0] || {}).content || {}).parts || []).find(p => p.inlineData);
+      let j = await r.json();
+      let part = ((((j.candidates || [])[0] || {}).content || {}).parts || []).find(p => p.inlineData);
       if (!part) return res.status(502).json({ error: 'voz-vacia' });
+      // A veces la voz agrega frases que no estaban en el texto: si el audio dura mucho más de lo esperado, se pide otra vez.
+      const largo = pt => { const n = Math.floor(String(pt.inlineData.data).length * 3 / 4); return (n - (/wav/.test(pt.inlineData.mimeType || '') ? 44 : 0)) / 48000; };
+      const esperado = frase.length / 13 + 1.2;
+      if (largo(part) > esperado * 1.35 && Date.now() - limiteT < -15000) {
+        const ult = pedir.ultimo;
+        const r2 = await pedir([...new Set([ult].concat(lt))], cuerpoVoz(b.lang === undefined ? 'es-US' : b.lang), key, 15000);
+        if (r2 && r2.ok) { const j2 = await r2.json(); const p2 = ((((j2.candidates || [])[0] || {}).content || {}).parts || []).find(p => p.inlineData); if (p2 && largo(p2) < largo(part)) { part = p2; j = j2; } }
+      }
       const rate = +((/rate=(\d+)/.exec(part.inlineData.mimeType || '') || [])[1] || 24000);
       return res.status(200).json({ audio: part.inlineData.data, mime: part.inlineData.mimeType, rate, modelo: pedir.ultimo });
     } catch (e) { return res.status(502).json({ error: 'red' }); }
