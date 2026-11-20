@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#C4553A">
+<meta name="theme-color" content="#F2E4DA" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#211A17" media="(prefers-color-scheme: dark)">
 <meta name="description" content="Mamá al Día: escribe como te salga y Lía te ordena agenda, medicamentos, menú y compras. Versión de prueba.">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="favicon.png?v=3">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3">
+<link rel="icon" href="favicon.png?v=4">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mamá al Día">
@@ -18,20 +18,20 @@
 <style>
 [hidden]{display:none!important}
 :root{
-  --bg:#FBF5EF; --surface:#FFFFFF; --surface2:#FFF9F4; --line:#EEDFD3; --ink:#2B2220; --sub:#75645D;
-  --accent:#C4553A; --accent2:#D2603F; --onaccent:#FFFFFF; --asoft:#FBE3D9;
-  --sage:#3F7154; --sagesoft:#DDEEE2; --sun:#9A6510; --sunsoft:#FCEFD6; --lilac:#6A5A9C; --lilacsoft:#ECE7F7;
-  --danger:#A83232; --dangersoft:#FBE4E2; --shadow:rgba(120,60,40,.14);
+  --bg:#F2E4DA; --surface:#FDF8F4; --surface2:#F8EEE7; --line:#E3CFC2; --ink:#3E302A; --sub:#7A645A;
+  --accent:#A5634F; --accent2:#B87866; --onaccent:#FFFFFF; --asoft:#F1D9CE;
+  --sage:#3F7154; --sagesoft:#DDEEE2; --sun:#8F5E12; --sunsoft:#F8EAD2; --lilac:#6A5A9C; --lilacsoft:#ECE7F7;
+  --danger:#A83232; --dangersoft:#FBE4E2; --shadow:rgba(94,75,66,.16);
   --f:'Nunito',system-ui,-apple-system,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#1B1614; --surface:#251E1B; --surface2:#2B2320; --line:#3A2F2A; --ink:#F3E9E2; --sub:#BBA99F;
-  --accent:#F0927A; --accent2:#F0927A; --onaccent:#2A130C; --asoft:#4A2A20;
+  --bg:#211A17; --surface:#2C2320; --surface2:#332926; --line:#47382F; --ink:#F2E4DA; --sub:#C2ADA2;
+  --accent:#E2A28C; --accent2:#E2A28C; --onaccent:#2B1810; --asoft:#4C3129;
   --sage:#8CC7A3; --sagesoft:#22382B; --sun:#F2C46E; --sunsoft:#3D3020; --lilac:#BDB0EA; --lilacsoft:#312B45;
   --danger:#F2A3A0; --dangersoft:#4A2423; --shadow:rgba(0,0,0,.5); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#1B1614; --surface:#251E1B; --surface2:#2B2320; --line:#3A2F2A; --ink:#F3E9E2; --sub:#BBA99F;
-  --accent:#F0927A; --accent2:#F0927A; --onaccent:#2A130C; --asoft:#4A2A20;
+  --bg:#211A17; --surface:#2C2320; --surface2:#332926; --line:#47382F; --ink:#F2E4DA; --sub:#C2ADA2;
+  --accent:#E2A28C; --accent2:#E2A28C; --onaccent:#2B1810; --asoft:#4C3129;
   --sage:#8CC7A3; --sagesoft:#22382B; --sun:#F2C46E; --sunsoft:#3D3020; --lilac:#BDB0EA; --lilacsoft:#312B45;
   --danger:#F2A3A0; --dangersoft:#4A2423; --shadow:rgba(0,0,0,.5); color-scheme:dark}
 *{box-sizing:border-box}
@@ -875,7 +875,7 @@ function finishRec(cancel){const r=rec;if(!r||r.done)return;
 
 
 /* ---- orbe de Lía: esfera de vidrio con agua (atardecer en el lago) ---- */
-const ORB={glass:'rgba(240,220,235,.5)',edge:'rgba(160,110,170,.45)',c:['#2F6FD6','#E5734E','#FFB896','#7F96F5'],glow:'200,120,170'};
+const ORB={glass:'rgba(248,228,218,.5)',edge:'rgba(150,95,78,.45)',c:['#8E5442','#C27F69','#F6D3C4','#B7A3DE'],glow:'184,120,102'};
 function orbWave(x,W,base,amp,t,sp,k,ph){return base+Math.sin(x/W*Math.PI*2*k+t*sp+ph)*amp+Math.sin(x/W*Math.PI*2*(k*1.7)-t*sp*0.6+ph*2)*amp*0.45}
 function orbDraw(cv,s,small){
  const x=cv.getContext('2d'),W=cv.width,R=W/2,o=s.o,a=s.amp,t=s.t;
