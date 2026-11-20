@@ -199,7 +199,16 @@ dialog h3{font-size:19px;margin-bottom:4px}
 .empty{text-align:center;color:var(--sub);padding:14px 6px;font-size:14px}
 .install{display:flex;gap:10px;align-items:center;background:var(--asoft);border-radius:16px;padding:10px 12px;margin:0 0 12px}
 .install .b{flex:1;font-size:13.5px}
-.msg.typing .slow{display:none;font-style:normal;font-size:13px;color:var(--muted);margin-left:8px}.msg.typing.long .slow{display:inline}</style>
+.msg.typing .slow{display:none;font-style:normal;font-size:13px;color:var(--muted);margin-left:8px}.msg.typing.long .slow{display:inline}.calma{position:fixed;inset:0;z-index:99;display:grid;place-items:center;padding:24px;background:linear-gradient(160deg,var(--bg),var(--asoft));transition:opacity .5s;cursor:pointer}
+.calma.out{opacity:0;pointer-events:none}
+.calma .cin{max-width:340px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:18px;color:var(--ink)}
+.calma p{font-size:21px;line-height:1.4;font-weight:700;margin:0;text-wrap:balance}
+.calma .tiny{color:var(--sub)}
+.calma .cb{width:74px;height:74px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff9,transparent 45%),var(--accent2);animation:resp 5s ease-in-out infinite;box-shadow:0 0 40px var(--asoft)}
+@keyframes resp{0%,100%{transform:scale(.8);opacity:.75}50%{transform:scale(1.12);opacity:1}}
+@media (prefers-reduced-motion:reduce){.calma .cb{animation:none}}
+.calmaln{margin:6px 0 0;color:var(--sub);font-size:14.5px;font-style:italic}
+</style>
 </head>
 <body>
 <div id="root"></div>
@@ -247,7 +256,8 @@ const LIA='<canvas class="orb" width="112" height="112" aria-hidden="true"></can
 const KEY='mamaaldia-v1';
 let S=null;
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}clearTimeout(save.t);save.t=setTimeout(()=>{try{pushSync()}catch(e){}},2500)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}clearTimeout(save.t);save.t=setTimeout(()=>{try{pushSync()}catch(e){}},700)}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){clearTimeout(save.t);try{pushSync()}catch(e){}}});
 function blank(){return {v:1,profile:{mom:'',kid:'',birth:'',allergies:[],dislikes:[],budget:150,adults:0,city:'Santa Cruz',mbudget:0},events:[],tasks:[],meds:[],health:[],chat:[],menu:null,shopChecked:{},extraShop:[],purchases:[],prices:{},notified:{},notes:[],bills:[],expenses:[],places:[],caps:{},items:[],priceLog:[],kids:null,tab:'hoy'}}
 
 /* Catálogo con precios estimados (Santa Cruz, Bs). Editables desde Compras. */
@@ -977,6 +987,11 @@ function speakBrowser(text,withChime){if(!('speechSynthesis' in window))return;
   u.rate=.94;u.pitch=1.12;u.volume=.9;u.onstart=()=>document.body.classList.add('lia-talk');u.onend=u.onerror=()=>document.body.classList.remove('lia-talk');
   if(withChime){chime();setTimeout(()=>speechSynthesis.speak(u),480)}else speechSynthesis.speak(u)}catch(e){}}
 function speakLast(){const m=[...S.chat].reverse().find(x=>x.from==='lia'&&!x.typing);if(!m)return;speak(m.text)}
+const CALMA=['Respira profundo. Lo estás haciendo mejor de lo que crees.','No tienes que poder con todo hoy. Un paso a la vez es suficiente.','Está bien pedir ayuda. Eso también es cuidar.','Tu calma también le enseña. Primero tú, después todo lo demás.','Inhala en 4, sostén en 4, suelta en 6. Ya estás aquí.','Hoy no tiene que ser perfecto, solo tiene que ser suficiente.','Eres la persona que tu hijo necesita, incluso en los días difíciles.','Lo que hoy no salga, mañana tendrá otra oportunidad.','Descansar no es perder el tiempo. Es recargar lo que das.','Una mamá cansada sigue siendo una gran mamá.','Suelta los hombros, afloja la mandíbula. Respira.','Los pequeños logros también cuentan. Celébralos.','No te compares. Tu camino y tu familia son únicos.','Tus emociones son válidas. Siéntelas, no te juzgues.','Hoy elige una sola cosa importante. Lo demás puede esperar.','El amor que pones en lo pequeño se nota en lo grande.','Tómate un minuto para ti. Te lo mereces.','Respira. Todo lo que tienes pendiente, lo ordenamos juntas.'];
+function frase(){const d=new Date();return CALMA[(d.getDate()*3+d.getMonth()+Math.floor(d.getHours()/6))%CALMA.length]}
+function calmaInicio(){try{if(!S||!S.profile||!S.profile.mom||sessionStorage.getItem('md-calma'))return;sessionStorage.setItem('md-calma','1')}catch(e){}
+ const el=document.createElement('div');el.className='calma';el.setAttribute('role','status');el.innerHTML=`<div class="cin"><div class="cb"></div><p>${esc(CALMA[Math.floor(Math.random()*CALMA.length)])}</p><span class="tiny">Toca para continuar</span></div>`;
+ const fin=()=>{el.classList.add('out');setTimeout(()=>el.remove(),500)};el.onclick=fin;document.body.appendChild(el);setTimeout(fin,4500)}
 function helloText(){const h=new Date().getHours();const n=S.profile.mom||'';const k=S.profile.kid;
  const hi=h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches';
  const opts=[`¡${hi}, ${n}! Qué lindo verte. Cuéntame, ¿en qué te ayudo hoy?`,`Hola, ${n}. Aquí estoy contigo. ¿Qué tenemos para hoy?`,`¡${hi}, ${n}! Respira un ratito. Dime qué necesitas y yo lo ordeno.`,`Hola, ${n}${k?', ¿cómo está '+k+'?':''}. Mantén apretado el micrófono y cuéntame lo que quieras.`];
@@ -1012,7 +1027,7 @@ function vHoy(){
  const act=S.meds.filter(medActive);
  return `
  ${installBanner()}
- <div class="hello"><div class="muted small">${fmtDate(new Date())}</div><h1>${greet()}, ${esc(S.profile.mom)}</h1></div>
+ <div class="hello"><div class="muted small">${fmtDate(new Date())}</div><h1>${greet()}, ${esc(S.profile.mom)}</h1><p class="calmaln">🌿 ${esc(frase())}</p></div>
  <form class="ask" onsubmit="event.preventDefault();quickAsk()"><input id="qa" placeholder="Cuéntale a Lía lo que pasó o lo que viene…" autocomplete="off">${micBtn('qa')}<button aria-label="Enviar">${IC.send}</button></form>
  <div class="tiny muted" style="margin:0 4px 8px">Ej.: "a ${esc(S.profile.kid||'la niña')} le dio fiebre, paracetamol 5 ml cada 6 h"</div>
  ${al.map(a=>`<div class="alert ${a.kind==='med'?'':'ev'}"><div class="b"><b>${esc(a.title)}</b><div class="small muted">${esc(a.sub)}</div></div>${a.kind==='med'?`<button class="btn sm" onclick="giveDose('${a.ref}','${a.id}')">Ya se la di</button>`:a.kind==='bill'?`<button class="btn sm" onclick="payBill('${a.ref}','${a.id}')">Pagado</button>`:a.kind==='item'?`<div style="display:flex;flex-direction:column;gap:6px"><button class="btn sm" onclick="itemToList('${a.ref}','${a.id}')">A la lista</button><button class="btn sm ghost" onclick="boughtItem('${a.ref}','${a.id}')">Ya compré</button></div>`:a.kind==='task'?`<button class="btn sm ghost" onclick="toggleTask('${a.ref}');dismissAlert('${a.id}')">Hecho</button>`:`<button class="btn sm ghost" onclick="dismissAlert('${a.id}')">Ok</button>`}</div>`).join('')}
@@ -1336,7 +1351,7 @@ async function pushSub(create){if(!('serviceWorker' in navigator)||!('PushManage
 async function pushSync(create){try{if(!S||!S.profile||!S.profile.mom)return false;const sub=await pushSub(create);if(!sub)return false;
  const av=futureAlerts();const h=JSON.stringify(av.map(a=>a.id+a.at+a.b))+sub.endpoint;let last={};try{last=JSON.parse(localStorage.getItem('md-push2')||'{}')}catch(e){}
  if(last.h===h&&Date.now()-(last.t||0)<12*36e5)return true;
- const r=await fetch('/api/avisos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'sync',sub:sub.toJSON(),avisos:av})});
+ const r=await fetch('/api/avisos',{method:'POST',keepalive:true,headers:{'content-type':'application/json'},body:JSON.stringify({modo:'sync',sub:sub.toJSON(),avisos:av})});
  if(r.ok){try{localStorage.setItem('md-push2',JSON.stringify({h,t:Date.now()}))}catch(e){}return true}return false}catch(e){return false}}
 async function pushTest(){try{const sub=await pushSub(true);if(!sub){toast('Primero activa los avisos');return}await fetch('/api/avisos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'prueba',sub:sub.toJSON()})});toast('Te mandé un aviso de prueba')}catch(e){toast('No pude enviar la prueba')}}
 
@@ -1400,7 +1415,7 @@ async function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();awa
 /* ====================== inicio ====================== */
 S=load();if(S){S=Object.assign(blank(),S);S.chat=S.chat.filter(m=>!m.typing);if(S.profile.mom)syncKid()}
 (()=>{try{const q=new URLSearchParams(location.search).get('c');if(q){setCode(q.toUpperCase().replace(/\s+/g,''));history.replaceState(null,'',location.pathname);setTimeout(()=>checkCode(aiCode()),800)}}catch(e){}})();
-render();
+render();calmaInicio();
 window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEventListener('pointercancel',e=>{if(rec&&rec.held)micUp(e)});
 try{if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
 setTimeout(()=>{try{if('Notification' in window&&Notification.permission==='granted')pushSync(true)}catch(e){}},4000);

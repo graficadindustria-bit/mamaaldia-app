@@ -53,7 +53,7 @@ module.exports = async (req, res) => {
     }
     if (req.method === 'GET' && q.tick && RURL) {
       const now = Date.now();
-      const [due] = await redis([['ZRANGEBYSCORE', 'av', now - 3 * 36e5, now + 60000], ['SET', 'ultimo_tick', new Date(now).toISOString()]]);
+      const [due] = await redis([['ZRANGEBYSCORE', 'av', now - 3 * 36e5, now + 20000], ['SET', 'ultimo_tick', new Date(now).toISOString()]]);
       let enviados = 0;
       if (due && due.length) {
         const ks = [...new Set(due.map(m => { try { return JSON.parse(m).k; } catch (e) { return ''; } }))];
