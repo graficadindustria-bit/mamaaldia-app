@@ -47,9 +47,9 @@ module.exports = async (req, res) => {
       const { CODIGOS } = require('./_codigos');
       const h = crypto.createHash('sha256').update(String(q.estado).trim().toUpperCase()).digest('hex');
       if (CODIGOS[h] !== 'creador') return res.status(401).json({ error: 'codigo' });
-      const [n, prox, tel, ult] = await redis([['ZCARD', 'av'], ['ZRANGE', 'av', 0, 7, 'WITHSCORES'], ['HLEN', 'tel'], ['GET', 'ultimo_tick']]);
+      const [n, prox, tel, ult, log, sinc] = await redis([['ZCARD', 'av'], ['ZRANGE', 'av', 0, 7, 'WITHSCORES'], ['HLEN', 'tel'], ['GET', 'ultimo_tick'], ['LRANGE', 'log', 0, 20], ['LRANGE', 'sinc', 0, 10]]);
       const lista = []; for (let i = 0; i < (prox || []).length; i += 2) { try { const a = JSON.parse(prox[i]); lista.push(new Date(+prox[i + 1]).toISOString() + ' ' + a.t + ' | ' + a.b); } catch (e) {} }
-      return res.status(200).json({ ahora: new Date().toISOString(), avisos: n, telefonos: tel, ultimo_tick: ult, proximos: lista });
+      return res.status(200).json({ ahora: new Date().toISOString(), avisos: n, telefonos: tel, ultimo_tick: ult, proximos: lista, envios: log, sincronizaciones: sinc });
     }
     if (req.method === 'GET' && q.tick && RURL) {
       const now = Date.now();
@@ -64,11 +64,12 @@ module.exports = async (req, res) => {
           let a; try { a = JSON.parse(m); } catch (e) { quitar.push(['ZREM', 'av', m]); continue; }
           const d = mapa[a.k];
           if (d && d.sub) {
-            try { await webpush.sendNotification(d.sub, JSON.stringify({ t: a.t, b: a.b, s: a.s, tag: a.id }), { TTL: 3600, urgency: 'high' }); enviados++; }
-            catch (e) { if (e && (e.statusCode === 404 || e.statusCode === 410)) quitar.push(['HDEL', 'tel', a.k]); }
-          }
+            try { const rr = await webpush.sendNotification(d.sub, JSON.stringify({ t: a.t, b: a.b, s: a.s, tag: a.id }), { TTL: 3600, urgency: 'high' }); enviados++; quitar.push(['LPUSH', 'log', new Date(now).toISOString() + ' OK ' + (rr && rr.statusCode) + ' ' + a.k.slice(0, 6) + ' ' + a.t]); }
+            catch (e) { quitar.push(['LPUSH', 'log', new Date(now).toISOString() + ' ERROR ' + (e && e.statusCode) + ' ' + String((e && (e.body || e.message)) || '').slice(0, 120) + ' ' + a.t]); if (e && (e.statusCode === 404 || e.statusCode === 410)) quitar.push(['HDEL', 'tel', a.k]); }
+          } else quitar.push(['LPUSH', 'log', new Date(now).toISOString() + ' SIN-TELEFONO ' + a.t]);
           quitar.push(['ZREM', 'av', m], ['SADD', 'env:' + a.k, a.id], ['EXPIRE', 'env:' + a.k, 86400]);
         }
+        quitar.push(['LTRIM', 'log', 0, 40]);
         await redis(quitar);
       }
       if (now % 36e5 < 120000) await redis([['ZREMRANGEBYSCORE', 'av', 0, now - 6 * 36e5]]);
@@ -134,7 +135,7 @@ module.exports = async (req, res) => {
         const cmds = [['HSET', 'tel', k, JSON.stringify({ sub, visto: now })]];
         if (prev.length) cmds.push(['ZREM', 'av'].concat(prev));
         if (nuevos.length) cmds.push(['ZADD', 'av'].concat(...nuevos.map((m, i) => [lista[i].at, m])));
-        cmds.push(['SET', 'avk:' + k, JSON.stringify(nuevos), 'EX', 10 * 86400]);
+        cmds.push(['SET', 'avk:' + k, JSON.stringify(nuevos), 'EX', 10 * 86400], ['LPUSH', 'sinc', new Date(now).toISOString() + ' ' + k.slice(0, 6) + ' ' + nuevos.length + ' avisos, primero: ' + (lista[0] ? new Date(lista[0].at).toISOString() + ' ' + lista[0].t : '-')], ['LTRIM', 'sinc', 0, 30]);
         await redis(cmds);
         return res.status(200).json({ ok: true, guardados: nuevos.length, redis: true });
       }
