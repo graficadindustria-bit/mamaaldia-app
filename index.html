@@ -737,14 +737,15 @@ function menuDay(ds){if(!S.menu)return null;const w=fromYmd(S.menu.week);const i
 
 /* ====================== recordatorios ====================== */
 function dueAlerts(){const now=Date.now();const res=[];
- for(const m of S.meds){if(!medActive(m))continue;const nx=medNext(m);if(nx<=now+5*60000)res.push({id:'med:'+m.id+':'+nx,kind:'med',ref:m.id,title:'Hora de '+m.name+(m.dose?' · '+m.dose:''),sub:nx<now-5*60000?'Tocaba '+rel(nx):'Ahora',ts:nx})}
- const ds=ymd(new Date());for(const e of eventsOn(ds)){if(!e.time)continue;const t=at(ds,e.time).getTime();const r=t-(e.remind||30)*60000;if(now>=r&&now<t+30*60000)res.push({id:'ev:'+e.id+':'+ds,kind:'ev',title:e.title,sub:(t>now?'Empieza '+rel(t):'Empezó '+rel(t))+' · '+e.time,ts:t})}
+ for(const m of S.meds){if(!medActive(m))continue;const nx=medNext(m);if(nx<=now+5*60000)res.push({say:avMed(m,nx).s,id:'med:'+m.id+':'+nx,kind:'med',ref:m.id,title:'Hora de '+m.name+(m.dose?' · '+m.dose:''),sub:nx<now-5*60000?'Tocaba '+rel(nx):'Ahora',ts:nx})}
+ const ds=ymd(new Date());for(const e of eventsOn(ds)){if(!e.time)continue;const t=at(ds,e.time).getTime();const r=t-(e.remind||30)*60000;if(now>=r&&now<t+30*60000)res.push({say:avEv(e).s,id:'ev:'+e.id+':'+ds,kind:'ev',title:e.title,sub:(t>now?'Empieza '+rel(t):'Empezó '+rel(t))+' · '+e.time,ts:t})}
  for(const it of S.items){const l=itemLeft(it);if(l<=3)res.push({id:'it:'+it.id+':'+it.last,kind:'item',ref:it.id,title:'Se está acabando: '+it.name,sub:l<=0?'Ya debería haberse acabado':'Quedan unos '+l+' día'+(l===1?'':'s'),ts:Date.now()})}
  const lim2=ymd(addDays(new Date(),2));for(const b of S.bills)if(b.due<=lim2)res.push({id:'bill:'+b.id+':'+b.due,kind:'bill',ref:b.id,title:'Pagar '+b.name+' · '+bs(b.amount),sub:cap(billDueTxt(b)),ts:fromYmd(b.due).getTime()});
- for(const t of S.tasks){if(t.done||!t.due)continue;if(t.due<=now&&t.due>now-12*36e5)res.push({id:'tk:'+t.id,kind:'task',ref:t.id,title:t.text,sub:'Pendiente para '+hm(new Date(t.due)),ts:t.due})}
+ for(const t of S.tasks){if(t.done||!t.due)continue;if(t.due<=now&&t.due>now-12*36e5)res.push({say:avTask(t).s,id:'tk:'+t.id,kind:'task',ref:t.id,title:t.text,sub:'Pendiente para '+hm(new Date(t.due)),ts:t.due})}
  return res.filter(a=>!S.notified['x'+a.id]);}
 async function tick(){if(!S||!S.profile.mom)return;const al=dueAlerts();let changed=false;
- for(const a of al){if(!S.notified[a.id]){S.notified[a.id]=1;changed=true;notify('Mamá al Día',a.title+' · '+a.sub,a.id)}}
+ let say=[];for(const a of al){if(!S.notified[a.id]){S.notified[a.id]=1;changed=true;notify('Mamá al Día',a.title+' · '+a.sub,a.id);if(a.say)say.push(a.say)}}
+ if(say.length&&document.visibilityState==='visible'&&!rec&&!busy)speak(say.slice(0,3).join(' '),true);
  if(changed){save();if(S.tab==='hoy')render()}}
 async function notify(title,body,tag){try{if(!('Notification' in window)||Notification.permission!=='granted')return;const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)r.showNotification(title,{body,icon:'icon-192.png',badge:'icon-192.png',tag:tag||body});else new Notification(title,{body,icon:'icon-192.png'})}catch(e){}}
 function dismissAlert(id){S.notified['x'+id]=1;save();render()}
@@ -1309,12 +1310,21 @@ async function askNotif(force){try{if(!('Notification' in window)){if(force)toas
 
 /* ---- avisos con la app cerrada (push) ---- */
 // Junta los avisos de los próximos 8 días y los manda al servidor, que los envía a su hora aunque la app esté cerrada.
+// Textos de aviso con nombre, para leer y para escuchar
+function falta(min){return (min===60?'falta ':'faltan ')+leadTxt(min)}
+function leadTxt(min){return min>=60?(min%60?Math.floor(min/60)+' hora'+(min>=120?'s':'')+' y '+(min%60)+' minutos':(min/60)+' hora'+(min>=120?'s':'')):min+' minutos'}
+function avEv(e){const mom=S.profile.mom||'';const min=e.remind||30;const k=e.who==='kid'?kidName(kidOf(e)):'';
+ return {t:(mom?mom+', ':'')+falta(min),b:e.title+' · a las '+e.time,s:(mom?mom+', ':'')+falta(min)+' para '+e.title.charAt(0).toLowerCase()+e.title.slice(1)+(k&&!norm(e.title).includes(norm(k))?', con '+k:'')+'.'}}
+function avMed(m,nx){const mom=S.profile.mom||'';const k=kidName(kidOf(m));
+ return {t:(mom?mom+', ':'')+'hora del '+m.name,b:(m.dose?m.dose+' · ':'')+(k?'para '+k+' · ':'')+'dosis de las '+hm(new Date(nx)),s:(mom?mom+', ':'')+'es hora de darle '+m.name+(m.dose?', '+m.dose:'')+(k?', a '+k:'')+'.'}}
+function avTask(t){const mom=S.profile.mom||'';return {t:(mom?mom+', ':'')+'recuerda',b:t.text,s:(mom?mom+', ':'')+'te recuerdo: '+t.text+'.'}}
+function avBill(b){const mom=S.profile.mom||'';return {t:(mom?mom+', ':'')+'mañana toca pagar',b:b.name+' · '+bs(b.amount),s:(mom?mom+', ':'')+'mañana toca pagar '+b.name+', '+bs(b.amount)+'.'}}
 function futureAlerts(){const now=Date.now(),out=[];const lim=now+8*864e5;
  for(let d=0;d<8;d++){const ds=ymd(addDays(new Date(),d));for(const e of eventsOn(ds)){if(!e.time)continue;const t=at(ds,e.time).getTime();const r=t-(e.remind||30)*60000;if(r<now-60000)continue;
-  const k=e.kid&&kids().find(x=>x.id===e.kid);out.push({id:'ev:'+e.id+':'+ds,at:r,t:e.title,b:'Empieza a las '+e.time+((e.remind||30)>=60?' (en '+Math.round((e.remind||30)/60)+' h)':' (en '+(e.remind||30)+' min)')})}}
- for(const m of S.meds){if(!medActive(m))continue;let nx=medNext(m);const end=medEnd(m);let n=0;while(nx&&nx<lim&&nx<end&&n<20){if(nx>now-60000)out.push({id:'med:'+m.id+':'+nx,at:nx,t:'Hora de '+m.name,b:(m.dose?m.dose+' · ':'')+'Toca la dosis de las '+hm(new Date(nx))});nx+=m.every*36e5;n++}}
- for(const t of S.tasks){if(t.done||!t.due||t.due<now-60000||t.due>lim)continue;out.push({id:'tk:'+t.id,at:t.due,t:'Pendiente',b:t.text})}
- for(const b of S.bills){const d=fromYmd(b.due);d.setHours(9,0,0,0);const a=d.getTime()-864e5;if(a>now-60000&&a<lim)out.push({id:'bill:'+b.id+':'+b.due,at:a,t:'Mañana toca pagar',b:b.name+' · '+bs(b.amount)})}
+  const k=e.kid&&kids().find(x=>x.id===e.kid);out.push(Object.assign({id:'ev:'+e.id+':'+ds,at:r},avEv(e)))}}
+ for(const m of S.meds){if(!medActive(m))continue;let nx=medNext(m);const end=medEnd(m);let n=0;while(nx&&nx<lim&&nx<end&&n<20){if(nx>now-60000)out.push(Object.assign({id:'med:'+m.id+':'+nx,at:nx},avMed(m,nx)));nx+=m.every*36e5;n++}}
+ for(const t of S.tasks){if(t.done||!t.due||t.due<now-60000||t.due>lim)continue;out.push(Object.assign({id:'tk:'+t.id,at:t.due},avTask(t)))}
+ for(const b of S.bills){const d=fromYmd(b.due);d.setHours(9,0,0,0);const a=d.getTime()-864e5;if(a>now-60000&&a<lim)out.push(Object.assign({id:'bill:'+b.id+':'+b.due,at:a},avBill(b)))}
  return out.sort((a,b)=>a.at-b.at).slice(0,120)}
 let pushKey=null;
 async function pushSub(create){if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)||Notification.permission!=='granted')return null;
@@ -1393,6 +1403,9 @@ render();
 window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEventListener('pointercancel',e=>{if(rec&&rec.held)micUp(e)});
 try{if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
 setTimeout(()=>{try{if('Notification' in window&&Notification.permission==='granted')pushSync(true)}catch(e){}},4000);
+function avisoHablar(t){if(!t)return;S.tab='hoy';render();setTimeout(()=>speak(String(t).slice(0,300),true),400)}
+try{const q=new URLSearchParams(location.search).get('aviso');if(q){history.replaceState(null,'',location.pathname);document.addEventListener('pointerdown',()=>{},{once:true});setTimeout(()=>avisoHablar(q),900)}}catch(e){}
+try{navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',ev=>{if(ev.data&&ev.data.aviso)avisoHablar(ev.data.aviso)})}catch(e){}
 setInterval(()=>{if(S&&S.profile.mom){tick();if(S.tab==='hoy'&&!rec&&!busy&&!$('#dlg').open&&document.activeElement.tagName!=='INPUT')render()}},30000);
 setTimeout(tick,1500);setTimeout(prefetchHello,2500);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});

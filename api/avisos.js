@@ -45,7 +45,7 @@ module.exports = async (req, res) => {
         for (const a of d.avisos || []) {
           if (a.env || a.at > now + 60000 || a.at < now - 3 * 36e5) continue;
           try {
-            await webpush.sendNotification(d.sub, JSON.stringify({ t: a.t, b: a.b, tag: a.id }), { TTL: 3600, urgency: 'high' });
+            await webpush.sendNotification(d.sub, JSON.stringify({ t: a.t, b: a.b, s: a.s, tag: a.id }), { TTL: 3600, urgency: 'high' });
             enviados++;
           } catch (e) {
             if (e && (e.statusCode === 404 || e.statusCode === 410)) { delete todo.tel[k]; cambio = true; break; }
@@ -74,7 +74,7 @@ module.exports = async (req, res) => {
       if (!s || typeof s.endpoint !== 'string' || !/^https:\/\//.test(s.endpoint) || !s.keys || !s.keys.p256dh || !s.keys.auth) return res.status(400).json({ error: 'sub' });
       const now = Date.now();
       const avisos = (Array.isArray(b.avisos) ? b.avisos : []).filter(a => a && +a.at > now - 36e5 && +a.at < now + 9 * 864e5).slice(0, 120)
-        .map(a => ({ id: txt(a.id, 80), at: +a.at, t: txt(a.t, 80) || 'Mamá al Día', b: txt(a.b, 160) }));
+        .map(a => ({ id: txt(a.id, 80), at: +a.at, t: txt(a.t, 80) || 'Mamá al Día', b: txt(a.b, 160), s: txt(a.s, 300) }));
       const todo = await leerJSON(TODO, { tel: {} });
       todo.tel = todo.tel || {};
       const k = clave(s.endpoint);
@@ -90,7 +90,7 @@ module.exports = async (req, res) => {
     if (b.modo === 'prueba') {
       const s = b.sub;
       if (!s || !s.endpoint) return res.status(400).json({ error: 'sub' });
-      await webpush.sendNotification(s, JSON.stringify({ t: 'Mamá al Día', b: 'Así te llegarán los avisos, aunque la app esté cerrada 🌷', tag: 'prueba' }), { TTL: 600 });
+      await webpush.sendNotification(s, JSON.stringify({ t: 'Mamá al Día', b: 'Así te llegarán los avisos, aunque la app esté cerrada 🌷', s: 'Hola, así te llegarán mis avisos. Toca el aviso y te lo digo en voz alta.', tag: 'prueba' }), { TTL: 600 });
       return res.status(200).json({ ok: true });
     }
     return res.status(400).json({ error: 'modo' });
