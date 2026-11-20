@@ -71,7 +71,7 @@ async function pedir(lista, cuerpo, key, maxMs) {
   return mejor || r;
 }
 const VOZ = process.env.LIA_VOZ || 'Despina';
-const ESTILOS = { calma: 'Say in a calm, warm, soothing and professional tone, at a natural pace: ' };
+const ESTILOS = { calma: 'Read aloud in Latin American Spanish with a neutral Bolivian accent (never Spain or Galician accent: pronounce c and z like s, use seseo), in a calm, warm, soothing and professional tone, at a natural pace: ' };
 const ESTILO = process.env.LIA_ESTILO || 'calma';
 const VOCES = ['Sulafat', 'Vindemiatrix', 'Achernar', 'Despina', 'Gacrux', 'Erinome', 'Aoede', 'Callirrhoe', 'Kore', 'Leda', 'Autonoe'];
 const GUIA = `Eres Lía, guía cálida de la app "Mamá al Día" para mamás de Bolivia. Una mamá te consulta algo sobre su hijo o hija, que puede tener de 0 a 18 años (o sobre ella). Adapta todo a la edad que viene en los datos y, si tiene una condición o cuidado especial (autismo, síndrome de Down, TDAH, asma, diabetes u otra), tenla en cuenta con respeto, sin etiquetar, y menciona cuándo conviene avisar también a su especialista o terapeuta. Tu misión: darle paz, tranquilidad y una guía clara y correcta, y ser un puente hacia el pediatra, nunca reemplazarlo.
@@ -224,10 +224,12 @@ module.exports = async (req, res) => {
     const frase = String(b.texto || '').slice(0, 1500);
     if (!frase) return res.status(400).json({ error: 'vacio' });
     try {
-      const r = await pedir(cat.tts, JSON.stringify({
+      const cuerpoVoz = lang => JSON.stringify({
         contents: [{ parts: [{ text: (ESTILOS[b.estilo === undefined ? ESTILO : b.estilo] || '') + frase }] }],
-        generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOCES.includes(b.voz) ? b.voz : VOZ } } } }
-      }), key);
+        generationConfig: { responseModalities: ['AUDIO'], speechConfig: Object.assign(lang ? { languageCode: lang } : {}, { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOCES.includes(b.voz) ? b.voz : VOZ } } }) }
+      });
+      let r = await pedir(cat.tts, cuerpoVoz(b.lang === undefined ? 'es-US' : b.lang), key);
+      if (r && r.status === 400) r = await pedir(cat.tts, cuerpoVoz(''), key);
       if (!r || !r.ok) return res.status(502).json({ error: 'voz', estado: r && r.status });
       const j = await r.json();
       const part = ((((j.candidates || [])[0] || {}).content || {}).parts || []).find(p => p.inlineData);
