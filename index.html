@@ -966,8 +966,8 @@ async function vozIA(text){const key='/lia-voz/'+encodeURIComponent(text.slice(0
   try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:aiCode(),modo:'voz',texto:text}),signal:ctl.signal});if(!r.ok)return null;j=await r.json()}catch(e){return null}finally{clearTimeout(to)}
   if(!j||!j.audio)return null;try{if(cache)await cache.put(key,new Response(JSON.stringify(j),{headers:{'content-type':'application/json'}}))}catch(e){}}
  return j}
-function playPCM(j,onDone){const a=ctxOn();if(!a)return false;const bin=atob(j.audio);const n=bin.length>>1;const buf=a.createBuffer(1,n,j.rate||24000);const ch=buf.getChannelData(0);
- for(let i=0;i<n;i++){let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>=32768)v-=65536;ch[i]=v/32768}
+function playPCM(j,onDone){const a=ctxOn();if(!a)return false;const bin=atob(j.audio);let o=0,rate=j.rate||24000;if(bin.slice(0,4)==='RIFF'){rate=(bin.charCodeAt(24)|bin.charCodeAt(25)<<8|bin.charCodeAt(26)<<16)||rate;const d=bin.indexOf('data',12);o=d>0?d+8:44}const n=(bin.length-o)>>1;const buf=a.createBuffer(1,n,rate);const ch=buf.getChannelData(0);
+ for(let i=0;i<n;i++){let v=bin.charCodeAt(o+2*i)|(bin.charCodeAt(o+2*i+1)<<8);if(v>=32768)v-=65536;ch[i]=v/32768}
  try{if(vozSrc)vozSrc.stop()}catch(e){}const src=a.createBufferSource();const g=a.createGain();g.gain.value=.95;src.buffer=buf;if(!liaAn||liaAn.context!==a){liaAn=a.createAnalyser();liaAn.fftSize=512;liaAn.connect(a.destination);liaBuf=null}src.connect(g).connect(liaAn);vozSrc=src;
  document.body.classList.add('lia-talk');src.onended=()=>{if(vozSrc!==src)return;if(onDone){vozSrc=null;onDone()}if(!vozSrc)document.body.classList.remove('lia-talk')};src.start(a.currentTime+.05);return true}
 function vozTxt(t){return String(t).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\*\*/g,'').replace(/^\s*[-•]\s+/gm,'').replace(/\bBs\.?\s*(\d+(?:[.,]\d+)?)/g,'$1 bolivianos').replace(/\s+\./g,'.').replace(/\s*\n+\s*/g,'. ').replace(/:\./g,':').replace(/\.\.+/g,'.').replace(/\s+/g,' ').trim().slice(0,1500)}
