@@ -209,6 +209,15 @@ dialog h3{font-size:19px;margin-bottom:4px}
 @keyframes resp{0%,100%{transform:scale(.8);opacity:.75}50%{transform:scale(1.12);opacity:1}}
 @media (prefers-reduced-motion:reduce){.calma .cb{animation:none}}
 .calmaln{margin:6px 0 0;color:var(--sub);font-size:14.5px;font-style:italic}
+.novs{outline:none;display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow:auto}
+.nov{display:flex;gap:10px;align-items:flex-start}.nov .ni{font-size:22px;line-height:1.2}
+.tour{position:fixed;inset:0;z-index:98}
+.tspot{position:fixed;border-radius:18px;box-shadow:0 0 0 9999px rgba(40,28,24,.55);transition:all .35s ease;pointer-events:none;outline:3px solid var(--accent2)}
+.tcard{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:480px;margin:0 auto;background:var(--surface);color:var(--ink);border-radius:20px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:6px}
+.tcard.arriba{bottom:auto;top:calc(16px + env(safe-area-inset-top,0px))}
+.tcard .tt{margin:0;font-size:16px;line-height:1.45}
+.tcard .tb{display:flex;gap:8px;align-items:center}
+@media (prefers-reduced-motion:reduce){.tspot{transition:none}}
 </style>
 </head>
 <body>
@@ -1300,7 +1309,7 @@ function saveTemp(){const v=parseFloat($('#tp').value);if(!v){toast('Escribe la 
 function budgetDlg(){dlg(`<h3>Presupuesto de comida</h3><label class="f">Por semana (Bs)</label><input class="inp" id="bB" type="number" inputmode="numeric" value="${S.profile.budget}"><label class="f">Adultos que comen el mismo menú</label><select class="inp" id="bA">${[0,1,2,3,4].map(i=>`<option ${i==S.profile.adults?'selected':''} value="${i}">${i===0?'Ninguno (solo la peque)':i}</option>`).join('')}</select>
  <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.profile.budget=+$('#bB').value||0;S.profile.adults=+$('#bA').value;makeMenu(S.menu&&S.menu.seed);save();closeDlg();render()">Guardar</button></div>`)}
 function priceDlg(k){dlg(`<h3>${esc(CAT[k].n)}</h3><label class="f">Precio por ${CAT[k].u==='u'?'unidad':CAT[k].u} (Bs)</label><input class="inp" id="pP" type="number" step="0.1" inputmode="decimal" value="${price(k)}"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.prices['${k}']=parseFloat($('#pP').value)||0;save();closeDlg();render()">Guardar</button></div>`)}
-function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3>
+function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3><button class="btn soft sm" style="width:100%;margin:4px 0 10px" onclick="novedades()">✨ Novedades y recorrido guiado</button>
  <label class="f">Tu nombre</label><input class="inp" id="sM" value="${esc(p.mom)}">
  <label class="f" style="margin-top:14px">Tus hijos (0 a 18 años)</label><div id="kidsEd">${kids().map(kidRow).join('')}</div>
  <button class="btn ghost sm" style="margin-top:6px" onclick="addKidRow()">+ Agregar hijo o hija</button>
@@ -1359,6 +1368,34 @@ async function pushSync(create){try{if(!S||!S.profile||!S.profile.mom)return fal
  if(r.ok){try{localStorage.setItem('md-push2',JSON.stringify({h,t:Date.now()}))}catch(e){}return true}return false}catch(e){return false}}
 async function pushTest(){try{const sub=await pushSub(true);if(!sub){toast('Primero activa los avisos');return}await fetch('/api/avisos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'prueba',sub:sub.toJSON()})});toast('Te mandé un aviso de prueba')}catch(e){toast('No pude enviar la prueba')}}
 
+
+/* ====================== novedades y recorrido ====================== */
+const NOV_V='2026-11-20';
+const NOVEDADES=[['🔔','Avisos con la app cerrada','Tus citas, remedios y pagos te avisan aunque no tengas la app abierta. Toca el aviso y Lía te lo dice en voz alta.'],['🎙️','Lía con voz nueva','Una voz más cálida y con acento latinoamericano. Y si activas "Hola Lía", empieza a escucharte sin tocar nada.'],['🌸','Colores nuevos','Tonos nude y oro rosa, más suaves. Si prefieres el modo oscuro, está en Ajustes.'],['🌿','Frases de calma','Al abrir la app, una frase para respirar y empezar el día con calma.'],['🙋','Te habla de usted si prefieres','Actívalo en Ajustes y Lía te tratará de usted.'],['📍','Lugares para ir con niños','Parques, restaurantes, terapias y pediatras de tu ciudad, en Menú › Lugares.']];
+function novedades(auto){try{localStorage.setItem('md-nov',NOV_V)}catch(e){}
+ dlg(`<h3 style="margin-bottom:2px">Novedades de Mamá al Día</h3><div class="tiny muted" style="margin-bottom:10px">Lo nuevo de esta versión</div>
+ <div class="novs">${NOVEDADES.map(([i,t,d])=>`<div class="nov"><span class="ni">${i}</span><div><b>${t}</b><div class="small muted">${d}</div></div></div>`).join('')}</div>
+ <button class="btn" style="width:100%;margin-top:14px" onclick="$('#dlg').close();tourIni()">▶ Recorrido guiado con Lía</button>
+ <button class="btn ghost" style="width:100%;margin-top:8px" onclick="$('#dlg').close()">${auto?'Ahora no':'Cerrar'}</button>`)}
+function novAuto(){try{if(!S||!S.profile||!S.profile.mom||localStorage.getItem('md-nov')===NOV_V)return}catch(e){return}setTimeout(()=>{if(!$('#dlg').open&&!document.querySelector('.calma'))novedades(true);else setTimeout(novAuto,2500)},5200)}
+const TOUR=[
+ {tab:'hoy',sel:'.hello',t:'Esta es tu pantalla Hoy. Aquí ves de un vistazo tu día: la fecha, tu saludo y una frase para empezar con calma.'},
+ {tab:'hoy',sel:'form.ask',t:'En esta barra le cuentas a Lía lo que pasó o lo que viene, como te salga. Escribe, o toca el micrófono y habla. Ella lo ordena en tu agenda, remedios, compras y gastos.'},
+ {tab:'hoy',sel:'.stats',t:'Aquí cuentas tus compromisos, las dosis por dar y tus pendientes del día.'},
+ {tab:'hoy',sel:'nav.tabs .lia',t:'Este es mi botón. Tócalo para conversar conmigo. Puedes pedirme ideas de comida, consejos de crianza, o preguntarme: cómo voy esta semana.'},
+ {tab:'lia',sel:'.chatwrap',t:'Aquí conversamos. Mantén apretado el micrófono para mandarme una nota de voz. Por ejemplo: cita con la pediatra el jueves a las diez. Yo la agendo y te aviso a tiempo.'},
+ {tab:'agenda',sel:'main',t:'En Agenda ves tu semana. Toca un día para ver sus citas, clases y pendientes. También puedes agregar algo a mano.'},
+ {tab:'salud',sel:'main',t:'En Salud llevas los remedios de tu peque: te aviso cada dosis y marcas "ya se la di". Si algo te preocupa, cuéntame los síntomas o mándame una foto y te doy una guía.'},
+ {tab:'comidas',sel:'.seg',t:'En Menú tienes el menú de la semana y del mes, la lista de compras, los precios del mercado, tus gastos y los lugares para ir con niños.'},
+ {tab:'comidas',sel:'header .iconbtn',t:'Y en Ajustes activas los avisos, eliges si quieres que te hable de usted, el modo "Hola Lía" y los colores. Listo, ya conoces la app. Aquí estoy cuando me necesites.'}];
+let tourI=-1,tourEl=null;
+function tourIni(){tourI=-1;if(!tourEl){tourEl=document.createElement('div');tourEl.className='tour';tourEl.innerHTML='<div class="tspot"></div><div class="tcard" role="dialog" aria-live="polite"><div class="tn tiny muted"></div><p class="tt"></p><div class="tb"><button class="btn ghost sm" onclick="tourFin()">Salir</button><span style="flex:1"></span><button class="btn ghost sm" onclick="tourIr(tourI-1)">Atrás</button><button class="btn sm" onclick="tourIr(tourI+1)">Siguiente</button></div></div>';document.body.appendChild(tourEl)}tourEl.hidden=false;tourIr(0)}
+function tourIr(i){if(i<0)return;if(i>=TOUR.length){tourFin();return}tourI=i;const st=TOUR[i];if(S.tab!==st.tab){if(st.tab==='comidas')foodSeg='menu';S.tab=st.tab;render();}
+ setTimeout(()=>{const el=document.querySelector(st.sel);const sp=tourEl.querySelector('.tspot');if(el){el.scrollIntoView({block:'center',behavior:'smooth'});setTimeout(()=>{const r=el.getBoundingClientRect();const pad=6;sp.style.cssText=`top:${Math.max(4,r.top-pad)}px;left:${Math.max(4,r.left-pad)}px;width:${Math.min(innerWidth-8,r.width+pad*2)}px;height:${Math.min(innerHeight*.6,r.height+pad*2)}px`;const card=tourEl.querySelector('.tcard');card.classList.toggle('arriba',r.top>innerHeight*.55)},350)}
+  tourEl.querySelector('.tn').textContent=`Paso ${i+1} de ${TOUR.length}`;tourEl.querySelector('.tt').textContent=st.t;tourEl.querySelector('.tb .btn:not(.ghost)').textContent=i===TOUR.length-1?'Terminar':'Siguiente';tourHabla(i)},60)}
+function tourHabla(i){vozSeq++;try{if(vozSrc)vozSrc.stop()}catch(e){}try{speechSynthesis.cancel()}catch(e){}try{if(tourHabla.a)tourHabla.a.pause()}catch(e){}if(S.voice===false)return;
+ const a=new Audio('guia/'+(i+1)+'.mp3');tourHabla.a=a;a.onplay=()=>document.body.classList.add('lia-talk');a.onended=a.onpause=()=>document.body.classList.remove('lia-talk');a.play().catch(()=>{if(tourI===i)speak(TOUR[i].t)})}
+function tourFin(){if(tourEl)tourEl.hidden=true;try{if(tourHabla.a)tourHabla.a.pause()}catch(e){}vozSeq++;try{if(vozSrc)vozSrc.stop()}catch(e){}tourI=-1;S.tab='hoy';render()}
 /* ====================== bienvenida ====================== */
 function renderWelcome(){
  $('#root').innerHTML=`<div class="welcome" id="wel">
@@ -1419,7 +1456,7 @@ async function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();awa
 /* ====================== inicio ====================== */
 S=load();if(S){S=Object.assign(blank(),S);S.chat=S.chat.filter(m=>!m.typing);if(S.profile.mom)syncKid()}
 (()=>{try{const q=new URLSearchParams(location.search).get('c');if(q){setCode(q.toUpperCase().replace(/\s+/g,''));history.replaceState(null,'',location.pathname);setTimeout(()=>checkCode(aiCode()),800)}}catch(e){}})();
-render();calmaInicio();
+render();calmaInicio();novAuto();
 window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEventListener('pointercancel',e=>{if(rec&&rec.held)micUp(e)});
 try{if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
 setTimeout(()=>{try{if('Notification' in window&&Notification.permission==='granted')pushSync(true)}catch(e){}},4000);
