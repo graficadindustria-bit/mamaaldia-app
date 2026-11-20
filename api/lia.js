@@ -141,6 +141,24 @@ module.exports = async (req, res) => {
   if (!key) return res.status(503).json({ error: 'sin-clave' });
   const cat = await modelos(key);
   if (b.modo === 'diag') return res.status(200).json({ texto: cat.texto, tts: cat.tts, total: cat.todos.length });
+  if (b.modo === 'medir' && tipo === 'creador') {
+    const out = [];
+    for (const m of cat.texto.concat(cat.todos.filter(n => /flash-lite/.test(n) && !/tts|image|live|audio/.test(n)))) {
+      const t0 = Date.now(); let st = 0, d = '', conf = '';
+      for (const tc of [null, { thinkingBudget: 0 }, { thinkingLevel: 'low' }, { thinkingLevel: 'minimal' }]) {
+        const gc = { maxOutputTokens: 60 }; if (tc) gc.thinkingConfig = tc;
+        const t1 = Date.now();
+        try { const r = await fetch(API + '/' + m + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ contents: [{ parts: [{ text: 'Di hola en una palabra.' }] }], generationConfig: gc }), signal: AbortSignal.timeout(15000) });
+          st = r.status; if (!r.ok) { try { const e = await r.json(); d = String((e.error || {}).message || '').slice(0, 80); } catch (x) {} } else d = '';
+        } catch (e) { st = 'timeout'; }
+        conf += (tc ? JSON.stringify(tc) : 'normal') + '=' + st + ' ' + (Date.now() - t1) + 'ms' + (d ? ' (' + d + ')' : '') + ' | ';
+        if (st === 404 || Date.now() - t0 > 40000) break;
+      }
+      out.push(m + ': ' + conf);
+      if (Date.now() - limiteT > -8000) break;
+    }
+    return res.status(200).json({ out });
+  }
   if (b.modo === 'buscar_lugares') {
     const ciudad = String(b.ciudad || 'Santa Cruz').slice(0, 40);
     const que = String(b.texto || 'parques infantiles').slice(0, 120);
