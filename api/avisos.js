@@ -43,9 +43,17 @@ module.exports = async (req, res) => {
     const q = req.query || {};
     if (req.method === 'GET' && q.clave) return res.status(200).json({ clave: v.publicKey });
 
+    if (req.method === 'GET' && q.estado && RURL) {
+      const { CODIGOS } = require('./_codigos');
+      const h = crypto.createHash('sha256').update(String(q.estado).trim().toUpperCase()).digest('hex');
+      if (CODIGOS[h] !== 'creador') return res.status(401).json({ error: 'codigo' });
+      const [n, prox, tel, ult] = await redis([['ZCARD', 'av'], ['ZRANGE', 'av', 0, 7, 'WITHSCORES'], ['HLEN', 'tel'], ['GET', 'ultimo_tick']]);
+      const lista = []; for (let i = 0; i < (prox || []).length; i += 2) { try { const a = JSON.parse(prox[i]); lista.push(new Date(+prox[i + 1]).toISOString() + ' ' + a.t + ' | ' + a.b); } catch (e) {} }
+      return res.status(200).json({ ahora: new Date().toISOString(), avisos: n, telefonos: tel, ultimo_tick: ult, proximos: lista });
+    }
     if (req.method === 'GET' && q.tick && RURL) {
       const now = Date.now();
-      const [due] = await redis([['ZRANGEBYSCORE', 'av', now - 3 * 36e5, now + 60000]]);
+      const [due] = await redis([['ZRANGEBYSCORE', 'av', now - 3 * 36e5, now + 60000], ['SET', 'ultimo_tick', new Date(now).toISOString()]]);
       let enviados = 0;
       if (due && due.length) {
         const ks = [...new Set(due.map(m => { try { return JSON.parse(m).k; } catch (e) { return ''; } }))];
