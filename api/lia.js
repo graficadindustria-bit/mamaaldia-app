@@ -201,8 +201,9 @@ module.exports = async (req, res) => {
       'No inventes lugares. Responde en español, sin introducción ni cierre.';
     const base = { contents: [{ role: 'user', parts: [{ text: pedido }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 1500 } };
     try {
-      let r = await pedir(cat.texto.slice(0, 3), JSON.stringify(Object.assign({ tools: [{ googleMaps: {} }] }, base)), key);
-      if (!r || !r.ok) r = await pedir(cat.texto.slice(0, 3), JSON.stringify(Object.assign({ tools: [{ google_search: {} }] }, base)), key);
+      const mods = [...new Set(['gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite'].concat(cat.texto))].slice(0, 5);
+      let r = await pedirYa(mods, Object.assign({ tools: [{ googleMaps: {} }] }, base), key, 6000, 20000);
+      if (!r || !r.ok) r = await pedirYa(mods, Object.assign({ tools: [{ google_search: {} }] }, base), key, 6000, 20000);
       if (!r || !r.ok) return res.status(502).json({ error: 'ia', estado: r && r.status });
       const j = await r.json();
       const c = (j.candidates || [])[0] || {};
