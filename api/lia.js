@@ -27,11 +27,30 @@ async function modelos(key) {
 }
 // Respuestas rápidas: le pedimos al modelo que "piense" lo mínimo (si el modelo no lo acepta, se reintenta sin esto).
 function conRapidez(cuerpo, modelo) {
-  let tc = null;
-  if (/gemini-2\.5-flash/.test(modelo)) tc = { thinkingBudget: 0 };
-  else if (/gemini-[3-9]/.test(modelo) && /flash/.test(modelo)) tc = { thinkingLevel: 'low' };
+  // medido en producción (20-nov-2026): con esto responden en ~1 s; con otros valores tardan o dan error
+  const tc = { 'gemini-3-flash-preview': { thinkingLevel: 'minimal' }, 'gemini-3.1-flash-lite-preview': { thinkingBudget: 0 } }[modelo] || null;
   if (!tc) return null;
   return JSON.stringify(Object.assign({}, cuerpo, { generationConfig: Object.assign({}, cuerpo.generationConfig, { thinkingConfig: tc }) }));
+}
+// Pide al modelo más rápido; si en unos segundos no contesta, lanza el siguiente en paralelo y se queda con el primero que responda.
+// Google a veces está saturado (503) o sin cupo (429): así la mamá no espera a que uno falle para probar otro.
+const RAPIDOS = ['gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite-preview', 'gemini-3.5-flash-lite'];
+function pedirYa(lista, cuerpo, key, paso, maxMs) {
+  return new Promise(resolve => {
+    let fin = false, vivos = 0, i = 0, ultimo = null, timer = null;
+    const ctls = [];
+    const lanzar = () => {
+      if (fin || i >= lista.length) return;
+      const m = lista[i++], ctl = new AbortController(); ctls.push(ctl); vivos++;
+      const t = setTimeout(() => ctl.abort(), Math.max(3000, Math.min(maxMs, (limiteT || Date.now() + 55000) - Date.now() - 2000)));
+      const rap = conRapidez(cuerpo, m);
+      fetch(API + '/' + m + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: rap || JSON.stringify(cuerpo), signal: ctl.signal })
+        .then(r => { if (r.ok && !fin) { fin = true; clearTimeout(timer); pedir.ultimo = m; ctls.forEach(c => c !== ctl && c.abort()); resolve(r); } else { ultimo = r; } })
+        .catch(() => {})
+        .finally(() => { clearTimeout(t); vivos--; if (!fin) { if (i < lista.length) { clearTimeout(timer); lanzar(); timer = setTimeout(lanzar, paso); } else if (!vivos) { fin = true; resolve(ultimo || { ok: false, status: 504, json: async () => ({}) }); } } });
+    };
+    lanzar(); timer = setTimeout(function seguir() { lanzar(); if (!fin && i < lista.length) timer = setTimeout(seguir, paso); }, paso);
+  });
 }
 let limiteT = 0; // hora en que la función debe responder sí o sí (Vercel corta a los 60 s)
 async function pedir(lista, cuerpo, key, maxMs) {
@@ -69,8 +88,8 @@ async function guia(cat, key, ctx, consulta, img, buscar) {
   const parts = [{ text: 'Datos de la familia: ' + ctx }, { text: 'Consulta de la mamá: ' + consulta }];
   if (img) parts.push({ inlineData: { mimeType: img.mime, data: img.data } });
   const base = { systemInstruction: { parts: [{ text: GUIA }] }, contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.4, maxOutputTokens: 2500 } };
-  let r = buscar ? await pedir(cat.texto.slice(0, 2), Object.assign({ tools: [{ google_search: {} }] }, base), key, 30000) : null;
-  if (!r || !r.ok) r = await pedir(cat.texto.slice(0, 3), base, key, 20000);
+  let r = buscar ? await pedirYa(['gemini-3-flash-preview'].concat(cat.texto.slice(0, 2)), Object.assign({ tools: [{ google_search: {} }] }, base), key, 9000, 25000) : null;
+  if (!r || !r.ok) r = await pedirYa(RAPIDOS, base, key, 3500, 15000);
   if (!r || !r.ok) return null;
   const j = await r.json();
   const c = (j.candidates || [])[0] || {};
@@ -146,7 +165,7 @@ module.exports = async (req, res) => {
     for (const m of (b.m ? [String(b.m)] : cat.todos.filter(n => /flash/.test(n) && !/tts|image|live|audio|embed/.test(n)).slice(0, 0))) {
       const t0 = Date.now(); let st = 0, d = '', conf = '';
       for (const tc of [null, { thinkingBudget: 0 }, { thinkingLevel: 'low' }, { thinkingLevel: 'minimal' }]) {
-        const gc = { maxOutputTokens: 60 }; if (tc) gc.thinkingConfig = tc;
+        const gc = b.tts ? { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOZ } } } } : { maxOutputTokens: 60 }; if (tc && !b.tts) gc.thinkingConfig = tc; if (b.tts && tc) break;
         const t1 = Date.now();
         try { const r = await fetch(API + '/' + m + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ contents: [{ parts: [{ text: 'Di hola en una palabra.' }] }], generationConfig: gc }), signal: AbortSignal.timeout(15000) });
           st = r.status; if (!r.ok) { try { const e = await r.json(); d = String((e.error || {}).message || '').slice(0, 80); } catch (x) {} } else d = '';
@@ -229,7 +248,7 @@ module.exports = async (req, res) => {
       generationConfig: { temperature: 0.5, maxOutputTokens: 2000, responseMimeType: 'application/json' }
     };
     const t0 = Date.now();
-    let r = await pedir(cat.rapido, cuerpo, key, 20000);
+    let r = await pedirYa([...new Set(RAPIDOS.concat(cat.rapido))], cuerpo, key, 3500, 15000);
     const tIA = Date.now() - t0, mIA = pedir.ultimo;
     if (!r.ok) {
       let d = '';
