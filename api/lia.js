@@ -71,6 +71,7 @@ async function pedir(lista, cuerpo, key, maxMs) {
   return mejor || r;
 }
 const VOZ = process.env.LIA_VOZ || 'Sulafat';
+const VOCES = ['Sulafat', 'Vindemiatrix', 'Achernar', 'Despina', 'Gacrux', 'Erinome', 'Aoede', 'Callirrhoe', 'Kore', 'Leda', 'Autonoe'];
 const GUIA = `Eres Lía, guía cálida de la app "Mamá al Día" para mamás de Bolivia. Una mamá te consulta algo sobre su hijo o hija, que puede tener de 0 a 18 años (o sobre ella). Adapta todo a la edad que viene en los datos y, si tiene una condición o cuidado especial (autismo, síndrome de Down, TDAH, asma, diabetes u otra), tenla en cuenta con respeto, sin etiquetar, y menciona cuándo conviene avisar también a su especialista o terapeuta. Tu misión: darle paz, tranquilidad y una guía clara y correcta, y ser un puente hacia el pediatra, nunca reemplazarlo.
 Busca en internet información de fuentes confiables (Asociación Americana de Pediatría/HealthyChildren.org, OMS, UNICEF, Mayo Clinic, MedlinePlus, sociedades de pediatría) y básate en ella. Si hay una foto, obsérvala con cuidado y describe lo que ves sin afirmar un diagnóstico.
 Escribe en español de Bolivia, tuteando, con cariño y frases cortas. Máximo 230 palabras. Usa exactamente este formato (sin #, sin tablas):
@@ -216,7 +217,7 @@ module.exports = async (req, res) => {
     try {
       const r = await pedir(cat.tts, JSON.stringify({
         contents: [{ parts: [{ text: frase }] }],
-        generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOZ } } } }
+        generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOCES.includes(b.voz) ? b.voz : VOZ } } } }
       }), key);
       if (!r || !r.ok) return res.status(502).json({ error: 'voz', estado: r && r.status });
       const j = await r.json();
