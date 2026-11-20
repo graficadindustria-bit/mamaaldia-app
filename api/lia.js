@@ -143,7 +143,7 @@ module.exports = async (req, res) => {
   if (b.modo === 'diag') return res.status(200).json({ texto: cat.texto, tts: cat.tts, total: cat.todos.length });
   if (b.modo === 'medir' && tipo === 'creador') {
     const out = [];
-    for (const m of cat.texto.concat(cat.todos.filter(n => /flash-lite/.test(n) && !/tts|image|live|audio/.test(n)))) {
+    for (const m of (b.m ? [String(b.m)] : cat.todos.filter(n => /flash/.test(n) && !/tts|image|live|audio|embed/.test(n)).slice(0, 0))) {
       const t0 = Date.now(); let st = 0, d = '', conf = '';
       for (const tc of [null, { thinkingBudget: 0 }, { thinkingLevel: 'low' }, { thinkingLevel: 'minimal' }]) {
         const gc = { maxOutputTokens: 60 }; if (tc) gc.thinkingConfig = tc;
@@ -157,7 +157,7 @@ module.exports = async (req, res) => {
       out.push(m + ': ' + conf);
       if (Date.now() - limiteT > -8000) break;
     }
-    return res.status(200).json({ out });
+    return res.status(200).json({ out, todos: cat.todos });
   }
   if (b.modo === 'buscar_lugares') {
     const ciudad = String(b.ciudad || 'Santa Cruz').slice(0, 40);
