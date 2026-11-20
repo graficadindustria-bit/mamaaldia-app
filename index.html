@@ -268,7 +268,7 @@ let S=null;
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}clearTimeout(save.t);save.t=setTimeout(()=>{try{pushSync()}catch(e){}},700)}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){clearTimeout(save.t);try{pushSync()}catch(e){}}});
-function blank(){return {v:1,profile:{mom:'',kid:'',birth:'',allergies:[],dislikes:[],budget:150,adults:0,city:'Santa Cruz',mbudget:0},events:[],tasks:[],meds:[],health:[],chat:[],menu:null,shopChecked:{},extraShop:[],purchases:[],prices:{},notified:{},notes:[],bills:[],expenses:[],places:[],caps:{},items:[],priceLog:[],kids:null,tab:'hoy'}}
+function blank(){return {v:1,wake:true,defs1:1,profile:{mom:'',kid:'',birth:'',allergies:[],dislikes:[],budget:150,adults:0,city:'Santa Cruz',mbudget:0},events:[],tasks:[],meds:[],health:[],chat:[],menu:null,shopChecked:{},extraShop:[],purchases:[],prices:{},notified:{},notes:[],bills:[],expenses:[],places:[],caps:{},items:[],priceLog:[],kids:null,tab:'hoy'}}
 
 /* Catálogo con precios estimados (Santa Cruz, Bs). Editables desde Compras. */
 const CAT={
@@ -831,7 +831,9 @@ async function talk(v,opts={}){
  busy=false;render();speakLast()}
 let lastVoice=null;
 function retryVoice(id){const v=lastVoice;S.chat=S.chat.filter(m=>m.id!==id);if(!v){toast('Graba la nota otra vez');render();return}lastVoice=null;const old=S.chat.find(m=>m.id===v.meId);if(old)S.chat=S.chat.filter(m=>m!==old);talkVoice(v.blob,v.secs)}
-async function talkVoice(blob,secs){const img=pendImg;pendImg=null;
+let esperaA=null;
+function espera(){if(!S||S.voice===false)return;try{const a=new Audio('/espera/'+(1+Math.floor(Math.random()*4))+'.mp3');esperaA=a;a.onended=a.onerror=()=>{if(esperaA===a)esperaA=null};const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{if(esperaA===a)esperaA=null})}catch(e){esperaA=null}}
+async function talkVoice(blob,secs){const img=pendImg;pendImg=null;espera();
  const me={id:uid(),from:'me',text:'🎤 Nota de voz ('+secs+' s)',img:img&&img.thumb,ts:Date.now()};S.chat.push(me);lastVoice={blob,secs,meId:me.id};S.tab='lia';typingOn();busy=true;
  try{const b64=await new Promise((ok,ko)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(',')[1]);fr.onerror=ko;fr.readAsDataURL(blob)});
   const j=await liaAsk2(Object.assign({audio:b64,mime:blob.type||'audio/webm'},img?{imagen:img.full,imgMime:'image/jpeg'}:{}));typingOff();
@@ -987,7 +989,7 @@ function vozTxt(t){return String(t).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27B
 function vozTrozos(t){const fr=t.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[t];const out=[];let cur='';
  for(const f of fr.map(x=>x.trim()).filter(Boolean)){const lim=out.length?320:110;if(cur&&(cur+' '+f).length>lim){out.push(cur);cur=f}else cur=cur?cur+' '+f:f}
  if(cur)out.push(cur);return out}
-function speak(text,withChime){if(S.voice===false)return;const my=++vozSeq;ctxOn();if(withChime)chime();
+function speak(text,withChime){if(S.voice===false)return;if(esperaA&&!esperaA.ended){const ea=esperaA;let sig=false;esperaA=null;const go=()=>{if(sig)return;sig=true;speak(text,withChime)};ea.onended=ea.onerror=go;setTimeout(go,ea.paused?300:4000);return}const my=++vozSeq;ctxOn();if(withChime)chime();
  if(aiCode()){const parts=vozTrozos(vozTxt(text));const reqs=parts.map(p=>vozIA(p));let i=0,ok=false;
   const next=()=>{if(my!==vozSeq||i>=parts.length)return;const k=i++;reqs[k].then(j=>{if(my!==vozSeq)return;
     if(j&&playPCM(j,next)){ok=true;return}if(!ok){speakBrowser(parts.slice(k).join(' '),false);return}next()})};
@@ -1371,8 +1373,8 @@ async function pushTest(){try{const sub=await pushSub(true);if(!sub){toast('Prim
 
 
 /* ====================== novedades y recorrido ====================== */
-const NOV_V='2026-11-20';
-const NOVEDADES=[['🔔','Avisos con la app cerrada','Tus citas, remedios y pagos te avisan aunque no tengas la app abierta. Toca el aviso y Lía te lo dice en voz alta.'],['🎙️','Lía con voz nueva','Una voz más cálida y con acento latinoamericano. Y si activas "Hola Lía", empieza a escucharte sin tocar nada.'],['🔊','Si la voz de Lía cambia de tono','La voz principal de Lía tiene un cupo de uso diario. Cuando se agota, la app usa la voz de tu celular, que suena distinta, hasta que el cupo se renueva al día siguiente. Esto pasa solo en esta fase de prueba: en la versión de Play Store, la voz suave de Lía será la voz de toda la app, siempre.'],['🌸','Colores nuevos','Tonos nude y oro rosa, más suaves. Si prefieres el modo oscuro, está en Ajustes.'],['🌿','Frases de calma','Al abrir la app, una frase para respirar y empezar el día con calma.'],['🙋','Te habla de usted si prefieres','Actívalo en Ajustes y Lía te tratará de usted.'],['📍','Lugares para ir con niños','Parques, restaurantes, terapias y pediatras de tu ciudad, en Menú › Lugares.']];
+const NOV_V='2026-11-20b';
+const NOVEDADES=[['⏳','Sin silencios incómodos','Apenas terminas tu nota de voz, Lía te dice "Un momento, lo estoy pensando" mientras prepara la respuesta, que tarda unos segundos. Así sabes que te escuchó.'],['✅','Todo activado desde el inicio','La voz de Lía, "Hola Lía" y los avisos ya vienen encendidos. La primera vez, acepta el permiso de avisos. Puedes apagar cualquier cosa en Ajustes.'],['🔔','Avisos con la app cerrada','Tus citas, remedios y pagos te avisan aunque no tengas la app abierta. Toca el aviso y Lía te lo dice en voz alta.'],['🎙️','Lía con voz nueva','Una voz más cálida y con acento latinoamericano. Y si activas "Hola Lía", empieza a escucharte sin tocar nada.'],['🔊','Si la voz de Lía cambia de tono','La voz principal de Lía tiene un cupo de uso diario. Cuando se agota, la app usa la voz de tu celular, que suena distinta, hasta que el cupo se renueva al día siguiente. Esto pasa solo en esta fase de prueba: en la versión de Play Store, la voz suave de Lía será la voz de toda la app, siempre.'],['🌸','Colores nuevos','Tonos nude y oro rosa, más suaves. Si prefieres el modo oscuro, está en Ajustes.'],['🌿','Frases de calma','Al abrir la app, una frase para respirar y empezar el día con calma.'],['🙋','Te habla de usted si prefieres','Actívalo en Ajustes y Lía te tratará de usted.'],['📍','Lugares para ir con niños','Parques, restaurantes, terapias y pediatras de tu ciudad, en Menú › Lugares.']];
 function novedades(auto){try{localStorage.setItem('md-nov',NOV_V)}catch(e){}
  dlg(`<h3 style="margin-bottom:2px">Novedades de Mamá al Día</h3><div class="tiny muted" style="margin-bottom:10px">Lo nuevo de esta versión</div>
  <div class="novs">${NOVEDADES.map(([i,t,d])=>`<div class="nov"><span class="ni">${i}</span><div><b>${t}</b><div class="small muted">${d}</div></div></div>`).join('')}</div>
@@ -1456,10 +1458,9 @@ function installBanner(w){if(standalone())return '';if(!deferredPrompt&&!isIOS()
 async function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;render()}
 
 /* ====================== inicio ====================== */
-S=load();if(S){S=Object.assign(blank(),S);S.chat=S.chat.filter(m=>!m.typing);if(S.profile.mom)syncKid()}
+S=load();if(S){if(!S.defs1){S.defs1=1;S.wake=true}S=Object.assign(blank(),S);S.chat=S.chat.filter(m=>!m.typing);if(S.profile.mom)syncKid()}
 (()=>{try{const q=new URLSearchParams(location.search).get('c');if(q){setCode(q.toUpperCase().replace(/\s+/g,''));history.replaceState(null,'',location.pathname);setTimeout(()=>checkCode(aiCode()),800)}}catch(e){}})();
-if(!S.defs1){S.defs1=1;S.wake=true;save()}
-(function pidePermiso(){if(!('Notification' in window)||Notification.permission!=='default')return;const f=()=>{if(!S.profile||!S.profile.mom||($('#dlg')||{}).open)return;document.removeEventListener('pointerup',f,true);askNotif()};document.addEventListener('pointerup',f,true)})();
+(function pidePermiso(){if(!('Notification' in window)||Notification.permission!=='default')return;const f=()=>{if(!S||!S.profile||!S.profile.mom||($('#dlg')||{}).open)return;document.removeEventListener('pointerup',f,true);askNotif()};document.addEventListener('pointerup',f,true)})();
 render();calmaInicio();novAuto();
 window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEventListener('pointercancel',e=>{if(rec&&rec.held)micUp(e)});
 try{if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
