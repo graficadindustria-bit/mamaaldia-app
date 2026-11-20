@@ -204,6 +204,12 @@ module.exports = async (req, res) => {
       const mods = [...new Set(['gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite'].concat(cat.texto))].slice(0, 5);
       let r = await pedirYa(mods, Object.assign({ tools: [{ googleMaps: {} }] }, base), key, 6000, 20000);
       if (!r || !r.ok) r = await pedirYa(mods, Object.assign({ tools: [{ google_search: {} }] }, base), key, 6000, 20000);
+      let aprox = false;
+      if (!r || !r.ok) { // sin cupo de búsqueda en Maps: lugares muy conocidos de memoria, con enlace de búsqueda para confirmar
+        aprox = true;
+        const b2 = { contents: [{ role: 'user', parts: [{ text: pedido.replace('Busca en Google Maps ', 'Sin buscar en internet, nombra solo lugares muy conocidos y que existan desde hace años: ') }] }], generationConfig: base.generationConfig };
+        r = await pedirYa(RAPIDOS, b2, key, 3500, 15000);
+      }
       if (!r || !r.ok) return res.status(502).json({ error: 'ia', estado: r && r.status });
       const j = await r.json();
       const c = (j.candidates || [])[0] || {};
@@ -218,7 +224,7 @@ module.exports = async (req, res) => {
         lugares.push({ nombre, zona: m[2].trim().slice(0, 100), nota: m[3].trim().slice(0, 160),
           maps: ch && ch.uri ? ch.uri : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(nombre + ', ' + ciudad + ', Bolivia') });
       }
-      return res.status(200).json({ lugares: lugares.slice(0, 8) });
+      return res.status(200).json({ lugares: lugares.slice(0, 8), aprox });
     } catch (e) { return res.status(502).json({ error: 'red' }); }
   }
   if (b.modo === 'voz') {
