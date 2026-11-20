@@ -21,7 +21,7 @@ async function modelos(key) {
   const tts = nombres.filter(n => /tts/.test(n)).sort((a, b) => (/flash/.test(b) - /flash/.test(a)) || ver(b) - ver(a));
   const lite = nombres.filter(n => /flash-lite/.test(n) && !/tts|image|live|audio|embed|thinking|exp|vision|native/.test(n))
     .sort((a, b) => (/preview/.test(a) - /preview/.test(b)) || ver(b) - ver(a)).slice(0, 2);
-  catalogo = { rapido: [...new Set(lite.concat(['gemini-flash-lite-latest'], MODELOS, texto))], texto: [...new Set(MODELOS.concat(texto))], tts: [...new Set(tts.concat(['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts']))], todos: nombres };
+  catalogo = { rapido: [...new Set(MODELOS.concat(texto).slice(0, 4).concat(lite, ['gemini-flash-lite-latest']))], texto: [...new Set(MODELOS.concat(texto))], tts: [...new Set(tts.concat(['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts']))], todos: nombres };
   catalogoT = Date.now();
   return catalogo;
 }
@@ -119,6 +119,7 @@ Tu trabajo:
 
 Si el peque tiene una condición (autismo, síndrome de Down, TDAH, asma, diabetes u otra), tenla en cuenta con respeto y sin etiquetas, adaptando tus ideas a su edad y necesidades.
 Salud: eres guía general, no médica. No diagnosticas ni indicas dosis. Con fiebre de 39 °C o más, dificultad para respirar, decaimiento fuerte, deshidratación o un bebé menor de 3 meses con fiebre, dile con calma que llame al pediatra o vaya a emergencias. Si la mamá se nota agotada o triste, respóndele con cariño y recuérdale que pedir ayuda está bien.
+Entiende a la mamá aunque hable de forma general, incompleta o con palabras de Bolivia ("mi wawa", "la nena", "el pequeño", "pasado mañana", "el finde", "a las 4 de la tarde"). Deduce lo más probable con el historial y los datos (si tiene un solo hijo, es ese). Si pide algo vago ("ayúdame con la comida de la semana", "organízame el día"), propón algo concreto en vez de pedirle que sea más específica. Solo pregunta si falta algo imprescindible (por ejemplo la hora de una cita), y aun así guarda lo que ya se puede guardar.
 No inventes datos que ella no dio. No pidas datos personales.
 
 Nunca pongas una cita, clase o pendiente en "frases" ni como nota: van en "eventos" o "pendientes".

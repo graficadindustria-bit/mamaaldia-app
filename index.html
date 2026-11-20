@@ -199,7 +199,7 @@ dialog h3{font-size:19px;margin-bottom:4px}
 .empty{text-align:center;color:var(--sub);padding:14px 6px;font-size:14px}
 .install{display:flex;gap:10px;align-items:center;background:var(--asoft);border-radius:16px;padding:10px 12px;margin:0 0 12px}
 .install .b{flex:1;font-size:13.5px}
-</style>
+.msg.typing .slow{display:none;font-style:normal;font-size:13px;color:var(--muted);margin-left:8px}.msg.typing.long .slow{display:inline}</style>
 </head>
 <body>
 <div id="root"></div>
@@ -763,12 +763,12 @@ function liaCtx(){const now=new Date();
   peque:{nombre:S.profile.kid||'',edad:S.profile.birth?ageText():'',condicion:S.profile.cond||''},hijos:kids().map(k=>({nombre:k.name,edad:k.birth?ageTextOf(k.birth):'',condicion:k.cond||''})),ciudad:S.profile.city||'',
   contexto:{tiendas_guardadas:[...new Set((S.priceLog||[]).map(x=>x.store).filter(Boolean))].slice(0,15),medicamentos_activos:S.meds.filter(medActive).map(m=>m.name+(m.dose?' '+m.dose:'')+' cada '+m.every+' h'),pagos_fijos:S.bills.map(b=>b.name+' Bs '+b.amount),productos:S.items.map(i=>i.name),no_le_gusta:S.profile.dislikes||[],alergias:S.profile.allergies||[]},
   historial:S.chat.filter(m=>!m.typing).slice(-6).map(m=>(m.from==='me'?'Mamá: ':'Lía: ')+String(m.text||'').slice(0,300))}}
-async function liaAsk2(body){const t0=Date.now();try{const j=await liaAsk(body);j.ms=Date.now()-t0;return j}catch(e){if(e.message==='codigo'||/^limite/.test(e.message))throw e;await new Promise(r=>setTimeout(r,1200));return liaAsk(body)}}
+async function liaAsk2(body){const t0=Date.now();try{const j=await liaAsk(body);j.ms=Date.now()-t0;return j}catch(e){if(e.message==='codigo'||/^limite/.test(e.message)||e.name==='AbortError'||Date.now()-t0>15000)throw e;await new Promise(r=>setTimeout(r,1200));return liaAsk(body)}}
 const errTxt=e=>e.message==='codigo'?'':' (detalle: '+(e.name==='AbortError'?'tardó demasiado':String(e.message||'red').slice(0,40))+')';
-async function liaAsk(body){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),75000);
+async function liaAsk(body){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),45000);
  try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(Object.assign({codigo:aiCode(),ctx:liaCtx()},body)),signal:ctl.signal});
   const j=await r.json().catch(()=>({}));if(r.status===401){setCode('');throw new Error('codigo')}if(!r.ok)throw new Error((j.error||'ia')+(j.estado?' '+j.estado:'')+(r.status>=500&&!j.error?' '+r.status:''));return j}finally{clearTimeout(to)}}
-function typingOn(){S.chat.push({id:'typing',from:'lia',typing:true,ts:Date.now()});render()}
+function typingOn(){S.chat.push({id:'typing',from:'lia',typing:true,ts:Date.now()});render();clearTimeout(typingOn.t);typingOn.t=setTimeout(()=>{const t=$('.msg.typing');if(t)t.classList.add('long')},9000)}
 function typingOff(){S.chat=S.chat.filter(m=>!m.typing)}
 function aiActions(j){const out=[];const now=new Date();const DN=['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
  const hhmm=x=>{const m=/^(\d{1,2})[:.](\d{2})/.exec(String(x||''));return m&&+m[1]<24?pad(+m[1])+':'+m[2]:null};
@@ -822,7 +822,7 @@ const micBtn=src=>`<button type="button" class="mic" aria-label="Mantén apretad
 let rec=null;
 const SRc=()=>window.SpeechRecognition||window.webkitSpeechRecognition;
 const canAudio=()=>!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder);
-function micDown(e,src){e.preventDefault();ctxOn();vozSeq++;try{if(vozSrc)vozSrc.stop()}catch(x){}
+function micDown(e,src){e.preventDefault();ctxOn();vozSeq++;if(typeof wakeStop==='function')wakeStop();try{if(vozSrc)vozSrc.stop()}catch(x){}
  if(rec){if(rec.locked)finishRec(false);return}
  if(busy){toast('Lía está pensando, un momentito…');return}
  try{e.currentTarget.setPointerCapture(e.pointerId)}catch(x){}
@@ -1061,7 +1061,7 @@ function vLia(){
  const sug=[`Cita con el pediatra el jueves a las 10`,`Natación los martes y jueves a las 16`,`Compré verduras y frutas, 45 Bs`,`Se acabó la leche y los pañales`,`${S.profile.kid||'La niña'} tiene fiebre 38.5, paracetamol 5 ml cada 6 h por 3 días`,`Recuérdame pagar la luz mañana`,`Pre kínder 1800 Bs cada mes el día 5`,`Pagué el internet 150 Bs`,`Guarda lugar: parque con juegos para bebés`,`¿Cómo voy esta semana?`,`Tope de comida 1200 Bs al mes`,`La crema de Sofi le dura 2 meses, cuesta 330 Bs`,`No le gustó el brócoli`,`Cumpleaños de la abuela el 30 de noviembre`];
  return `<div class="chatwrap"><div class="msgs">
  <div class="lia-row"><div class="av hi" onclick="liaHello()" role="button" aria-label="Saludar a Lía" style="cursor:pointer">${LIA}</div><div class="msg lia">Hola, ${esc(S.profile.mom)}. Soy Lía 🌱 Escríbeme o díctame como te salga, todo junto si quieres, y yo lo ordeno en tu agenda, medicamentos, menú, compras y gastos. Pídeme "¿cómo voy esta semana?" y te doy tu resumen.</div></div>
- ${msgs.map(m=>m.from==='me'?`<div class="msg me">${m.img?`<img class="mimg" src="${m.img}" alt="Foto">`:''}${esc(m.text)}</div>`:m.typing?`<div class="lia-row"><div class="av hi">${LIA}</div><div class="msg lia typing" aria-label="Lía está pensando"><span></span><span></span><span></span></div></div>`:`<div class="lia-row"><div class="av">${LIA}</div><div class="msg lia${m.guia?' guia':''}">${m.guia?'<div class="gtag">🩺 Guía para mamá</div>':''}${fmt(m.text)}${m.guia?`<div class="gnote">Es una guía general para que estés tranquila y llegues preparada: quien confirma qué tiene es el pediatra.</div>${(m.fuentes||[]).length?`<div class="gsrc">Fuentes: ${m.fuentes.map(f=>`<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join(' · ')}</div>`:''}`:''}${m.cards&&m.cards.length?`<div class="org">${m.cards.map(c=>`<div class="it"><span class="chip ${c.cls}">${esc(c.label)}</span><span>${esc(c.detail)}</span></div>`).join('')}</div>`:''}${m.extra?`<div class="small muted" style="margin-top:8px">${esc(m.extra)}</div>`:''}${m.tms?`<div class="tiny muted" style="margin-top:6px;opacity:.7">⏱ ${(m.tms/1000).toFixed(1).replace('.',',')} s${m.tia?' · IA '+(m.tia/1000).toFixed(1).replace('.',','):''}</div>`:''}${m.retry?`<button class="undo" onclick="retryVoice('${m.id}')">🔁 Reintentar</button>`:''}${m.undone?'<div class="tiny muted" style="margin-top:6px">(Deshecho)</div>':m.undo?`<button class="undo" onclick="undoMsg('${m.id}')">Deshacer</button>`:''}</div></div>`).join('')}
+ ${msgs.map(m=>m.from==='me'?`<div class="msg me">${m.img?`<img class="mimg" src="${m.img}" alt="Foto">`:''}${esc(m.text)}</div>`:m.typing?`<div class="lia-row"><div class="av hi">${LIA}</div><div class="msg lia typing" aria-label="Lía está pensando"><span></span><span></span><span></span><em class="slow">Sigo pensando, un momentito…</em></div></div>`:`<div class="lia-row"><div class="av">${LIA}</div><div class="msg lia${m.guia?' guia':''}">${m.guia?'<div class="gtag">🩺 Guía para mamá</div>':''}${fmt(m.text)}${m.guia?`<div class="gnote">Es una guía general para que estés tranquila y llegues preparada: quien confirma qué tiene es el pediatra.</div>${(m.fuentes||[]).length?`<div class="gsrc">Fuentes: ${m.fuentes.map(f=>`<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join(' · ')}</div>`:''}`:''}${m.cards&&m.cards.length?`<div class="org">${m.cards.map(c=>`<div class="it"><span class="chip ${c.cls}">${esc(c.label)}</span><span>${esc(c.detail)}</span></div>`).join('')}</div>`:''}${m.extra?`<div class="small muted" style="margin-top:8px">${esc(m.extra)}</div>`:''}${m.tms?`<div class="tiny muted" style="margin-top:6px;opacity:.7">⏱ ${(m.tms/1000).toFixed(1).replace('.',',')} s${m.tia?' · IA '+(m.tia/1000).toFixed(1).replace('.',','):''}</div>`:''}${m.retry?`<button class="undo" onclick="retryVoice('${m.id}')">🔁 Reintentar</button>`:''}${m.undone?'<div class="tiny muted" style="margin-top:6px">(Deshecho)</div>':m.undo?`<button class="undo" onclick="undoMsg('${m.id}')">Deshacer</button>`:''}</div></div>`).join('')}
  </div>
  <div class="composer"><div class="sugs">${sug.map(s=>`<button onclick="sendChat(this.textContent)">${esc(s)}</button>`).join('')}</div>
  ${imgBox()}<form class="ask" onsubmit="event.preventDefault();sendChat()"><button type="button" class="cam" onclick="pickImg()" aria-label="Adjuntar foto">${IC.cam}</button><input id="ci" placeholder="${pendImg?'Cuéntale qué te preocupa de la foto…':'Escribe o mantén 🎤 para hablar'}" autocomplete="off">${micBtn('ci')}<button aria-label="Enviar">${IC.send}</button></form>
