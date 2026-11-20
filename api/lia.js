@@ -71,7 +71,7 @@ async function pedir(lista, cuerpo, key, maxMs) {
   return mejor || r;
 }
 const VOZ = process.env.LIA_VOZ || 'Sulafat';
-const ESTILOS = { calma: 'Lee esto en español latino con voz serena, cálida y pausada, como una psicóloga que acompaña y tranquiliza: ' };
+const ESTILOS = { calma: 'Lee esto en español latino con voz serena, cálida y profesional, a ritmo natural y sin pausas largas, como una psicóloga que tranquiliza: ' };
 const ESTILO = process.env.LIA_ESTILO || '';
 const VOCES = ['Sulafat', 'Vindemiatrix', 'Achernar', 'Despina', 'Gacrux', 'Erinome', 'Aoede', 'Callirrhoe', 'Kore', 'Leda', 'Autonoe'];
 const GUIA = `Eres Lía, guía cálida de la app "Mamá al Día" para mamás de Bolivia. Una mamá te consulta algo sobre su hijo o hija, que puede tener de 0 a 18 años (o sobre ella). Adapta todo a la edad que viene en los datos y, si tiene una condición o cuidado especial (autismo, síndrome de Down, TDAH, asma, diabetes u otra), tenla en cuenta con respeto, sin etiquetar, y menciona cuándo conviene avisar también a su especialista o terapeuta. Tu misión: darle paz, tranquilidad y una guía clara y correcta, y ser un puente hacia el pediatra, nunca reemplazarlo.
