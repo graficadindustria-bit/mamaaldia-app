@@ -955,7 +955,7 @@ function autoStopSR(r){let last='',t=Date.now();const iv=setInterval(()=>{if(rec
 setInterval(wakeTick,1500);
 /* ---- voz de Lía ---- */
 function liaVoice(){let vs=[];try{vs=speechSynthesis.getVoices().filter(v=>/^es/i.test(v.lang))}catch(e){}
- const sc=v=>(/natural|neural|premium|enhanced|mejorad/i.test(v.name)?4:0)+(/paulina|m[oó]nica|marisol|ang[eé]lica|sabina|dalia|elena|helena|laura|luciana|francisca|camila|valentina|paloma|lupe|isabela|female|mujer/i.test(v.name)?3:0)+(/google/i.test(v.name)?1:0)+(/es[-_](419|MX|US|BO|AR|CO|PE|CL|EC|UY)/i.test(v.lang)?2:0)-(/jorge|diego|juan|carlos|pablo|enrique|alvaro|raul|male|hombre/i.test(v.name)?6:0);
+ const sc=v=>(/natural|neural|premium|enhanced|mejorad/i.test(v.name)?4:0)+(/paulina|m[oó]nica|marisol|ang[eé]lica|sabina|dalia|elena|helena|laura|luciana|francisca|camila|valentina|paloma|lupe|isabela|female|mujer/i.test(v.name)?3:0)+(/google/i.test(v.name)?1:0)+(/es[-_](419|MX|US|BO|AR|CO|PE|CL|EC|UY)/i.test(v.lang)?6:0)-(/es[-_]ES/i.test(v.lang)?4:0)-(/jorge|diego|juan|carlos|pablo|enrique|alvaro|raul|male|hombre/i.test(v.name)?6:0);
  return vs.sort((a,b)=>sc(b)-sc(a))[0]||null}
 let actx=null;
 function chime(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const t0=actx.currentTime+.02;
