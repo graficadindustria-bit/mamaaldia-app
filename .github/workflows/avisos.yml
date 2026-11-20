@@ -9,4 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - run: curl -fsS --max-time 50 "https://mamaaldia-app.vercel.app/api/avisos?tick=1"
+      - run: curl -fsS --max-time 50 "https://mamaaldia-app.vercel.app/api/avisos?tick=1&forzar=1"

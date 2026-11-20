@@ -1315,13 +1315,14 @@ function falta(min){return (min===60?'falta ':'faltan ')+leadTxt(min)}
 function leadTxt(min){return min>=60?(min%60?Math.floor(min/60)+' hora'+(min>=120?'s':'')+' y '+(min%60)+' minutos':(min/60)+' hora'+(min>=120?'s':'')):min+' minutos'}
 function avEv(e){const mom=S.profile.mom||'';const min=e.remind||30;const k=e.who==='kid'?kidName(kidOf(e)):'';
  return {t:(mom?mom+', ':'')+falta(min),b:e.title+' · a las '+e.time,s:(mom?mom+', ':'')+falta(min)+' para '+e.title.charAt(0).toLowerCase()+e.title.slice(1)+(k&&!norm(e.title).includes(norm(k))?', con '+k:'')+'.'}}
+function avEvNow(e){const mom=S.profile.mom||'';const k=e.who==='kid'?kidName(kidOf(e)):'';return {t:(mom?mom+', ':'')+'es la hora',b:e.title+' · '+e.time,s:(mom?mom+', ':'')+'ya es hora: '+e.title.charAt(0).toLowerCase()+e.title.slice(1)+(k&&!norm(e.title).includes(norm(k))?', con '+k:'')+'. No lo olvides.'}}
 function avMed(m,nx){const mom=S.profile.mom||'';const k=kidName(kidOf(m));
  return {t:(mom?mom+', ':'')+'hora del '+m.name,b:(m.dose?m.dose+' · ':'')+(k?'para '+k+' · ':'')+'dosis de las '+hm(new Date(nx)),s:(mom?mom+', ':'')+'es hora de darle '+m.name+(m.dose?', '+m.dose:'')+(k?', a '+k:'')+'.'}}
 function avTask(t){const mom=S.profile.mom||'';return {t:(mom?mom+', ':'')+'recuerda',b:t.text,s:(mom?mom+', ':'')+'te recuerdo: '+t.text+'.'}}
 function avBill(b){const mom=S.profile.mom||'';return {t:(mom?mom+', ':'')+'mañana toca pagar',b:b.name+' · '+bs(b.amount),s:(mom?mom+', ':'')+'mañana toca pagar '+b.name+', '+bs(b.amount)+'.'}}
 function futureAlerts(){const now=Date.now(),out=[];const lim=now+8*864e5;
- for(let d=0;d<8;d++){const ds=ymd(addDays(new Date(),d));for(const e of eventsOn(ds)){if(!e.time)continue;const t=at(ds,e.time).getTime();const r=t-(e.remind||30)*60000;if(r<now-60000)continue;
-  const k=e.kid&&kids().find(x=>x.id===e.kid);out.push(Object.assign({id:'ev:'+e.id+':'+ds,at:r},avEv(e)))}}
+ for(let d=0;d<8;d++){const ds=ymd(addDays(new Date(),d));for(const e of eventsOn(ds)){if(!e.time)continue;const t=at(ds,e.time).getTime();const r=t-(e.remind||30)*60000;if(t<now-60000)continue;
+  if(r>now-60000)out.push(Object.assign({id:'ev:'+e.id+':'+ds,at:r},avEv(e)));out.push(Object.assign({id:'evh:'+e.id+':'+ds,at:t},avEvNow(e)))}}
  for(const m of S.meds){if(!medActive(m))continue;let nx=medNext(m);const end=medEnd(m);let n=0;while(nx&&nx<lim&&nx<end&&n<20){if(nx>now-60000)out.push(Object.assign({id:'med:'+m.id+':'+nx,at:nx},avMed(m,nx)));nx+=m.every*36e5;n++}}
  for(const t of S.tasks){if(t.done||!t.due||t.due<now-60000||t.due>lim)continue;out.push(Object.assign({id:'tk:'+t.id,at:t.due},avTask(t)))}
  for(const b of S.bills){const d=fromYmd(b.due);d.setHours(9,0,0,0);const a=d.getTime()-864e5;if(a>now-60000&&a<lim)out.push(Object.assign({id:'bill:'+b.id+':'+b.due,at:a},avBill(b)))}
