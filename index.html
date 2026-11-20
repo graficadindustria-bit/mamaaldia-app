@@ -247,7 +247,7 @@ const LIA='<canvas class="orb" width="112" height="112" aria-hidden="true"></can
 const KEY='mamaaldia-v1';
 let S=null;
 function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}clearTimeout(save.t);save.t=setTimeout(()=>{try{pushSync()}catch(e){}},2500)}
 function blank(){return {v:1,profile:{mom:'',kid:'',birth:'',allergies:[],dislikes:[],budget:150,adults:0,city:'Santa Cruz',mbudget:0},events:[],tasks:[],meds:[],health:[],chat:[],menu:null,shopChecked:{},extraShop:[],purchases:[],prices:{},notified:{},notes:[],bills:[],expenses:[],places:[],caps:{},items:[],priceLog:[],kids:null,tab:'hoy'}}
 
 /* Catálogo con precios estimados (Santa Cruz, Bs). Editables desde Compras. */
@@ -744,9 +744,9 @@ function dueAlerts(){const now=Date.now();const res=[];
  for(const t of S.tasks){if(t.done||!t.due)continue;if(t.due<=now&&t.due>now-12*36e5)res.push({id:'tk:'+t.id,kind:'task',ref:t.id,title:t.text,sub:'Pendiente para '+hm(new Date(t.due)),ts:t.due})}
  return res.filter(a=>!S.notified['x'+a.id]);}
 async function tick(){if(!S||!S.profile.mom)return;const al=dueAlerts();let changed=false;
- for(const a of al){if(!S.notified[a.id]){S.notified[a.id]=1;changed=true;notify('Mamá al Día',a.title+' · '+a.sub)}}
+ for(const a of al){if(!S.notified[a.id]){S.notified[a.id]=1;changed=true;notify('Mamá al Día',a.title+' · '+a.sub,a.id)}}
  if(changed){save();if(S.tab==='hoy')render()}}
-async function notify(title,body){try{if(!('Notification' in window)||Notification.permission!=='granted')return;const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)r.showNotification(title,{body,icon:'icon-192.png',badge:'icon-192.png',tag:body});else new Notification(title,{body,icon:'icon-192.png'})}catch(e){}}
+async function notify(title,body,tag){try{if(!('Notification' in window)||Notification.permission!=='granted')return;const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)r.showNotification(title,{body,icon:'icon-192.png',badge:'icon-192.png',tag:tag||body});else new Notification(title,{body,icon:'icon-192.png'})}catch(e){}}
 function dismissAlert(id){S.notified['x'+id]=1;save();render()}
 function giveDose(mid,aid){const m=S.meds.find(x=>x.id===mid);if(!m)return;m.given.push(Date.now());S.health.push({id:uid(),kid:kidOf(m),ts:Date.now(),type:'dosis',text:'Dosis de '+m.name+(m.dose?' '+m.dose:'')});if(aid)S.notified['x'+aid]=1;save();render();const nx=medNext(m);toast(nx?'Anotado. Próxima dosis '+hm(new Date(nx)):'Tratamiento terminado')}
 
@@ -1294,7 +1294,7 @@ function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3>
  ${SRc()?`<label class="chips" style="margin-top:6px"><label><input type="checkbox" id="sWake" ${S.wake?'checked':''}>Escuchar "Hola Lía" (con la app abierta)</label></label><div class="tiny muted">Di "Hola Lía" y empieza a grabar sola; cuando terminas de hablar, lo envía. Deja el micrófono encendido y gasta algo más de batería.</div>`:''}
  <div class="dlg-act"><button class="btn" onclick="saveSettings()">Guardar</button></div>
  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0 6px">
- <button class="btn ghost block" style="margin-top:8px" onclick="askNotif(true)">Activar avisos en este celular</button>
+ <button class="btn ghost block" style="margin-top:8px" onclick="askNotif(true)">Activar avisos en este celular</button><button class="btn ghost block" style="margin-top:8px" onclick="pushTest()">Probar un aviso</button><div class="tiny muted" style="margin-top:4px">Te avisa aunque la app esté cerrada. En iPhone, primero agrega la app a tu pantalla de inicio.</div>
  <button class="btn ghost block" style="margin-top:8px" onclick="exportData()">Descargar respaldo</button>
  <label class="btn ghost block" style="margin-top:8px;display:grid;place-items:center">Cargar respaldo<input type="file" accept=".json" hidden onchange="importData(this.files[0])"></label>
  <button class="btn ghost block" style="margin-top:8px;color:var(--danger)" onclick="confirmInline('¿Borrar todos tus datos de este celular?',()=>{localStorage.removeItem(KEY);S=null;render()})">Borrar todo</button>
@@ -1305,7 +1305,29 @@ function addKidRow(){const d=document.createElement('div');d.innerHTML=kidRow({i
 function saveSettings(){const rows=[...document.querySelectorAll('.kidrow')].map(r=>({id:r.dataset.id.startsWith('n')?'k'+uid():r.dataset.id,name:cap(r.querySelector('.kN').value.trim()),birth:r.querySelector('.kB').value,cond:r.querySelector('.kC').value.trim()})).filter(k=>k.name||k.birth);if(rows.length)S.kids=rows;syncKid();const p=S.profile;const nc=$('#sCode').value.trim().toUpperCase().replace(/\s+/g,'');if(nc!==aiCode()){setCode(nc);if(nc)checkCode(nc)}S.voice=$('#sVoice').checked;{const w=$('#sWake');if(w){const was=S.wake;S.wake=w.checked;if(S.wake&&!was)toast('Listo: di "Hola Lía" cuando quieras');if(!S.wake)wakeStop()}}p.mom=$('#sM').value.trim()||p.mom;p.city=$('#sCity').value.trim();p.allergies=[...document.querySelectorAll('.sA:checked')].map(x=>x.value);p.dislikes=$('#sD').value.split(',').map(x=>norm(x.trim())).filter(Boolean);makeMenu(S.menu&&S.menu.seed);save();closeDlg();render();toast('Guardado')}
 function exportData(){const b=new Blob([JSON.stringify(S)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mamaaldia-respaldo-'+ymd(new Date())+'.json';a.click()}
 function importData(f){if(!f)return;f.text().then(t=>{const d=JSON.parse(t);if(!d.profile)throw 0;S=Object.assign(blank(),d);save();closeDlg();render();toast('Respaldo cargado')}).catch(()=>toast('Archivo no válido'))}
-async function askNotif(force){try{if(!('Notification' in window)){if(force)toast('Este navegador no permite avisos. Instala la app primero.');return}if(Notification.permission==='default'||force){const r=await Notification.requestPermission();if(force)toast(r==='granted'?'Avisos activados':'Avisos bloqueados en el navegador')}}catch(e){}}
+async function askNotif(force){try{if(!('Notification' in window)){if(force)toast(/iPhone|iPad/.test(navigator.userAgent)?'En iPhone primero agrega la app a tu pantalla de inicio (Compartir › Agregar a inicio)':'Este navegador no permite avisos');return}if(Notification.permission==='default'||force){const r=await Notification.requestPermission();if(r==='granted'){const ok=await pushSync(true);if(force){toast(ok?'Avisos activados, también con la app cerrada':'Avisos activados');if(ok)pushTest()}}else if(force)toast('Avisos bloqueados: actívalos en los ajustes del navegador')}else pushSync()}catch(e){}}
+
+/* ---- avisos con la app cerrada (push) ---- */
+// Junta los avisos de los próximos 8 días y los manda al servidor, que los envía a su hora aunque la app esté cerrada.
+function futureAlerts(){const now=Date.now(),out=[];const lim=now+8*864e5;
+ for(let d=0;d<8;d++){const ds=ymd(addDays(new Date(),d));for(const e of eventsOn(ds)){if(!e.time)continue;const t=at(ds,e.time).getTime();const r=t-(e.remind||30)*60000;if(r<now-60000)continue;
+  const k=e.kid&&kids().find(x=>x.id===e.kid);out.push({id:'ev:'+e.id+':'+ds,at:r,t:e.title,b:'Empieza a las '+e.time+((e.remind||30)>=60?' (en '+Math.round((e.remind||30)/60)+' h)':' (en '+(e.remind||30)+' min)')})}}
+ for(const m of S.meds){if(!medActive(m))continue;let nx=medNext(m);const end=medEnd(m);let n=0;while(nx&&nx<lim&&nx<end&&n<20){if(nx>now-60000)out.push({id:'med:'+m.id+':'+nx,at:nx,t:'Hora de '+m.name,b:(m.dose?m.dose+' · ':'')+'Toca la dosis de las '+hm(new Date(nx))});nx+=m.every*36e5;n++}}
+ for(const t of S.tasks){if(t.done||!t.due||t.due<now-60000||t.due>lim)continue;out.push({id:'tk:'+t.id,at:t.due,t:'Pendiente',b:t.text})}
+ for(const b of S.bills){const d=fromYmd(b.due);d.setHours(9,0,0,0);const a=d.getTime()-864e5;if(a>now-60000&&a<lim)out.push({id:'bill:'+b.id+':'+b.due,at:a,t:'Mañana toca pagar',b:b.name+' · '+bs(b.amount)})}
+ return out.sort((a,b)=>a.at-b.at).slice(0,120)}
+let pushKey=null;
+async function pushSub(create){if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)||Notification.permission!=='granted')return null;
+ const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();if(sub||!create&&!localStorage.getItem('md-push'))return sub;
+ if(!pushKey){const r=await fetch('/api/avisos?clave=1');pushKey=(await r.json()).clave}
+ const raw=atob(pushKey.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-pushKey.length%4)%4));const key=new Uint8Array([...raw].map(c=>c.charCodeAt(0)));
+ sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});return sub}
+async function pushSync(create){try{if(!S||!S.profile||!S.profile.mom)return false;const sub=await pushSub(create);if(!sub)return false;
+ const av=futureAlerts();const h=JSON.stringify(av.map(a=>a.id+a.at+a.b))+sub.endpoint;let last={};try{last=JSON.parse(localStorage.getItem('md-push')||'{}')}catch(e){}
+ if(last.h===h&&Date.now()-(last.t||0)<12*36e5)return true;
+ const r=await fetch('/api/avisos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'sync',sub:sub.toJSON(),avisos:av})});
+ if(r.ok){try{localStorage.setItem('md-push',JSON.stringify({h,t:Date.now()}))}catch(e){}return true}return false}catch(e){return false}}
+async function pushTest(){try{const sub=await pushSub(true);if(!sub){toast('Primero activa los avisos');return}await fetch('/api/avisos',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'prueba',sub:sub.toJSON()})});toast('Te mandé un aviso de prueba')}catch(e){toast('No pude enviar la prueba')}}
 
 /* ====================== bienvenida ====================== */
 function renderWelcome(){
@@ -1370,6 +1392,7 @@ S=load();if(S){S=Object.assign(blank(),S);S.chat=S.chat.filter(m=>!m.typing);if(
 render();
 window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEventListener('pointercancel',e=>{if(rec&&rec.held)micUp(e)});
 try{if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
+setTimeout(()=>{try{if('Notification' in window&&Notification.permission==='granted')pushSync(true)}catch(e){}},4000);
 setInterval(()=>{if(S&&S.profile.mom){tick();if(S.tab==='hoy'&&!rec&&!busy&&!$('#dlg').open&&document.activeElement.tagName!=='INPUT')render()}},30000);
 setTimeout(tick,1500);setTimeout(prefetchHello,2500);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});

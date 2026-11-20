@@ -1,0 +1,12 @@
+# Reloj de avisos: cada 10 minutos le pide a la app que envíe las notificaciones que ya tocan.
+name: Avisos
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: curl -fsS --max-time 50 "https://mamaaldia-app.vercel.app/api/avisos?tick=1"
