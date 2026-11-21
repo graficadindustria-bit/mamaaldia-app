@@ -1387,11 +1387,11 @@ const TOUR=[
  {tab:'hoy',sel:'.stats',t:'Aquí cuentas tus compromisos, las dosis por dar y tus pendientes del día.'},
  {tab:'hoy',sel:'nav.tabs .lia',t:'Este es mi botón. Tócalo para conversar conmigo. Puedes pedirme ideas de comida, consejos de crianza, o preguntarme: cómo voy esta semana.'},
  {tab:'lia',sel:'.chatwrap',t:'Aquí conversamos. Mantén apretado el micrófono para mandarme una nota de voz. Por ejemplo: cita con la pediatra el jueves a las diez. Yo la agendo y te aviso a tiempo.'},
- {tab:'lia',sel:'.chatwrap',wake:1,t:'Y si no quieres tocar nada, activa Hola Lía. Con la app abierta, solo di: Hola Lía, y empiezo a escucharte. Cuando terminas de hablar, lo envío sola. Puedes activarlo con este botón o en Ajustes.'},
+ {tab:'lia',sel:'.chatwrap',wake:1,t:'Y si no quieres tocar nada, usa Hola Lía. Ya viene activado: con la app abierta, solo di Hola Lía, y empiezo a escucharte. Cuando terminas de hablar, lo envío sola. Si lo apagaste, actívalo con este botón o en Ajustes.'},
  {tab:'agenda',sel:'main',t:'En Agenda ves tu semana. Toca un día para ver sus citas, clases y pendientes. También puedes agregar algo a mano.'},
  {tab:'salud',sel:'main',t:'En Salud llevas los remedios de tu peque: te aviso cada dosis y marcas "ya se la di". Si algo te preocupa, cuéntame los síntomas o mándame una foto y te doy una guía.'},
  {tab:'comidas',sel:'.seg',t:'En Menú tienes el menú de la semana y del mes, la lista de compras, los precios del mercado, tus gastos y los lugares para ir con niños.'},
- {tab:'comidas',sel:'header .iconbtn',t:'Y en Ajustes activas los avisos, eliges si quieres que te hable de usted, el modo "Hola Lía" y los colores. Listo, ya conoces la app. Aquí estoy cuando me necesites.'}];
+ {tab:'comidas',sel:'header .iconbtn',t:'Y en Ajustes puedes apagar o encender los avisos y el modo "Hola Lía", elegir si quieres que te hable de usted, y cambiar los colores. Listo, ya conoces la app. Aquí estoy cuando me necesites.'}];
 let tourI=-1,tourEl=null;
 function tourIni(){tourI=-1;if(!tourEl){tourEl=document.createElement('div');tourEl.className='tour';tourEl.innerHTML='<div class="tspot"></div><div class="tcard" role="dialog" aria-live="polite"><div class="tn tiny muted"></div><p class="tt"></p><div class="tb"><button class="btn ghost sm" onclick="tourFin()">Salir</button><span style="flex:1"></span><button class="btn ghost sm" onclick="tourIr(tourI-1)">Atrás</button><button class="btn sm" onclick="tourIr(tourI+1)">Siguiente</button></div></div>';document.body.appendChild(tourEl)}tourEl.hidden=false;tourIr(0)}
 function tourIr(i){if(i<0)return;if(i>=TOUR.length){tourFin();return}tourI=i;const st=TOUR[i];if(S.tab!==st.tab){if(st.tab==='comidas')foodSeg='menu';S.tab=st.tab;render();}
