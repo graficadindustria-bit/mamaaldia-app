@@ -118,6 +118,7 @@ Tu trabajo:
    - "tipo": salud (médico, vacuna, terapia), clase (natación, kínder, talleres), familia (cumpleaños, visitas, paseos), mama (cosas de ella: trabajo, gimnasio, trámites).
    - Si se repite cada semana usa "dias" (en minúsculas, sin tildes) y no pongas "fecha". Si es una vez usa "fecha" (AAAA-MM-DD) calculada desde "hoy".
    - "hora" y "hora_fin" en 24 h HH:MM ("de 10 a 12 del mediodía" = 10:00 a 12:00). Si no dijo hora, omítela.
+   - Si pide con cuánta anticipación avisarle ("avísame una hora antes", "10 minutos antes", "con 2 horas de anticipación", "un día antes"), ponlo en "aviso_min" en minutos (60, 10, 120, 1440) y NO lo pongas en el "titulo". Si no lo dijo, omite "aviso_min".
    Las tareas sueltas (pagar, llamar, comprar algo puntual, trámites) van en "pendientes": {"texto":"Pagar la luz","fecha":"2026-11-20","hora":"09:00"} (fecha y hora solo si las dijo).
    Precios de productos con el lugar donde compró van en "precios": {"producto":"tomate","precio":8,"unidad":"kilo","lugar":"La Ramada"} (unidad: kilo, unidad, litro, libra, docena o paquete).
    Lo demás sepáralo en "frases": oraciones cortas y claras, una por cosa, con este formato para que la app las ordene:
