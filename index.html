@@ -838,7 +838,7 @@ async function talkVoice(blob,secs){const img=pendImg;pendImg=null;espera();
  try{const b64=await new Promise((ok,ko)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(',')[1]);fr.onerror=ko;fr.readAsDataURL(blob)});
   const j=await liaAsk2(Object.assign({audio:b64,mime:blob.type||'audio/webm'},img?{imagen:img.full,imgMime:'image/jpeg'}:{}));typingOff();
   lastVoice=null;if(j.transcripcion)me.text='🎤 '+j.transcripcion;applyAI(j,j.transcripcion||'');}
- catch(e){typingOff();me.text='🎤 Nota de voz ('+secs+' s)';S.chat.push({id:uid(),from:'lia',ts:Date.now(),retry:e.message!=='codigo',text:e.message==='no-entendi'?'No logré entender las palabras de tu nota de voz: quizás se grabó muy bajito o con mucho ruido. Toca Reintentar, grábala de nuevo más cerca del celular, o escríbeme tu pregunta.':'Ay, no pude escuchar tu nota de voz'+(e.message==='codigo'?' porque tu código de IA no es válido.':'. Toca Reintentar y la vuelvo a enviar, sin grabarla de nuevo.'),extra:errTxt(e).trim()||undefined});}
+ catch(e){typingOff();me.text='🎤 Nota de voz ('+secs+' s)';S.chat.push({id:uid(),from:'lia',ts:Date.now(),retry:e.message!=='codigo',text:e.message==='no-entendi'?'No alcancé a entender bien tu nota de voz. ¿Me la repites un poquito más cerca del celular, o me la escribes? Si quieres, toca Reintentar.':'Ay, no pude escuchar tu nota de voz'+(e.message==='codigo'?' porque tu código de IA no es válido.':'. Toca Reintentar y la vuelvo a enviar, sin grabarla de nuevo.'),extra:errTxt(e).trim()||undefined});}
  busy=false;save();render();speakLast()}
 
 /* ---- botón de grabar estilo WhatsApp ---- */
