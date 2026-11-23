@@ -947,11 +947,20 @@ let wakeSR=null;
 function activarHolaLia(){if(!SRc()){toast('Este navegador no permite "Hola Lía". Prueba con Chrome.');return}S.wake=true;save();toast('Listo: di "Hola Lía" cuando quieras');try{wakeTick()}catch(e){}if(tourI<0)render();else{const b=document.querySelector('.tcard .tw');if(b)b.remove()}}
 function wakeStop(){const g=wakeSR;wakeSR=null;if(g){g.onend=null;try{g.abort()}catch(e){}}}
 function wakeOk(){return S&&S.wake&&SRc()&&!document.hidden&&!rec&&!busy&&!document.body.classList.contains('lia-talk')&&!($('#dlg')||{}).open}
-function wakeTick(){if(!wakeOk()){if(wakeSR&&(rec||busy||document.hidden||document.body.classList.contains('lia-talk')))wakeStop();return}if(wakeSR)return;
- const g=new (SRc())();wakeSR=g;g.lang='es-BO';g.continuous=true;g.interimResults=true;
- g.onresult=ev=>{let t='';for(let i=ev.resultIndex;i<ev.results.length;i++)t+=' '+ev.results[i][0].transcript;
+let wakeWait=0,talkStuck=0;
+// Si la marca de "Lía está hablando" quedó pegada sin que nada suene, la quitamos (si no, Hola Lía no vuelve a escuchar)
+function talkCheck(){if(!document.body.classList.contains('lia-talk')){talkStuck=0;return}let sonando=!!vozSrc||!!esperaA;try{sonando=sonando||speechSynthesis.speaking}catch(e){}try{const ta=typeof tourHabla==='function'&&tourHabla.a;if(ta&&!ta.paused&&!ta.ended)sonando=true}catch(e){}
+ if(sonando){talkStuck=0;return}if(!talkStuck){talkStuck=Date.now();return}if(Date.now()-talkStuck>8000){talkStuck=0;document.body.classList.remove('lia-talk')}}
+function wakeTick(){try{talkCheck()}catch(e){}
+ // escucha vieja o trabada: la reiniciamos (el navegador a veces la deja muda sin avisar)
+ if(wakeSR&&!rec){const g=wakeSR,now=Date.now();if((!g.on&&now-g.t0>8000)||(now-g.t0>55000&&now-(g.ev||0)>3000)){wakeStop();return}}
+ if(Date.now()<wakeWait)return;
+ if(!wakeOk()){if(wakeSR&&(rec||busy||document.hidden||document.body.classList.contains('lia-talk')))wakeStop();return}if(wakeSR)return;
+ const g=new (SRc())();wakeSR=g;g.t0=Date.now();g.lang='es-BO';g.continuous=true;g.interimResults=true;
+ g.onstart=g.onaudiostart=()=>{g.on=true};g.onsoundstart=g.onspeechstart=()=>{g.ev=Date.now()};
+ g.onresult=ev=>{g.ev=Date.now();let t='';for(let i=ev.resultIndex;i<ev.results.length;i++)t+=' '+ev.results[i][0].transcript;
   if(/\b(hola|ola|oye|hey)\s*,?\s*(l[ií]a|lea|leah|lilia|l[ií]ah)\b/i.test(norm(t)))wakeHit()};
- g.onerror=ev=>{if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){S.wake=false;save();toast('Sin permiso de micrófono para "Hola Lía"')}};
+ g.onerror=ev=>{if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){S.wake=false;save();toast('Sin permiso de micrófono para "Hola Lía"')}else if(ev.error!=='no-speech'&&ev.error!=='aborted')wakeWait=Date.now()+3000};
  g.onend=()=>{if(wakeSR===g)wakeSR=null};
  try{g.start()}catch(e){wakeSR=null}}
 function wakeHit(){wakeStop();if(rec||busy)return;try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}ctxOn();chime();if(S.tab!=='lia'){S.tab='lia';save();render()}
@@ -965,14 +974,28 @@ function autoStop(r,st){try{const a=ctxOn();const src=a.createMediaStreamSource(
 function autoStopSR(r){let last='',t=Date.now();const iv=setInterval(()=>{if(rec!==r||r.done){clearInterval(iv);return}const now=(r.final+' '+r.interim).trim();if(now!==last){last=now;t=Date.now()}
  if(now&&Date.now()-t>1800){clearInterval(iv);finishRec(false)}else if(!now&&Date.now()-t>8000){clearInterval(iv);finishRec(true)}},200)}
 setInterval(wakeTick,1500);
+// Al volver a la app (después de un rato en otra cosa o con la pantalla apagada): despertamos el audio y la escucha desde cero
+function wakeRevive(){if(document.hidden)return;wakeStop();wakeWait=0;try{ctxOn()}catch(e){}setTimeout(wakeTick,300)}
+document.addEventListener('visibilitychange',wakeRevive);addEventListener('pageshow',wakeRevive);addEventListener('focus',wakeRevive);
+// cualquier toque en la pantalla deja el audio listo para el tono
+document.addEventListener('pointerdown',()=>{try{if(actx&&actx.state!=='running')ctxOn()}catch(e){}},{passive:true,capture:true});
 /* ---- voz de Lía ---- */
 function liaVoice(){let vs=[];try{vs=speechSynthesis.getVoices().filter(v=>/^es/i.test(v.lang))}catch(e){}
  const sc=v=>(/natural|neural|premium|enhanced|mejorad/i.test(v.name)?4:0)+(/paulina|m[oó]nica|marisol|ang[eé]lica|sabina|dalia|elena|helena|laura|luciana|francisca|camila|valentina|paloma|lupe|isabela|female|mujer/i.test(v.name)?3:0)+(/google/i.test(v.name)?1:0)+(/es[-_](419|MX|US|BO|AR|CO|PE|CL|EC|UY)/i.test(v.lang)?6:0)-(/es[-_]ES/i.test(v.lang)?4:0)-(/jorge|diego|juan|carlos|pablo|enrique|alvaro|raul|male|hombre/i.test(v.name)?6:0);
  return vs.sort((a,b)=>sc(b)-sc(a))[0]||null}
 let actx=null;
-function chime(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const t0=actx.currentTime+.02;
- [[784,0],[988,.13],[1319,.26]].forEach(([f,d])=>{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.07,t0+d+.03);g.gain.exponentialRampToValueAtTime(.0001,t0+d+.9);o.connect(g).connect(actx.destination);o.start(t0+d);o.stop(t0+d+1)})}catch(e){}}
-function ctxOn(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume()}catch(e){}return actx}
+function chime(){const a=ctxOn();if(!a){chimeFallback();return}
+ const play=()=>{try{const t0=a.currentTime+.02;[[784,0],[988,.13],[1319,.26]].forEach(([f,d])=>{const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.07,t0+d+.03);g.gain.exponentialRampToValueAtTime(.0001,t0+d+.9);o.connect(g).connect(a.destination);o.start(t0+d);o.stop(t0+d+1)})}catch(e){chimeFallback()}};
+ if(a.state==='running'){play();return}
+ // el audio estaba dormido: lo despertamos y, si no responde rápido, suena el tono de respaldo
+ let ok=false;try{const p=a.resume();if(p&&p.then)p.then(()=>{if(!ok&&a.state==='running'){ok=true;play()}}).catch(()=>{})}catch(e){}
+ setTimeout(()=>{if(!ok){ok=true;chimeFallback()}},300)}
+function ctxOn(){try{if(actx&&actx.state==='closed')actx=null;actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state!=='running'){const p=actx.resume();if(p&&p.catch)p.catch(()=>{})}}catch(e){}return actx}
+// Tono de respaldo (archivo de sonido hecho aquí mismo) por si el audio del navegador quedó dormido tras mucho rato
+let chimeWav=null;function chimeFallback(){try{if(!chimeWav){const sr=22050,n=Math.round(sr*1.1),b=new DataView(new ArrayBuffer(44+n*2));const w=(o,t)=>{for(let i=0;i<t.length;i++)b.setUint8(o+i,t.charCodeAt(i))};w(0,'RIFF');b.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');b.setUint32(16,16,true);b.setUint16(20,1,true);b.setUint16(22,1,true);b.setUint32(24,sr,true);b.setUint32(28,sr*2,true);b.setUint16(32,2,true);b.setUint16(34,16,true);w(36,'data');b.setUint32(40,n*2,true);
+ for(let i=0;i<n;i++){const t=i/sr;let v=0;[[784,0],[988,.13],[1319,.26]].forEach(([f,d])=>{if(t>=d){const k=t-d;v+=Math.sin(2*Math.PI*f*k)*Math.min(1,k/.03)*Math.exp(-k*6)*.22}});b.setInt16(44+i*2,Math.max(-1,Math.min(1,v))*32767,true)}
+ let bin='';const u=new Uint8Array(b.buffer);for(let i=0;i<u.length;i++)bin+=String.fromCharCode(u[i]);chimeWav='data:audio/wav;base64,'+btoa(bin)}
+ const a=new Audio(chimeWav);a.volume=.8;const pr=a.play();if(pr&&pr.catch)pr.catch(()=>{})}catch(e){}}
 let vozSrc=null,vozSeq=0;
 async function vozIA(text){const key='/lia-voz/'+encodeURIComponent(text.slice(0,1500));let j=null,cache=null;
  try{cache=await caches.open('lia-voz-v5');const hit=await cache.match(key);if(hit)j=await hit.json()}catch(e){}
