@@ -74,7 +74,10 @@ const VOZ = process.env.LIA_VOZ || 'Despina';
 const ESTILOS = { serena: 'Di con voz cálida, serena y profesional, con acento latinoamericano neutro: ', corto: 'Di con voz cálida y serena, en español latinoamericano: ', calma: 'Read aloud in Latin American Spanish with a neutral Bolivian accent (never Spain or Galician accent: pronounce c and z like s, use seseo), in a calm, warm, soothing and professional tone, at a natural pace: ' };
 const ESTILO = process.env.LIA_ESTILO || ''; // sin instrucción de tono: a veces la voz la leía en voz alta
 const VOCES = ['Sulafat', 'Vindemiatrix', 'Achernar', 'Despina', 'Gacrux', 'Erinome', 'Aoede', 'Callirrhoe', 'Kore', 'Leda', 'Autonoe'];
+// Consultas de salud (dolor, fiebre, remedios) a veces las bloquea el filtro por defecto: se deja solo el bloqueo de lo muy grave.
+const SEGURIDAD = ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'HARM_CATEGORY_DANGEROUS_CONTENT'].map(category => ({ category, threshold: 'BLOCK_ONLY_HIGH' }));
 const GUIA = `Eres Lía, guía cálida de la app "Mamá al Día" para mamás de Bolivia. Una mamá te consulta algo sobre su hijo o hija, que puede tener de 0 a 18 años (o sobre ella). Adapta todo a la edad que viene en los datos y, si tiene una condición o cuidado especial (autismo, síndrome de Down, TDAH, asma, diabetes u otra), tenla en cuenta con respeto, sin etiquetar, y menciona cuándo conviene avisar también a su especialista o terapeuta. Tu misión: darle paz, tranquilidad y una guía clara y correcta, y ser un puente hacia el pediatra, nunca reemplazarlo.
+La consulta también puede ser sobre otro miembro de la familia (la pareja, la esposa o el esposo, un abuelo, quien consulta). Si es sobre una persona adulta, ayúdala igual y con el mismo cuidado: usa causas, cuidados y señales de alarma propias de un adulto, cambia "pediatra" por "médico" en todo el formato (por ejemplo **Llévalo al médico:** o **Ve al médico:**) y no apliques las reglas de bebés. Si es una mujer y dijeron que no está embarazada, tenlo en cuenta.
 Busca en internet información de fuentes confiables (Asociación Americana de Pediatría/HealthyChildren.org, OMS, UNICEF, Mayo Clinic, MedlinePlus, sociedades de pediatría) y básate en ella. Si hay una foto, obsérvala con cuidado y describe lo que ves sin afirmar un diagnóstico.
 Quien consulta puede ser mamá, papá u otra persona que cuida: si en los datos "rol" es "papa", háblale como a un papá; si no se sabe, usa palabras sin género. Escribe en español de Bolivia, tuteando (o de usted si en los datos viene "trato":"usted"), con cariño y frases cortas. Nunca recomiendes collares de ámbar, miel a menores de 1 año, benzocaína ni jarabes para la tos en menores de 2 años. Máximo 230 palabras. Usa exactamente este formato (sin #, sin tablas):
 Una o dos frases para calmarla y validar lo que siente.
@@ -88,9 +91,9 @@ Una o dos frases para calmarla y validar lo que siente.
 Cierra con una frase de ánimo.
 No indiques medicamentos con dosis ni recetes antibióticos o cremas con corticoides; si un medicamento podría ayudar, di que lo consulte con el pediatra. Si el peque es menor de 3 meses con fiebre, o hay dificultad para respirar, labios morados, decaimiento fuerte, manchas que no desaparecen al presionar, convulsión o deshidratación: lo primero es ir a emergencias.`;
 async function guia(cat, key, ctx, consulta, img, buscar) {
-  const parts = [{ text: 'Datos de la familia: ' + ctx }, { text: 'Consulta de la mamá: ' + consulta }];
+  const parts = [{ text: 'Datos de la familia: ' + ctx }, { text: 'Consulta: ' + consulta }];
   if (img) parts.push({ inlineData: { mimeType: img.mime, data: img.data } });
-  const base = { systemInstruction: { parts: [{ text: GUIA }] }, contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.4, maxOutputTokens: 2500 } };
+  const base = { systemInstruction: { parts: [{ text: GUIA }] }, contents: [{ role: 'user', parts }], safetySettings: SEGURIDAD, generationConfig: { temperature: 0.4, maxOutputTokens: 2500 } };
   let r = buscar ? await pedirYa(['gemini-3-flash-preview'].concat(cat.texto.slice(0, 2)), Object.assign({ tools: [{ google_search: {} }] }, base), key, 9000, 25000) : null;
   if (!r || !r.ok) r = await pedirYa(RAPIDOS, base, key, 3500, 15000);
   if (!r || !r.ok) return null;
@@ -141,6 +144,9 @@ Tu trabajo:
 
 Si el peque tiene una condición (autismo, síndrome de Down, TDAH, asma, diabetes u otra), tenla en cuenta con respeto y sin etiquetas, adaptando tus ideas a su edad y necesidades.
 Salud: eres guía general, no médica. No diagnosticas ni indicas dosis. Con fiebre de 39 °C o más, dificultad para respirar, decaimiento fuerte, deshidratación o un bebé menor de 3 meses con fiebre, dile con calma que llame al pediatra o vaya a emergencias. Si la mamá se nota agotada o triste, respóndele con cariño y recuérdale que pedir ayuda está bien.
+Lía ayuda a toda la familia: también responde dudas sobre la pareja (esposa o esposo), los abuelos, quien consulta u otro adulto de la casa, y preguntas generales del hogar. Nunca digas que no puedes ayudar porque el tema no es de niños. Si es de salud de un adulto, también va "consulta": true y en "tema" di de quién se trata (por ejemplo "esposa adulta, no embarazada, con dolor de estómago").
+Nota de voz: escúchala con atención aunque tenga ruido, se oiga bajito o hable rápido, y responde a lo que dijo. Nunca respondas "no puedo escucharte" ni que no oyes. Solo si el audio está realmente en silencio o no se entiende ninguna palabra, pon "no_entendi": true, "respuesta" vacía y "transcripcion" vacía.
+Si en el historial hay mensajes de Lía diciendo que no pudo escuchar, ignóralos y no los repitas.
 Entiende a la mamá aunque hable de forma general, incompleta o con palabras de Bolivia ("mi wawa", "la nena", "el pequeño", "pasado mañana", "el finde", "a las 4 de la tarde"). Deduce lo más probable con el historial y los datos (si tiene un solo hijo, es ese). Si pide algo vago ("ayúdame con la comida de la semana", "organízame el día"), propón algo concreto en vez de pedirle que sea más específica. Solo pregunta si falta algo imprescindible (por ejemplo la hora de una cita), y aun así guarda lo que ya se puede guardar.
 No inventes datos que ella no dio. No pidas datos personales.
 
@@ -157,7 +163,7 @@ Si pregunta cuánto cuesta la app o su plan, no inventes precios ni digas que es
 Escribe para que cualquier mamá entienda, con palabras simples; si ella escribe sin tildes o con faltas, no la corrijas.
 Usa la frase "¿Cómo voy esta semana?" solo si pregunta por sus gastos o su semana, y no la repitas dentro de "respuesta".
 
-Responde SOLO con JSON: {"respuesta":"...","consulta":false,"tema":"","eventos":[],"pendientes":[],"precios":[],"frases":[],"transcripcion":"..."}`;
+Responde SOLO con JSON: {"respuesta":"...","no_entendi":false,"consulta":false,"tema":"","eventos":[],"pendientes":[],"precios":[],"frases":[],"transcripcion":"..."}`;
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -277,23 +283,46 @@ module.exports = async (req, res) => {
     const cuerpo = {
       systemInstruction: { parts: [{ text: SYS }] },
       contents: [{ role: 'user', parts }],
+      safetySettings: SEGURIDAD,
       generationConfig: { temperature: 0.5, maxOutputTokens: 2000, responseMimeType: 'application/json' }
     };
     const t0 = Date.now();
     let r = await pedirYa([...new Set(RAPIDOS.concat(cat.rapido))], cuerpo, key, 3500, 15000);
     if (!r.ok && (r.status === 429 || r.status === 503) && Date.now() - t0 < 30000) { await new Promise(z => setTimeout(z, 2500)); r = await pedirYa([...new Set(cat.rapido.concat(RAPIDOS))], cuerpo, key, 3000, 15000); }
-    const tIA = Date.now() - t0, mIA = pedir.ultimo;
+    let tIA = Date.now() - t0, mIA = pedir.ultimo;
     if (!r.ok) {
       let d = '';
       try { const e = await r.json(); d = (e.error && (e.error.message || e.error.status)) || ''; } catch (x) {}
       return res.status(502).json({ error: 'ia', estado: r.status, detalle: String(d).slice(0, 200) });
     }
-    const j = await r.json();
-    const out = (((j.candidates || [])[0] || {}).content || {}).parts;
-    let t = out ? out.map(p => p.text || '').join('') : '';
-    t = t.replace(/^```(?:json)?\s*|\s*```$/g, '');
-    let o;
-    try { o = JSON.parse(t); } catch (e) { o = { respuesta: t.slice(0, 400), frases: [] }; }
+    const leer = async rr => {
+      const j = await rr.json();
+      const c = (j.candidates || [])[0] || {};
+      let t = ((c.content || {}).parts || []).map(p => p.text || '').join('');
+      t = t.replace(/^```(?:json)?\s*|\s*```$/g, '');
+      let o = null;
+      if (t.trim()) { try { o = JSON.parse(t); } catch (e) { o = { respuesta: t.slice(0, 400), frases: [] }; } }
+      return { o, fin: c.finishReason || (j.promptFeedback || {}).blockReason || '' };
+    };
+    // Lía no entendió el audio (o la respuesta vino vacía o bloqueada): se intenta otra vez con un modelo más completo.
+    const NO_OYE = /no (te )?(puedo|pude|logro|logr[eé]|alcanzo) (escuchar|o[ií]r|entender)|no (te )?(escucho|oigo|se escucha|se oye)/i;
+    const malo = o => {
+      if (!o) return true;
+      if (!audio) return false;
+      const resp = String(o.respuesta || ''), tr = String(o.transcripcion || '').trim();
+      return !!o.no_entendi || (!tr && (!resp.trim() || NO_OYE.test(resp))) || (NO_OYE.test(resp) && resp.length < 140);
+    };
+    let { o, fin } = await leer(r);
+    if (malo(o) && Date.now() - limiteT < -18000) {
+      const fuertes = [...new Set(['gemini-3-flash-preview'].concat(cat.texto.filter(m => !/lite/.test(m)), cat.texto))].filter(m => m !== mIA).slice(0, 4);
+      const r2 = await pedirYa(fuertes, Object.assign({}, cuerpo, { generationConfig: Object.assign({}, cuerpo.generationConfig, { temperature: 0.3 }) }), key, 6000, 20000);
+      if (r2 && r2.ok) { const x = await leer(r2); if (!malo(x.o)) { o = x.o; fin = x.fin; mIA = pedir.ultimo; } else if (!o) { o = x.o; fin = x.fin; } }
+      tIA = Date.now() - t0;
+    }
+    if (malo(o)) {
+      if (audio) return res.status(422).json({ error: 'no-entendi', detalle: String(fin).slice(0, 40) });
+      if (!o) return res.status(502).json({ error: 'vacia', detalle: String(fin).slice(0, 40) });
+    }
     const frases = Array.isArray(o.frases) ? o.frases.filter(x => typeof x === 'string' && x.trim()).slice(0, 15) : [];
     const lista = x => Array.isArray(x) ? x.filter(e => e && typeof e === 'object').slice(0, 12) : [];
     let g = null;

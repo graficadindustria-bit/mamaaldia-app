@@ -784,9 +784,9 @@ function liaCtx(){const now=new Date();
   peque:{nombre:S.profile.kid||'',edad:S.profile.birth?ageText():'',condicion:S.profile.cond||''},hijos:kids().map(k=>({nombre:k.name,edad:k.birth?ageTextOf(k.birth):'',condicion:k.cond||''})),ciudad:S.profile.city||'',
   contexto:{tiendas_guardadas:[...new Set((S.priceLog||[]).map(x=>x.store).filter(Boolean))].slice(0,15),medicamentos_activos:S.meds.filter(medActive).map(m=>m.name+(m.dose?' '+m.dose:'')+' cada '+m.every+' h'),pagos_fijos:S.bills.map(b=>b.name+' Bs '+b.amount),productos:S.items.map(i=>i.name),no_le_gusta:S.profile.dislikes||[],alergias:S.profile.allergies||[]},
   trato:(S.usted||(S.usted=S.chat.slice(-4).some(m=>m.from==='me'&&/\busted\b/i.test(m.text||'')&&/(trat|habl|dir[ií]j|diga)/i.test(m.text||''))))?'usted':'tu',
-  historial:S.chat.filter(m=>!m.typing).slice(-6).map(m=>(m.from==='me'?'Mamá: ':'Lía: ')+String(m.text||'').slice(0,300))}}
-async function liaAsk2(body){const t0=Date.now();try{const j=await liaAsk(body);j.ms=Date.now()-t0;return j}catch(e){if(e.message==='codigo'||/^limite/.test(e.message)||e.name==='AbortError'||Date.now()-t0>15000)throw e;await new Promise(r=>setTimeout(r,1200));return liaAsk(body)}}
-const errTxt=e=>e.message==='codigo'?'':' (detalle: '+(e.name==='AbortError'?'tardó demasiado':String(e.message||'red').slice(0,40))+')';
+  historial:S.chat.filter(m=>!m.typing&&!m.retry&&!(m.from==='lia'&&/no (te )?(puedo|pude|logr[eé]|logro) (escuchar|o[ií]r|entender)/i.test(m.text||''))).slice(-6).map(m=>(m.from==='me'?'Mamá: ':'Lía: ')+String(m.text||'').slice(0,300))}}
+async function liaAsk2(body){const t0=Date.now();try{const j=await liaAsk(body);j.ms=Date.now()-t0;return j}catch(e){if(e.message==='codigo'||e.message==='no-entendi'||/^limite/.test(e.message)||e.name==='AbortError'||Date.now()-t0>15000)throw e;await new Promise(r=>setTimeout(r,1200));return liaAsk(body)}}
+const errTxt=e=>e.message==='codigo'||e.message==='no-entendi'?'':' (detalle: '+(e.name==='AbortError'?'tardó demasiado':String(e.message||'red').slice(0,40))+')';
 async function liaAsk(body){const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),45000);
  try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(Object.assign({codigo:aiCode(),ctx:liaCtx()},body)),signal:ctl.signal});
   const j=await r.json().catch(()=>({}));if(r.status===401){setCode('');throw new Error('codigo')}if(!r.ok)throw new Error((j.error||'ia')+(j.estado?' '+j.estado:'')+(r.status>=500&&!j.error?' '+r.status:''));return j}finally{clearTimeout(to)}}
@@ -838,7 +838,7 @@ async function talkVoice(blob,secs){const img=pendImg;pendImg=null;espera();
  try{const b64=await new Promise((ok,ko)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(',')[1]);fr.onerror=ko;fr.readAsDataURL(blob)});
   const j=await liaAsk2(Object.assign({audio:b64,mime:blob.type||'audio/webm'},img?{imagen:img.full,imgMime:'image/jpeg'}:{}));typingOff();
   lastVoice=null;if(j.transcripcion)me.text='🎤 '+j.transcripcion;applyAI(j,j.transcripcion||'');}
- catch(e){typingOff();me.text='🎤 Nota de voz ('+secs+' s)';S.chat.push({id:uid(),from:'lia',ts:Date.now(),retry:e.message!=='codigo',text:'Ay, no pude escuchar tu nota de voz'+(e.message==='codigo'?' porque tu código de IA no es válido.':'. Toca Reintentar y la vuelvo a enviar, sin grabarla de nuevo.'),extra:errTxt(e).trim()||undefined});}
+ catch(e){typingOff();me.text='🎤 Nota de voz ('+secs+' s)';S.chat.push({id:uid(),from:'lia',ts:Date.now(),retry:e.message!=='codigo',text:e.message==='no-entendi'?'No logré entender las palabras de tu nota de voz: quizás se grabó muy bajito o con mucho ruido. Toca Reintentar, grábala de nuevo más cerca del celular, o escríbeme tu pregunta.':'Ay, no pude escuchar tu nota de voz'+(e.message==='codigo'?' porque tu código de IA no es válido.':'. Toca Reintentar y la vuelvo a enviar, sin grabarla de nuevo.'),extra:errTxt(e).trim()||undefined});}
  busy=false;save();render();speakLast()}
 
 /* ---- botón de grabar estilo WhatsApp ---- */
