@@ -380,7 +380,7 @@ function groupsOf(r){const g=new Set(r.g||[]);for(const [k,list] of Object.entri
 /* ====================== gastos ====================== */
 const GCAT=[['comida','Comida','🥕'],['higiene','Higiene y cuidado','🧴'],['limpieza','Limpieza','🧽'],['educacion','Educación y actividades','🎒'],['salud','Salud y médicos','🩺'],['servicios','Servicios y casa','💡'],['transporte','Transporte','🚕'],['mama','Para mí','💛'],['otros','Otros','📦']];
 const GNAME=Object.fromEntries(GCAT.map(g=>[g[0],g[1]]));
-const GKW=[['servicios',/\b(luz|agua|internet|gas|expensas|alquiler|telefono|celular|cable|catering|wifi)\b/],['salud',/\b(pediatra|doctor\w*|medic\w*|farmacia|remedio|jarabe|vitamina\w*|consulta|estudios|analisis|odonto\w*|dentista|ibuprofeno|paracetamol|ginecolog\w*|traumatolog\w*|endocrin\w*|ecograf\w*)\b/],['educacion',/\b(kinder|pre ?kinder|guarderia|colegio|piscina|natacion|ballet|musica|karate|clase|clases|matricula|material|utiles|cine|parque|parques)\b/],['transporte',/\b(pasajes?|taxi|micro|gasolina|transporte|uber|trufi|minibus)\b/],['higiene',/\b(shampoo|champu|crema|panales|pañales|toallitas|panitos|jabon|pasta dental|cepillo|protector|desodorante|acondicionador)\b/],['limpieza',/\b(detergente|lavandina|suavizante|lavavajilla|esponja|limpieza|bolsas|ola|ambientador\w*|papel)\b/],['mama',/\b(gimnasio|gym|peluqueria|perfume|manicure|maquillaje|curso|cursos|trading|barismo|chino)\b/],['comida',/\b(verduras?|frutas?|carne|pollo|mercado|super\w*|leche|pan|comida|huevos?|arroz|yogur|queso|fideo|avena)\b/]];
+const GKW=[['servicios',/\b(servicios|luz|agua|internet|gas|expensas|alquiler|telefono|celular|cable|catering|wifi)\b/],['salud',/\b(salud|pediatra|doctor\w*|medic\w*|farmacia|remedio|jarabe|vitamina\w*|consulta|estudios|analisis|odonto\w*|dentista|ibuprofeno|paracetamol|ginecolog\w*|traumatolog\w*|endocrin\w*|ecograf\w*)\b/],['educacion',/\b(educacion|actividades|kinder|pre ?kinder|guarderia|colegio|piscina|natacion|ballet|musica|karate|clase|clases|matricula|material|utiles|cine|parque|parques)\b/],['transporte',/\b(pasajes?|taxi|micro|gasolina|transporte|uber|trufi|minibus)\b/],['higiene',/\b(higiene|aseo|shampoo|champu|crema|panales|pañales|toallitas|panitos|jabon|pasta dental|cepillo|protector|desodorante|acondicionador)\b/],['limpieza',/\b(detergente|lavandina|suavizante|lavavajilla|esponja|limpieza|bolsas|ola|ambientador\w*|papel)\b/],['mama',/\b(para mi|gimnasio|gym|peluqueria|perfume|manicure|maquillaje|curso|cursos|trading|barismo|chino)\b/],['comida',/\b(verduras?|frutas?|carne|pollo|mercado|super\w*|leche|pan|comida|huevos?|arroz|yogur|queso|fideo|avena)\b/]];
 function gcat(t){const n=norm(t);for(const [k,re] of GKW)if(re.test(n))return k;return 'otros'}
 const PER={semana:['cada semana',0],mes:['cada mes',1],'2meses':['cada 2 meses',2],'3meses':['cada 3 meses',3],'6meses':['cada 6 meses',6],'año':['cada año',12]};
 function perOf(n){if(/\b(cada semana|semanal|por semana|a la semana)\b/.test(n))return 'semana';if(/\b(cada (2|dos) meses|bimestral)\b/.test(n))return '2meses';if(/\b(cada (3|tres) meses|trimestral)\b/.test(n))return '3meses';if(/\b(cada (6|seis) meses|semestral)\b/.test(n))return '6meses';if(/\b(cada ano|anual|al ano|por ano)\b/.test(n))return 'año';if(/\b(cada mes|mensual|al mes|por mes|mensualmente)\b/.test(n))return 'mes';return null}
@@ -435,7 +435,7 @@ function kidsFactor(){return kids().reduce((a,k)=>a+factorOf(monthsOf(k.birth)),
 function ageMonths(){const b=S.profile.birth;if(!b)return 36;const d=fromYmd(b),n=new Date();return (n.getFullYear()-d.getFullYear())*12+(n.getMonth()-d.getMonth())-(n.getDate()<d.getDate()?1:0)}
 function ageText(){const m=ageMonths();if(m<24)return m+' meses';const y=Math.floor(m/12),r=m%12;return y+' años'+(r?' y '+r+(r>1?' meses':' mes'):'')}
 function kidFactor(){const m=ageMonths();return m<24?.3:m<48?.45:m<96?.6:m<156?.8:1}
-function portion(k){const m=ageMonths();
+function portion(k,mm){const m=mm??ageMonths();
  if(m<12)return 'Menor de 1 año: la alimentación la guía el pediatra.';
  const big=k==='a'||k==='c';
  if(m<24)return big?'Porción orientativa: ½ a ¾ taza, en trocitos blandos.':k==='d'?'Porción orientativa: ½ taza.':'Porción orientativa: ½ fruta o ¼ taza.';
@@ -447,7 +447,7 @@ function portion(k){const m=ageMonths();
 /* ====================== menú y compras ====================== */
 function rnd(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647}
 function youngest(){return Math.min(...kids().map(k=>monthsOf(k.birth)))}
-function okRec(r){if(r.min&&youngest()<r.min)return false;const al=S.profile.allergies||[];if((r.al||[]).some(a=>al.includes(a)))return false;
+function okRec(r,mm){if(r.min&&(mm??youngest())<r.min)return false;const al=S.profile.allergies||[];if((r.al||[]).some(a=>al.includes(a)))return false;
  const dis=(S.profile.dislikes||[]).map(norm);if(dis.some(d=>norm(r.n).includes(d)||Object.keys(r.i).some(k=>norm(CAT[k].n).includes(d))))return false;return true}
 function price(k){return S.prices[k]!=null?S.prices[k]:CAT[k].p}
 /* ---- planilla de precios ---- */
@@ -518,7 +518,7 @@ function qtyTxt(x){const q=Math.round(x.q*100)/100;if(x.ab)return 'usa ~'+(q<1?M
 /* ====================== Lía: organizador ====================== */
 const WD='(lunes|martes|miercoles|jueves|viernes|sabados?|domingos?)';
 const MED_RE=/\b(ibuprofeno|paracetamol|acetaminofen|amoxicilina|azitromicina|cefalexina|dipirona|metamizol|salbutamol|loratadina|cetirizina|desloratadina|prednisolona|dexametasona|omeprazol|domperidona|ondansetron|suero oral|sales de rehidratacion|jarabe|antibiotico|antialergico|antigripal|vitamina \w+|vitaminas|hierro|zinc|nebulizacion(?:es)?|nebulizar|inhalador|pomada|crema|supositorio|remedio|medicamento|medicina|gotas)\b/;
-const SYM_RE=/\b(fiebre|temperatura|tos|vomito|vomitos|vomitando|diarrea|mocos?|resfrio|resfriado|gripe|congestion|catarro|sarpullido|alergia|dolor de \w+|le duele \w+|decaid[oa])\b/;
+const SYM_RE=/\b(fiebre|temperatura|tos|vomito|vomitos|vomitando|diarrea|mocos?|moquitos?|resfrio|resfriado|gripe|congestion|catarro|sarpullido|alergia|dolor de \w+|le duele \w+|decaid[oa])\b/;
 const EV_SALUD=/\b(cita|pediatra|doctor|doctora|medico|dentista|odontolog\w*|vacuna\w*|control|hospital|clinica|consulta|terapia|fonoaudiolog\w*|nutricionista|laboratorio|analisis)\b/;
 const EV_CLASE=/\b(clase|clases|natacion|ballet|musica|estimulacion|futbol|danza|kinder|guarderia|nido|taller|piscina|gimnasia|catequesis)\b/;
 const EV_FAM=/\b(cumple\w*|visita|fiesta|reunion|almuerzo con|cena con|abuel[oa]s?|tias?|tios?|amig[oa]s?|primos?|bautizo|boda|matrimonio|paseo|parque)\b/;
@@ -557,6 +557,7 @@ function parseDate(n,now=new Date()){
  if(/\bpasado manana\b/.test(nm))date=addDays(today,2);
  else if(/\bmanana\b/.test(nm))date=addDays(today,1);
  else if(/\bhoy\b|\besta (tarde|noche|manana)\b|\bahorita\b/.test(n))date=today;
+ if(!date&&/\b(finde|fin de semana)\b/.test(n)){const d=(6-today.getDay()+7)%7;date=addDays(today,d)}
  if(!date&&(m=/\b(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/.exec(n))){
   const mo=m[2]==='setiembre'?8:MON.indexOf(m[2]);date=new Date(today.getFullYear(),mo,+m[1]);if(date<today)date.setFullYear(date.getFullYear()+1)}
  if(!date&&(m=/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/.exec(n))){let y=m[3]?+m[3]:today.getFullYear();if(y<100)y+=2000;date=new Date(y,+m[2]-1,+m[1]);if(!m[3]&&date<today)date.setFullYear(y+1)}
@@ -567,10 +568,10 @@ function parseDate(n,now=new Date()){
 }
 function stripDT(s){
  const R=[/\b(pasado\s+)?ma[nñ]ana\b/gi,/\bhoy\b|\bahorita\b/gi,/\b(esta|en la|por la|de la)\s+(ma[nñ]ana|tarde|noche)\b/gi,
-  /\b(como\s+)?(a\s+las?|alas|tipo)\s*\d{1,2}(\s*[:.h]\s*\d{2})?\s*(am|pm|a\.\s?m\.|p\.\s?m\.|hrs|hs|h)?\b(\s+y\s+(media|cuarto))?/gi,
+  /\b(como\s+)?(a\s+las?|alas|tipo)\s*\d{1,2}(\s*[:.h]\s*\d{2})?\s*(am|pm|a\.\s?m\.|p\.\s?m\.|hrs|hs|h)?\b(\s*y\s+(media|cuarto)\b)?/gi,
   /\b\d{1,2}:\d{2}\s*(am|pm|hs)?/gi,/\b\d{1,2}\s*(am|pm|hrs|hs)\b/gi,/\bal?\s+mediod[ií]a\b/gi,
   /\b(todos\s+los|los|cada|el|este|pr[oó]ximo|el\s+pr[oó]ximo|para\s+el)?\s*\b(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?|domingos?)\b(\s*(,|y|e)\s*(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?|domingos?)\b)*/gi,
-  /\bde\s+lunes\s+a\s+viernes\b/gi,/\btodos\s+los\s+d[ií]as\b|\bcada\s+d[ií]a\b|\ba\s+diario\b/gi,
+  /\bde\s+lunes\s+a\s+viernes\b/gi,/\b(el|este|para\s+el)?\s*(finde|fin\s+de\s+semana)\b/gi,/\btodos\s+los\s+d[ií]as\b|\bcada\s+d[ií]a\b|\ba\s+diario\b/gi,
   /\b(el\s+|para\s+el\s+)?\d{1,2}\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/gi,/\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/gi,
   /\b(recu[eé]rdame|record[aá]me|recordar|acordarme|no\s+olvidar|no\s+olvides|av[ií]same)(\s+que)?(\s+de)?\b/gi,
   /\b(ay[uú]dame|ayudame)\s+(a\s+)?/gi,/\b(de|desde)\s+(las\s+)?\d{1,2}([:.]\d{2})?\s*(hs|h)?\s+(a|hasta)\s+(las\s+)?\d{1,2}([:.]\d{2})?\s*(hs|h)?(\s+del?\s+(mediod[ií]a|ma[nñ]ana|tarde|noche))?/gi,/\blos\s+d[ií]as\b/gi,/\b(del\s+)?mediod[ií]a\b/gi,/^\s*(que\s+)?(tengo|tiene|tenemos)\s+/gi];
@@ -612,22 +613,27 @@ function organize(text,now=new Date()){
   // salud: síntomas / fiebre
   const sym=SYM_RE.exec(n);let temp=null;
   if(/fiebre|temperatura|grados|°|º/.test(n)){const tm=/\b(3[5-9]|4[0-2])(?:[.,](\d))?\b/.exec(n);if(tm)temp=parseFloat(tm[1]+'.'+(tm[2]||0))}
-  if(sym||temp){const txt=temp?('Temperatura '+String(temp).replace('.',',')+' °C'+(sym&&sym[1]!=='fiebre'&&sym[1]!=='temperatura'?' · '+sym[1]:'')):cap(sym[1]);
+  const syms=[...new Set([...n.matchAll(new RegExp(SYM_RE.source,'g'))].map(x=>x[1]))];const otros=syms.filter(x=>x!=='fiebre'&&x!=='temperatura');
+  if(sym||temp){const txt=temp?('Temperatura '+String(temp).replace('.',',')+' °C'+(otros.length?' · '+otros.join(', '):'')):cap((otros.length?otros:syms).join(', '));
    out.push({kind:'health',obj:{id:uid(),ts:now.getTime(),type:temp?'temp':'sintoma',text:txt,value:temp,raw:orig},label:'Salud',detail:txt+(temp&&temp>=39?' · revisa los signos de alarma':''),cls:'c-salud',warn:temp&&temp>=39});used=true}
   // medicamentos
-  const med=MED_RE.exec(n);const ev=/\bcada\s+(\d{1,2})\s*(h|hs|hrs|horas?)\b/.exec(n);
+  const meds=[...n.matchAll(new RegExp(MED_RE.source,'g'))];const med=meds.find(x=>!/^(gotas|remedio|medicamento|medicina|jarabe|crema)$/.test(x[1]))||meds[0];const ev=/\bcada\s+(\d{1,2})\s*(h|hs|hrs|horas?)\b/.exec(n);
   let every=ev?+ev[1]:null;
   if(!every){if(/\b(una vez al dia|1 vez al dia|cada dia en la manana)\b/.test(n))every=24;else if(/\b(dos|2) veces al dia\b/.test(n))every=12;else if(/\b(tres|3) veces al dia\b/.test(n))every=8;else if(/\b(cuatro|4) veces al dia\b/.test(n))every=6}
   if(med&&(every||/\b(le di|darle|dar|tomar|toma|recet\w*|indic\w*)\b/.test(n))||(every&&!EV_CLASE.test(n))){
-   const nm=med?cap(med[1]==='gotas'?'gotas':med[1]):'Medicamento';
    const dm=/(\d+(?:[.,]\d+)?)\s*(ml|mg|gotas|cc|cucharadit\w*|cucharad\w*|tabletas?|pastillas?|sobres?|puff\w*)/.exec(n);
+   let nm=med?cap(med[1]):'Medicamento';
+   if(!med&&dm){const w=/([a-zñ]{5,})\s+$/.exec(n.slice(0,dm.index));if(w&&!/^(darle|tomar|toma|dale|ponle|dosis|cada|sobre|tiene)$/.test(w[1]))nm=cap(w[1])}
    const dose=dm?dm[1].replace('.',',')+' '+dm[2].replace(/^cucharadit\w*/,'cucharadita'):'';
    const dd=/\b(?:por|durante)\s+(\d{1,2})\s+dias\b/.exec(n);let days=dd?+dd[1]:/una semana/.test(n)?7:/diez dias/.test(n)?10:null;
+   if(/\b(le di|ya le di|le dimos|tomo)\b/.test(n)&&!every&&!days){nm=nm.replace(/^(vitamina )(\w)$/i,(x,a,b)=>a+b.toUpperCase());const tx='Le di '+nm.charAt(0).toLowerCase()+nm.slice(1)+(dose?' '+dose:'');
+    out.push({kind:'health',obj:{id:uid(),ts:now.getTime(),type:'dosis',text:cap(tx),raw:orig},label:'Salud',detail:cap(tx)+' · anotado en su historial',cls:'c-med'});used=true}
+   else{
    const t=parseTime(n.replace(/cada\s+\d+\s*(h|hs|hrs|horas?)/,''));let start=now.getTime();
    const gaveNow=/\b(le di|ya le di|le dimos|tomo)\b/.test(n);
    if(t&&!gaveNow){const d=at(ymd(now),t);if(d.getTime()<now.getTime()-60*60000)d.setDate(d.getDate()+1);start=d.getTime()}
    const o={id:uid(),name:nm,dose,every:every||8,start,days,given:gaveNow?[now.getTime()]:[],forKid:isKid||!/\b(yo|me|tomar yo)\b/.test(n),created:now.getTime()};
-   out.push({kind:'meds',obj:o,label:'Medicamento',detail:nm+(dose?' '+dose:'')+' cada '+o.every+' h'+(days?' por '+days+' días':'')+(gaveNow?' · primera dosis registrada ahora':' · desde las '+hm(new Date(start))),cls:'c-med',med:true});used=true}
+   out.push({kind:'meds',obj:o,label:'Medicamento',detail:nm+(dose?' '+dose:'')+' cada '+o.every+' h'+(days?' por '+days+' días':'')+(gaveNow?' · primera dosis registrada ahora':' · desde las '+hm(new Date(start))),cls:'c-med',med:true});used=true}}
   if(used)continue;
   // informe
   if(/\b(informe|resumen|cuanto gaste|cuanto llevo|como voy)\b/.test(n)){out.push({kind:'report',label:'Informe',detail:'',cls:'c-tarea',report:true});continue}
@@ -715,7 +721,7 @@ function liaReply(text,lead,pre){
  const real=out.filter(a=>!a.note&&!a.report);const undoable=out.some(a=>a.obj||a.keys||a.ids||a.cat);
  let msg;
  if(!out.length)msg=lead||'No entendí bien. Prueba con algo como "cita con el pediatra el jueves a las 10".';
- else if(!real.length)msg=lead||'Lo guardé en tus notas. Si tiene fecha u hora, dímelo y lo paso a tu agenda.';
+ else if(!real.length)msg=lead||(!aiCode()&&/\?|\b(que hago|como hago|me preocupa|no quiere|es normal)\b/.test(norm(text))?'Lo guardé en tus notas. Para responder preguntas y darte consejos necesito el modo Lía con IA: toca "Activar Lía con IA" aquí abajo y escribe tu código.':'Lo guardé en tus notas. Si tiene fecha u hora, dímelo y lo paso a tu agenda.');
  else if(lead)msg=lead;
  else msg=['Listo, ya lo ordené:','Anotado, quedó así:','Hecho, lo organicé así:'][Math.floor(Math.random()*3)];
  if(out.some(a=>a.report)){msg=(real.length?msg+'\n\n':'')+'Tu resumen de la semana:\n'+weeklyReport();if(!real.length){const ix=out.findIndex(a=>a.report);out.splice(ix,1)}}
@@ -753,7 +759,8 @@ function dayItems(ds){const items=[];
  const md=menuDay(ds);if(md)for(const [id,lab,time] of SLOTS){const r=RECBY[md[id]];if(r)items.push({time,type:'meal',cat:'comida',title:r.n,sub:lab})}
  for(const t of S.tasks)if(t.due&&ymd(new Date(t.due))===ds)items.push({time:hm(new Date(t.due)),type:'task',cat:'tarea',title:t.text,sub:'Pendiente',done:t.done,id:t.id});
  return items.sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'))}
-function menuDay(ds){if(!S.menu)return null;const w=fromYmd(S.menu.week);const i=Math.round((fromYmd(ds)-w)/864e5);return i>=0&&i<7?S.menu.days[i]:null}
+function comeSolidos(){return S.profile.adults>0||kids().some(k=>monthsOf(k.birth)>=6)}
+function menuDay(ds){if(!S.menu||!comeSolidos())return null;const w=fromYmd(S.menu.week);const i=Math.round((fromYmd(ds)-w)/864e5);return i>=0&&i<7?S.menu.days[i]:null}
 
 /* ====================== recordatorios ====================== */
 function dueAlerts(){const now=Date.now();const res=[];
@@ -807,6 +814,7 @@ function aiActions(j){const out=[];const now=new Date();const DN=['domingo','lun
   out.push({kind:'tasks',obj:o,label:'Pendiente',detail:o.text+(due?' · '+fmtDate(new Date(due))+(t.hora?' a las '+hhmm(t.hora):''):''),cls:'c-tarea'})}
  return out}
 function applyAI(j,fallbackText){
+ const mid=menuDeIA(j);if(mid){S.menuPend=null;S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:(j.respuesta||'').trim()||'Listo, te armé el menú. Lo ves aquí abajo y en Menú.',menu:mid});save();return j.respuesta||''}
  const fr=(j.frases||[]).map(x=>x.trim()).filter(Boolean);const lead=(j.respuesta||'').trim();const pre=aiActions(j);S.priceLog=S.priceLog||[];
  if(fr.length||pre.length)liaReply(fr.join('\n'),lead||null,pre);
  else if(lead){S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:lead});save()}
@@ -824,10 +832,10 @@ function fmt(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^\s
 async function talk(v,opts={}){
  const img=pendImg;pendImg=null;
  S.chat.push({id:uid(),from:'me',text:v,img:img&&img.thumb,ts:Date.now()});const inp=$('#ci');if(inp)inp.value='';const qa=$('#qa');if(qa)qa.value='';
- if(!aiCode()){if(/\b(consejo|consejos|aconsej\w*|gu[ií]ame|orient\w*|qu[eé] (hago|le doy|puedo hacer)|es normal|me preocupa|ayudame con|ay[uú]dame con)\b/i.test(v)){S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:'Para darte consejos y guías (también con fotos) necesito estar en modo Lía con IA. Toca "Activar Lía con IA" aquí abajo y escribe tu código. Mientras tanto, si es urgente, llama a tu pediatra.'});save();render();return}liaReply(v);render();if(opts.speak)speakLast();return}
+ if(!aiCode()){if(menuBasico(v)){render();if(opts.speak)speakLast();return}if(/\b(consejo|consejos|aconsej\w*|gu[ií]ame|orient\w*|qu[eé] (hago|le doy|puedo hacer)|es normal|me preocupa|ayudame con|ay[uú]dame con)\b/i.test(v)){S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:'Para darte consejos y guías (también con fotos) necesito estar en modo Lía con IA. Toca "Activar Lía con IA" aquí abajo y escribe tu código. Mientras tanto, si es urgente, llama a tu pediatra.'});save();render();return}liaReply(v);render();if(opts.speak)speakLast();return}
  typingOn();busy=true;
  try{const j=await liaAsk2(Object.assign({texto:v},img?{imagen:img.full,imgMime:'image/jpeg'}:{}));typingOff();applyAI(j,v)}
- catch(e){typingOff();liaReply(v);const m=S.chat[S.chat.length-1];if(m&&e.message!=='codigo')m.extra=(m.extra?m.extra+'\n':'')+'(Sin conexión con la IA: lo ordené con la Lía básica.)'+errTxt(e);if(e.message==='codigo')toast('Tu código de IA ya no es válido');save()}
+ catch(e){typingOff();if(menuBasico(v)){render();return}liaReply(v);const m=S.chat[S.chat.length-1];if(m&&e.message!=='codigo')m.extra=(m.extra?m.extra+'\n':'')+'(Sin conexión con la IA: lo ordené con la Lía básica.)'+errTxt(e);if(e.message==='codigo')toast('Tu código de IA ya no es válido');save()}
  busy=false;render();speakLast()}
 let lastVoice=null;
 function retryVoice(id){const v=lastVoice;S.chat=S.chat.filter(m=>m.id!==id);if(!v){toast('Graba la nota otra vez');render();return}lastVoice=null;const old=S.chat.find(m=>m.id===v.meId);if(old)S.chat=S.chat.filter(m=>m!==old);talkVoice(v.blob,v.secs)}
@@ -1114,7 +1122,7 @@ function vLia(){
  const sug=[`Cita con el pediatra el jueves a las 10`,`Natación los martes y jueves a las 16`,`Compré verduras y frutas, 45 Bs`,`Se acabó la leche y los pañales`,`${S.profile.kid||'La niña'} tiene fiebre 38.5, paracetamol 5 ml cada 6 h por 3 días`,`Recuérdame pagar la luz mañana`,`Pre kínder 1800 Bs cada mes el día 5`,`Pagué el internet 150 Bs`,`Guarda lugar: parque con juegos para bebés`,`¿Cómo voy esta semana?`,`Tope de comida 1200 Bs al mes`,`La crema de Sofi le dura 2 meses, cuesta 330 Bs`,`No le gustó el brócoli`,`Cumpleaños de la abuela el 30 de noviembre`];
  return `<div class="chatwrap"><div class="msgs">
  <div class="lia-row"><div class="av hi" onclick="liaHello()" role="button" aria-label="Saludar a Lía" style="cursor:pointer">${LIA}</div><div class="msg lia">Hola, ${esc(S.profile.mom)}. Soy Lía 🌱 Escríbeme o díctame como te salga, todo junto si quieres, y yo lo ordeno en tu agenda, medicamentos, menú, compras y gastos. Pídeme "¿cómo voy esta semana?" y te doy tu resumen.${SRc()?(S.wake?'<br><span class="tiny">🎙️ "Hola Lía" está activo: dilo y empiezo a escucharte.</span>':'<br>También puedes hablarme sin tocar nada: di "Hola Lía". <a href="#" onclick="activarHolaLia();return false" style="color:var(--accent);font-weight:700">Activar "Hola Lía"</a>'):''}</div></div>
- ${msgs.map(m=>m.from==='me'?`<div class="msg me">${m.img?`<img class="mimg" src="${m.img}" alt="Foto">`:''}${esc(m.text)}</div>`:m.typing?`<div class="lia-row"><div class="av hi">${LIA}</div><div class="msg lia typing" aria-label="Lía está pensando"><span></span><span></span><span></span><em class="slow">Sigo pensando, un momentito…</em></div></div>`:`<div class="lia-row"><div class="av">${LIA}</div><div class="msg lia${m.guia?' guia':''}">${m.guia?'<div class="gtag">🩺 Guía para mamá</div>':''}${fmt(m.text)}${m.guia?`<div class="gnote">Es una guía general para que estés tranquila y llegues preparada: quien confirma qué tiene es el pediatra.</div>${(m.fuentes||[]).length?`<div class="gsrc">Fuentes: ${m.fuentes.map(f=>`<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join(' · ')}</div>`:''}`:''}${m.cards&&m.cards.length?`<div class="org">${m.cards.map(c=>`<div class="it"><span class="chip ${c.cls}">${esc(c.label)}</span><span>${esc(c.detail)}</span></div>`).join('')}</div>`:''}${m.extra?`<div class="small muted" style="margin-top:8px">${esc(m.extra)}</div>`:''}${m.tms?`<div class="tiny muted" style="margin-top:6px;opacity:.7">⏱ ${(m.tms/1000).toFixed(1).replace('.',',')} s${m.tia?' · IA '+(m.tia/1000).toFixed(1).replace('.',','):''}</div>`:''}${m.retry?`<button class="undo" onclick="retryVoice('${m.id}')">🔁 Reintentar</button>`:''}${m.undone?'<div class="tiny muted" style="margin-top:6px">(Deshecho)</div>':m.undo?`<button class="undo" onclick="undoMsg('${m.id}')">Deshacer</button>`:''}</div></div>`).join('')}
+ ${msgs.map(m=>m.from==='me'?`<div class="msg me">${m.img?`<img class="mimg" src="${m.img}" alt="Foto">`:''}${esc(m.text)}</div>`:m.typing?`<div class="lia-row"><div class="av hi">${LIA}</div><div class="msg lia typing" aria-label="Lía está pensando"><span></span><span></span><span></span><em class="slow">Sigo pensando, un momentito…</em></div></div>`:`<div class="lia-row"><div class="av">${LIA}</div><div class="msg lia${m.guia?' guia':''}">${m.guia?'<div class="gtag">🩺 Guía para mamá</div>':''}${fmt(m.text)}${m.guia?`<div class="gnote">Es una guía general para que estés tranquila y llegues preparada: quien confirma qué tiene es el pediatra.</div>${(m.fuentes||[]).length?`<div class="gsrc">Fuentes: ${m.fuentes.map(f=>`<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join(' · ')}</div>`:''}`:''}${m.cards&&m.cards.length?`<div class="org">${m.cards.map(c=>`<div class="it"><span class="chip ${c.cls}">${esc(c.label)}</span><span>${esc(c.detail)}</span></div>`).join('')}</div>`:''}${m.extra?`<div class="small muted" style="margin-top:8px">${esc(m.extra)}</div>`:''}${m.menu?menuMini(m.menu):''}${m.tms?`<div class="tiny muted" style="margin-top:6px;opacity:.7">⏱ ${(m.tms/1000).toFixed(1).replace('.',',')} s${m.tia?' · IA '+(m.tia/1000).toFixed(1).replace('.',','):''}</div>`:''}${m.retry?`<button class="undo" onclick="retryVoice('${m.id}')">🔁 Reintentar</button>`:''}${m.undone?'<div class="tiny muted" style="margin-top:6px">(Deshecho)</div>':m.undo?`<button class="undo" onclick="undoMsg('${m.id}')">Deshacer</button>`:''}</div></div>`).join('')}
  </div>
  <div class="composer"><div class="sugs">${sug.map(s=>`<button onclick="sendChat(this.textContent)">${esc(s)}</button>`).join('')}</div>
  ${imgBox()}<form class="ask" onsubmit="event.preventDefault();sendChat()"><button type="button" class="cam" onclick="pickImg()" aria-label="Adjuntar foto">${IC.cam}</button><input id="ci" placeholder="${pendImg?'Cuéntale qué te preocupa de la foto…':'Escribe o mantén 🎤 para hablar'}" autocomplete="off">${micBtn('ci')}<button aria-label="Enviar">${IC.send}</button></form>
@@ -1127,7 +1135,7 @@ function vSalud(){syncKid();const kid=activeKid().id;const mine=x=>kidOf(x)===ki
  const act=S.meds.filter(m=>medActive(m)&&mine(m));const past=S.meds.filter(m=>!medActive(m)&&mine(m));
  const log=[...S.health].filter(mine).sort((a,b)=>b.ts-a.ts).slice(0,25);
  return `<h1 style="font-size:24px">Salud${S.profile.kid?' de '+esc(S.profile.kid):''}</h1>${kidTabs()}${S.profile.cond?`<div class="note" style="margin-top:8px"><b>Cuidado especial:</b> ${esc(S.profile.cond)}. Lía lo tiene en cuenta en sus guías. <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Cambiar</a></div>`:`<div class="tiny muted" style="margin:4px 0 8px">¿Tiene alguna condición o cuidado especial (autismo, síndrome de Down, asma…)? <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Anótala en Ajustes</a> y Lía la tendrá en cuenta.</div>`}
- <div class="muted small" style="margin:2px 0 12px">${ageText()}${(S.profile.allergies||[]).length?' · Alergias: '+S.profile.allergies.map(a=>ALLERG.find(x=>x[0]===a)[1]).join(', '):''}</div>
+ <div class="muted small" style="margin:2px 0 12px">${S.profile.birth?ageText():''}${(S.profile.allergies||[]).length?' · Alergias: '+S.profile.allergies.map(a=>ALLERG.find(x=>x[0]===a)[1]).join(', '):''}</div>
  <div class="note"><b>Importante:</b> esta app no calcula dosis ni diagnostica. Anota la dosis que indicó el pediatra y consulta ante cualquier duda.</div>
  <div class="row" style="gap:8px;margin-bottom:6px"><button class="btn block" onclick="addMedDlg()">+ Medicamento</button><button class="btn ghost block" onclick="addTempDlg()">Anotar temperatura</button></div>
  <div class="sect"><h2>Tratamientos activos</h2></div>
@@ -1245,12 +1253,62 @@ function savePlace(){const n=$('#lN').value.trim();if(!n){toast('Escribe el nomb
 function budgetCard(){const c=menuCost(),b=Number(S.profile.budget)||0;const p=b?Math.min(100,c/b*100):0;
  return `<div class="card"><div class="row between"><b>Costo estimado de la semana</b><button class="btn sm ghost" onclick="budgetDlg()">Presupuesto</button></div>
  <div class="bar ${c>b?'over':''}"><i style="width:${p}%"></i></div>
- <div class="small"><b>${bs(c)}</b> <span class="muted">de ${bs(b)} · ${S.profile.adults>0?'niña + '+S.profile.adults+' adulto'+(S.profile.adults>1?'s':''):'solo para '+esc(S.profile.kid||'la peque')}</span></div>
+ <div class="small"><b>${bs(c)}</b> <span class="muted">de ${bs(b)} · ${(()=>{const ad=S.profile.adults>0?' + '+S.profile.adults+' adulto'+(S.profile.adults>1?'s':''):'';return kids().length>1?kids().length+' hijos'+ad:ad?esc(S.profile.kid||'la peque')+ad:'solo para '+esc(S.profile.kid||'la peque')})()}</span></div>
  ${c>b?'<div class="small" style="color:var(--danger);margin-top:4px">Ya usé las opciones más económicas. Sube un poco el presupuesto o quita adultos.</div>':''}</div>`}
+/* ====================== menú por días para un hijo (lo pide la mamá a Lía) ====================== */
+const BEBE={d:['Papilla de avena con banana','Papilla de quinua con manzana cocida','Papilla de maicena con leche materna o fórmula','Puré de papaya','Papilla de arroz con pera cocida'],
+ s:['Puré de banana','Puré de manzana cocida','Puré de pera','Papaya aplastada','Puré de durazno cocido','Mandarina en gajos sin hilos (desde 9 meses, aplastada)'],
+ a:['Puré de zapallo con pollo desmenuzado','Puré de papa y zanahoria con carne molida','Sopita espesa de quinua con verduras, aplastada','Puré de arveja con arroz bien cocido','Puré de camote con hígado muy picado','Fideo cabello de ángel con zapallo y pollo, aplastado','Puré de lentejas con zanahoria'],
+ c:['Puré de zapallo y papa','Papilla de verduras con un poquito de aceite','Puré de zanahoria con yema de huevo cocida','Puré de brócoli y papa','Puré de yuca con zapallo','Papilla de quinua con verduras']};
+const MENU_RE=/\b(menu|menus|minuta)\b/;
+function menuPide(n){return MENU_RE.test(n)&&/\b(arm\w*|dame|haz|hazme|prepar\w*|necesito|quiero|podrias|podria|puedes|puede|organiz\w*|planific\w*|sugier\w*|propon\w*|ideas?|semanas?|dias|quincena|mes|para)\b/.test(n)}
+function menuDias(n){let m;if((m=/\b(\d{1,2})\s*dias\b/.exec(n)))return Math.max(1,Math.min(31,+m[1]));const W={una:1,un:1,dos:2,tres:3,cuatro:4};
+ if((m=/\b(\d|una|dos|tres|cuatro)\s+semanas\b/.exec(n)))return Math.min(31,(+m[1]||W[m[1]])*7);if(/\b(quincena|quince dias)\b/.test(n))return 15;
+ const N={tres:3,cuatro:4,cinco:5,diez:10,quince:15,veinte:20,treinta:30};if((m=/\b(tres|cuatro|cinco|diez|quince|veinte|treinta)\s+dias\b/.exec(n)))return N[m[1]];
+ if(/\b(un mes|el mes|mensual|del mes|todo el mes)\b/.test(n))return 30;return 7}
+function menuHijo(n){const ks=kids();if(/\b(todos|todas|los dos|las dos|los tres|la familia|toda la familia|ambos|ambas)\b/.test(n))return 'todos';
+ const hit=ks.find(k=>k.name&&new RegExp('\\b'+norm(k.name)+'\\b').test(n));if(hit)return hit;
+ const ed=/\b(\d{1,2})\s*(anos?|anitos?|meses)\b/.exec(n);if(ed&&ks.length>1){const me=/mes/.test(ed[2]);const mm=+ed[1]*(me?1:12);const c=ks.filter(k=>k.birth&&(me?Math.abs(monthsOf(k.birth)-mm)<=1:monthsOf(k.birth)>=mm&&monthsOf(k.birth)<mm+12));if(c.length===1)return c[0]}
+ return ks.length<2?ks[0]:null}
+function menuArmar(kid,dias){const todos=kid==='todos';const grandes=kids().map(k=>monthsOf(k.birth)).filter(m=>m>=12);const meses=todos?(grandes.length?Math.min(...grandes):youngest()):monthsOf(kid.birth);const R=rnd(Date.now());
+ const mix=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+ const P=meses<12?{d:mix(BEBE.d),s:mix(BEBE.s),a:mix(BEBE.a),c:mix(BEBE.c)}:Object.fromEntries(['d','s','a','c'].map(k=>[k,mix(REC.filter(r=>r.k===k&&okRec(r,meses)&&!((k==='a'||k==='c')&&r.cheap)).map(r=>r.n))]));
+ const out=[];for(let i=0;i<dias;i++){const g=k=>P[k].length?P[k][(k==='s'?i*2:i)%P[k].length]:'—';out.push([g('d'),P.s.length?P.s[(i*2)%P.s.length]:'—',g('a'),P.s.length?P.s[(i*2+1)%P.s.length]:'—',g('c')])}
+ return menuGuardar({para:todos?'Toda la familia':kid.name||'Tu peque',kid:todos?'':kid.id,meses,dias:out,ia:false})}
+function menuGuardar(o){S.menus=S.menus||[];const m=Object.assign({id:uid(),ts:Date.now(),desde:ymd(new Date())},o);S.menus.unshift(m);S.menus=S.menus.slice(0,8);save();return m.id}
+function menuEdad(m){return m==null?'':m<24?m+' meses':Math.floor(m/12)+' años'}
+function menuBasico(v){const n=norm(v);const pend=S.menuPend&&Date.now()-S.menuPend.ts<15*60000;const pide=menuPide(n);
+ if(!pide&&!pend)return false;const kid=menuHijo(n);
+ if(!pide&&!kid){S.menuPend=null;return false}
+ const dias=pide?menuDias(n):S.menuPend.dias;
+ const say=(t,id)=>{S.chat.push({id:uid(),from:'lia',ts:Date.now(),text:t,menu:id});save()};
+ if(!kid){S.menuPend={dias,ts:Date.now()};const ks=kids();say('¡Claro! ¿Para cuál de tus hijos armo el menú de '+dias+' días: '+ks.map(k=>(k.name||'tu peque')+(k.birth?' ('+ageTextOf(k.birth)+')':'')).join(', ')+'? También puedo hacer uno para todos.');return true}
+ S.menuPend=null;
+ if(kid!=='todos'&&kid.birth&&monthsOf(kid.birth)<6){say((kid.name||'Tu bebé')+' tiene '+ageTextOf(kid.birth)+': hasta los 6 meses se alimenta solo con leche materna o fórmula, sin agua ni jugos. Cuando el pediatra te diga que empiece con papillas, pídeme el menú y te lo armo.');return true}
+ const id=menuArmar(kid,dias);const m=S.menus[0];
+ const bebes=kid==='todos'?kids().filter(k=>k.birth&&monthsOf(k.birth)<12):[];
+ say('Listo, te armé un menú de '+dias+' día'+(dias>1?'s':'')+' para '+(kid==='todos'?'toda la familia':m.para)+(m.meses!=null&&kid!=='todos'?' ('+menuEdad(m.meses)+')':'')+', con sus alergias y lo que no le gusta. Lo ves aquí abajo y en Menú.'+(bebes.length?' Para '+bebes.map(k=>k.name||'el bebé').join(' y ')+(bebes.some(k=>monthsOf(k.birth)<6)?': si aún no cumple 6 meses, solo leche materna o fórmula; si ya come, ':': ')+'haz puré de su porción, sin sal ni azúcar.':''),id);return true}
+function menuMini(id){const m=(S.menus||[]).find(x=>x.id===id);if(!m)return '';const d=m.dias[0]||[];
+ return `<div class="org"><div class="it"><span class="chip c-comida">Menú</span><span>${esc(m.para)} · ${m.dias.length} día${m.dias.length>1?'s':''} desde ${esc(fmtDate(fromYmd(m.desde)).toLowerCase())}</span></div>${SLOTS.map(([,lab],i)=>`<div class="tiny"><b>${lab}:</b> ${esc(d[i]||'—')}</div>`).join('')}</div><button class="undo" onclick="verMenu('${m.id}')">📋 Ver menú completo</button>`}
+function menusLia(){const L=S.menus||[];if(!L.length)return '';return `<div class="card"><b>Menús que te armó Lía</b>${L.map(m=>`<div class="row between" style="margin-top:8px;gap:8px"><div style="min-width:0"><div>${esc(m.para)} · ${m.dias.length} días</div><div class="tiny muted">Desde ${esc(fmtDate(fromYmd(m.desde)).toLowerCase())}${m.meses!=null&&m.kid?' · '+menuEdad(m.meses):''}</div></div><button class="btn sm ghost" onclick="verMenu('${m.id}')">Ver</button></div>`).join('')}<div class="tiny muted" style="margin-top:8px">Pídele otro a Lía: "arma un menú de 15 días para ${esc(kids()[0].name||'mi hija')}".</div></div>`}
+function menuTexto(m){const d0=fromYmd(m.desde);return '🍲 Menú para '+m.para+' ('+m.dias.length+' días) · Mamá al Día\n'+m.dias.map((d,i)=>{const f=addDays(d0,i);return '\n*'+DAYS[f.getDay()]+' '+f.getDate()+' '+MON[f.getMonth()].slice(0,3)+'*\n'+SLOTS.map(([,lab],j)=>'• '+lab+': '+(d[j]||'—')).join('\n')}).join('\n')}
+function verMenu(id){const m=(S.menus||[]).find(x=>x.id===id);if(!m)return;const d0=fromYmd(m.desde);const hoy=ymd(new Date());
+ dlg(`<h3>Menú para ${esc(m.para)}</h3><div class="small muted">${m.dias.length} días${m.meses!=null&&m.kid?' · '+menuEdad(m.meses):''}${m.ia?' · armado por Lía con IA':''}</div>
+ <div style="max-height:58vh;overflow:auto;margin-top:10px">${m.dias.map((d,i)=>{const f=addDays(d0,i);return `<div class="card" style="padding:10px;margin:6px 0${ymd(f)===hoy?';border-color:var(--accent)':''}"><b>${DAYS[f.getDay()]} ${f.getDate()} ${MON[f.getMonth()].slice(0,3)}</b>${SLOTS.map(([,lab,time],j)=>`<div class="small" style="margin-top:3px"><span class="muted">${time} ${lab}:</span> ${esc(d[j]||'—')}</div>`).join('')}</div>`}).join('')}</div>
+ ${m.meses!=null?`<div class="tiny muted" style="margin-top:8px">${esc(portion('a',m.meses))} Son ideas orientativas: ajústalas con tu pediatra o nutricionista.</div>`:''}
+ <div class="dlg-act"><button class="btn ghost" onclick="confirmInline('¿Borrar este menú?',()=>{S.menus=S.menus.filter(x=>x.id!=='${m.id}');save();render()})">Borrar</button><button class="btn" onclick="menuCompartir('${m.id}')">Compartir</button></div>
+ <button class="btn ghost block" style="margin-top:8px" onclick="closeDlg()">Cerrar</button>`)}
+function menuCompartir(id){const m=(S.menus||[]).find(x=>x.id===id);if(!m)return;const txt=menuTexto(m);if(navigator.share)navigator.share({text:txt}).catch(()=>{});else window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank')}
+function menuDeIA(j){const x=j&&j.menu;if(!x||!Array.isArray(x.dias)||!x.dias.length)return null;
+ const dias=x.dias.slice(0,31).map(d=>{const a=Array.isArray(d)?d:[d.desayuno,d.media_manana||d.mm,d.almuerzo,d.merienda,d.cena];return [0,1,2,3,4].map(i=>String(a[i]||'—').slice(0,90))});
+ const para=String(x.para||'').slice(0,40);const k=kids().find(k=>k.name&&norm(para).includes(norm(k.name)));
+ let desde=/^\d{4}-\d{2}-\d{2}$/.test(x.desde||'')?x.desde:ymd(new Date());const dd=(fromYmd(desde)-startDay(new Date()))/864e5;if(!(dd>=-1&&dd<=62))desde=ymd(new Date());
+ return menuGuardar({para:k?k.name:(para||'Tu peque'),kid:k?k.id:'',meses:k&&k.birth?monthsOf(k.birth):null,desde,dias,ia:true})}
 function vMenu(){
+ if(!comeSolidos()){const k=activeKid();return `${menusLia()}<div class="card"><b>${esc(k.name||'Tu bebé')} tiene ${ageTextOf(k.birth)}</b><div class="small" style="margin-top:6px">Hasta los 6 meses se alimenta solo con leche materna o fórmula, a libre demanda. No necesita agua, jugos ni otras comidas. Las primeras papillas empiezan cerca de los 6 meses, cuando el pediatra lo indique.</div><div class="small muted" style="margin-top:8px">Cuando cumpla 6 meses, pídele a Lía: "arma un menú de 7 días para ${esc(k.name||'mi bebé')}".</div></div>`}
  const w=fromYmd(S.menu.week);const ti=Math.round((startDay(new Date())-w)/864e5);if(menuDayIdx==null)menuDayIdx=Math.max(0,Math.min(6,ti));
  const d=S.menu.days[menuDayIdx];
- return `${budgetCard()}
+ return `${menusLia()}${budgetCard()}
  <div class="week">${S.menu.days.map((_,i)=>{const dd=addDays(w,i);return `<button class="${i===menuDayIdx?'on':''} ${i===ti?'today':''}" onclick="menuDayIdx=${i};render()">${DSH[dd.getDay()]}<b>${dd.getDate()}</b></button>`}).join('')}</div>
  <div class="card">${SLOTS.map(([id,lab,time,k])=>{const r=RECBY[d[id]];return `<div class="meal"><div class="t">${time}</div><div style="flex:1;min-width:0"><div class="k">${lab}</div><div class="n">${r?esc(r.n):'—'}</div>${r&&Object.keys(r.i).length?`<div class="small muted">${Object.keys(r.i).map(k=>CAT[k].n.split(' (')[0]).join(', ')}</div>`:''}${r&&(k==='d'||k==='a'||k==='c')&&!r.cheap?(()=>{const g=groupsOf(r);const miss=Object.keys(GRPN).filter(x=>!g.has(x));return `<div class="tiny" style="margin:3px 0;color:${miss.length?'var(--sun)':'var(--sage)'}">${miss.length?'Tiene '+g.size+' de 5 grupos · agrega: '+miss.map(x=>GRPN[x].toLowerCase()).join(', ')+(miss.includes('grasa')?' (unas gotas de aceite de palta u oliva)':''):'✓ Los 5 grupos: cereal, grasa, fruta, verdura y proteína'}</div>`})():''}<div class="tiny muted">${portion(k)}</div><button class="swap" onclick="swapMeal(${menuDayIdx},'${id}')">Cambiar</button></div></div>`}).join('')}</div>
  <div class="note"><b>Regla de los 5 grupos:</b> en desayuno, almuerzo y cena intenta que haya cereal, grasa buena, fruta, verdura y proteína. ${ageMonths()<24?'<b>Hasta los 2 años:</b> sin azúcar, poca sal y nada de golosinas con colorantes (como la tartracina). ':''}</div>
@@ -1396,8 +1454,8 @@ async function pushTest(){try{const sub=await pushSub(true);if(!sub){toast('Prim
 
 
 /* ====================== novedades y recorrido ====================== */
-const NOV_V='2026-11-20b';
-const NOVEDADES=[['⏳','Sin silencios incómodos','Apenas terminas tu nota de voz, Lía te dice "Un momento, lo estoy pensando" mientras prepara la respuesta, que tarda unos segundos. Así sabes que te escuchó.'],['✅','Todo activado desde el inicio','La voz de Lía, "Hola Lía" y los avisos ya vienen encendidos. La primera vez, acepta el permiso de avisos. Puedes apagar cualquier cosa en Ajustes.'],['🔔','Avisos con la app cerrada','Tus citas, remedios y pagos te avisan aunque no tengas la app abierta. Toca el aviso y Lía te lo dice en voz alta.'],['🎙️','Lía con voz nueva','Una voz más cálida y con acento latinoamericano. Y si activas "Hola Lía", empieza a escucharte sin tocar nada.'],['🔊','Si la voz de Lía cambia de tono','La voz principal de Lía tiene un cupo de uso diario. Cuando se agota, la app usa la voz de tu celular, que suena distinta, hasta que el cupo se renueva al día siguiente. Esto pasa solo en esta fase de prueba: en la versión de Play Store, la voz suave de Lía será la voz de toda la app, siempre.'],['🌸','Colores nuevos','Tonos nude y oro rosa, más suaves. Si prefieres el modo oscuro, está en Ajustes.'],['🌿','Frases de calma','Al abrir la app, una frase para respirar y empezar el día con calma.'],['🙋','Te habla de usted si prefieres','Actívalo en Ajustes y Lía te tratará de usted.'],['📍','Lugares para ir con niños','Parques, restaurantes, terapias y pediatras de tu ciudad, en Menú › Lugares.']];
+const NOV_V='2026-11-25a';
+const NOVEDADES=[['🍲','Menú a medida para cada hijo','Pídele a Lía: "arma un menú de 15 días para mi niña de 2 años". Lo hace por los días que quieras (7, 15, 20 o un mes), según su edad, alergias y lo que no le gusta. Si tienes varios hijos, te pregunta para cuál. Lo ves en Menú y lo puedes compartir por WhatsApp.'],['⏳','Sin silencios incómodos','Apenas terminas tu nota de voz, Lía te dice "Un momento, lo estoy pensando" mientras prepara la respuesta, que tarda unos segundos. Así sabes que te escuchó.'],['✅','Todo activado desde el inicio','La voz de Lía, "Hola Lía" y los avisos ya vienen encendidos. La primera vez, acepta el permiso de avisos. Puedes apagar cualquier cosa en Ajustes.'],['🔔','Avisos con la app cerrada','Tus citas, remedios y pagos te avisan aunque no tengas la app abierta. Toca el aviso y Lía te lo dice en voz alta.'],['🎙️','Lía con voz nueva','Una voz más cálida y con acento latinoamericano. Y si activas "Hola Lía", empieza a escucharte sin tocar nada.'],['🔊','Si la voz de Lía cambia de tono','La voz principal de Lía tiene un cupo de uso diario. Cuando se agota, la app usa la voz de tu celular, que suena distinta, hasta que el cupo se renueva al día siguiente. Esto pasa solo en esta fase de prueba: en la versión de Play Store, la voz suave de Lía será la voz de toda la app, siempre.'],['🌸','Colores nuevos','Tonos nude y oro rosa, más suaves. Si prefieres el modo oscuro, está en Ajustes.'],['🌿','Frases de calma','Al abrir la app, una frase para respirar y empezar el día con calma.'],['🙋','Te habla de usted si prefieres','Actívalo en Ajustes y Lía te tratará de usted.'],['📍','Lugares para ir con niños','Parques, restaurantes, terapias y pediatras de tu ciudad, en Menú › Lugares.']];
 function novedades(auto){try{localStorage.setItem('md-nov',NOV_V)}catch(e){}
  dlg(`<h3 style="margin-bottom:2px">Novedades de Mamá al Día</h3><div class="tiny muted" style="margin-bottom:10px">Lo nuevo de esta versión</div>
  <div class="novs">${NOVEDADES.map(([i,t,d])=>`<div class="nov"><span class="ni">${i}</span><div><b>${t}</b><div class="small muted">${d}</div></div></div>`).join('')}</div>

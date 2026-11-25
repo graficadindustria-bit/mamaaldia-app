@@ -141,6 +141,14 @@ Tu trabajo:
    Si manda una foto, descríbela con cuidado en "tema".
 4. Escribir "respuesta": máximo 45 palabras (salvo los consejos del punto 3), cálida y natural, para leerse en voz alta. Si guardaste cosas, confírmalo en una frase sin repetir todo (la app muestra el detalle). Si pregunta algo (ideas de comida, rutinas, juegos, organización), responde con ideas concretas y breves.
 5. Si es nota de voz, pon en "transcripcion" lo que dijo, limpio y sin muletillas.
+6. MENÚ POR DÍAS: si pide un menú, minuta o plan de comidas (para la semana, 15 días, 20 días, un mes o los días que diga) para un hijo, arma "menu":
+   {"para":"Alya","desde":"AAAA-MM-DD","dias":[["desayuno","media mañana","almuerzo","merienda","cena"], ...]}
+   - Un elemento en "dias" por cada día pedido, en orden. "semana" = 7, "quincena" = 15, "un mes" = 30; máximo 31. Si no dice cuántos días, 7.
+   - "desde" es hoy, salvo que diga otra fecha ("la próxima semana" = el próximo lunes).
+   - Usa los datos de "hijos": si dice un nombre o una edad ("mi niña de 2 años"), es ese hijo. Si tiene un solo hijo, es ese. Si tiene varios y no queda claro para cuál, NO armes el menú: en "respuesta" pregúntale para cuál, nombrando a sus hijos con su edad, o si lo quiere para todos. Si pide uno para todos, "para":"Toda la familia" y adáptalo al menor.
+   - Adáptalo a la edad: menor de 6 meses no lleva menú (solo leche materna o fórmula; explícalo en "respuesta" y no pongas "menu"); de 6 a 11 meses papillas y purés sin sal, sin azúcar y sin miel; de 1 a 2 años trocitos blandos, sin azúcar y con poca sal; niños y adolescentes, porciones de su edad. Respeta "alergias", "no_le_gusta" y su condición (por ejemplo diabetes o celiaquía).
+   - Comidas caseras de Bolivia, sencillas, económicas y variadas: no repitas el mismo almuerzo ni la misma cena en una semana. Cada comida en 3 a 9 palabras, sin cantidades.
+   - En "respuesta" (máx. 40 palabras) dile para quién y cuántos días es, y que lo ve abajo y en Menú; no escribas el menú en "respuesta". Las comidas del menú no van en "eventos", "pendientes" ni "frases".
 
 Si el peque tiene una condición (autismo, síndrome de Down, TDAH, asma, diabetes u otra), tenla en cuenta con respeto y sin etiquetas, adaptando tus ideas a su edad y necesidades.
 Salud: eres guía general, no médica. No diagnosticas ni indicas dosis. Con fiebre de 39 °C o más, dificultad para respirar, decaimiento fuerte, deshidratación o un bebé menor de 3 meses con fiebre, dile con calma que llame al pediatra o vaya a emergencias. Si la mamá se nota agotada o triste, respóndele con cariño y recuérdale que pedir ayuda está bien.
@@ -163,7 +171,7 @@ Si pregunta cuánto cuesta la app o su plan, no inventes precios ni digas que es
 Escribe para que cualquier mamá entienda, con palabras simples; si ella escribe sin tildes o con faltas, no la corrijas.
 Usa la frase "¿Cómo voy esta semana?" solo si pregunta por sus gastos o su semana, y no la repitas dentro de "respuesta".
 
-Responde SOLO con JSON: {"respuesta":"...","no_entendi":false,"consulta":false,"tema":"","eventos":[],"pendientes":[],"precios":[],"frases":[],"transcripcion":"..."}`;
+Responde SOLO con JSON: {"respuesta":"...","no_entendi":false,"consulta":false,"tema":"","eventos":[],"pendientes":[],"precios":[],"frases":[],"menu":null,"transcripcion":"..."}`;
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -284,10 +292,11 @@ module.exports = async (req, res) => {
       systemInstruction: { parts: [{ text: SYS }] },
       contents: [{ role: 'user', parts }],
       safetySettings: SEGURIDAD,
-      generationConfig: { temperature: 0.5, maxOutputTokens: 2000, responseMimeType: 'application/json' }
+      generationConfig: { temperature: 0.5, maxOutputTokens: 8192, responseMimeType: 'application/json' }
     };
     const t0 = Date.now();
-    let r = await pedirYa([...new Set(RAPIDOS.concat(cat.rapido))], cuerpo, key, 3500, 15000);
+    const largo = /men[uú]|minuta|plan de comidas/i.test(texto) ? 32000 : audio ? 20000 : 15000; // un menú de muchos días tarda más en escribirse
+    let r = await pedirYa([...new Set(RAPIDOS.concat(cat.rapido))], cuerpo, key, 3500, largo);
     if (!r.ok && (r.status === 429 || r.status === 503) && Date.now() - t0 < 30000) { await new Promise(z => setTimeout(z, 2500)); r = await pedirYa([...new Set(cat.rapido.concat(RAPIDOS))], cuerpo, key, 3000, 15000); }
     let tIA = Date.now() - t0, mIA = pedir.ultimo;
     if (!r.ok) {
@@ -340,6 +349,7 @@ module.exports = async (req, res) => {
       pendientes: lista(o.pendientes),
       precios: lista(o.precios),
       frases,
+      menu: o.menu && typeof o.menu === 'object' && Array.isArray(o.menu.dias) && o.menu.dias.length ? { para: String(o.menu.para || '').slice(0, 40), desde: String(o.menu.desde || '').slice(0, 10), dias: o.menu.dias.slice(0, 31).map(d => (Array.isArray(d) ? d : [d && d.desayuno, d && (d.media_manana || d.mm), d && d.almuerzo, d && d.merienda, d && d.cena]).slice(0, 5).map(x => String(x || '').slice(0, 90))) } : null,
       transcripcion: String(o.transcripcion || '').slice(0, 4000),
       restantes: LIMITE[tipo] - usos[k]
     });
