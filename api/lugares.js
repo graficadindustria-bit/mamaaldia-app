@@ -6,7 +6,7 @@
 // POST {codigo, modo:'borrar', id}            -> borra (solo creador)
 const crypto = require('crypto');
 const { put, get } = require('@vercel/blob');
-const { CODIGOS } = require('./_codigos');
+const { tipoDe } = require('./_codigos');
 const INDICE = 'lugares/indice.json';
 const TIPOS = ['parque', 'restaurante', 'medico', 'especialista', 'otro'];
 
@@ -48,9 +48,9 @@ module.exports = async (req, res) => {
     let b = req.body;
     if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } }
     b = b || {};
-    const h = crypto.createHash('sha256').update(String(b.codigo || '').toUpperCase().replace(/\s+/g, '')).digest('hex');
-    const tipo = CODIGOS[h];
-    if (!tipo) return res.status(401).json({ error: 'codigo' });
+    const cod = tipoDe(b.codigo);
+    if (!cod || cod.tipo === 'vencido') return res.status(401).json({ error: 'codigo' });
+    const tipo = cod.tipo, h = cod.h;
     const lista = await leer();
     if (b.modo === 'reportar' || b.modo === 'borrar') {
       const x = lista.find(l => l.id === b.id);

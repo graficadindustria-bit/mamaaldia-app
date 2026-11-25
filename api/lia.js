@@ -2,8 +2,22 @@
 // La app manda el mensaje (texto o nota de voz) y recibe una respuesta cálida y frases ordenadas
 // que el organizador de la app convierte en agenda, medicamentos, compras y gastos.
 const crypto = require('crypto');
-const { CODIGOS } = require('./_codigos');
-const LIMITE = { creador: 300, invitada: 80 }; // mensajes por día (mejor esfuerzo)
+const { tipoDe, crearPro } = require('./_codigos');
+const LIMITE = { creador: 300, invitada: 80, pro: 60 }; // mensajes por día (mejor esfuerzo)
+const PRUEBA_SEMANA = 10, PRUEBA_TOTAL_DIA = 400; // plan Gratis: 10 mensajes con IA por semana y por celular; tope total por día
+// Contador: en Redis (Upstash) si está conectado; si no, en memoria (mejor esfuerzo).
+const RURL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL, RTOK = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const memo = {};
+async function contar(clave, segundos) {
+  if (RURL && RTOK) {
+    try {
+      const r = await fetch(RURL.replace(/\/$/, '') + '/pipeline', { method: 'POST', headers: { authorization: 'Bearer ' + RTOK, 'content-type': 'application/json' }, body: JSON.stringify([['INCR', clave], ['EXPIRE', clave, String(segundos)]]), signal: AbortSignal.timeout(3000) });
+      if (r.ok) return +(await r.json())[0].result;
+    } catch (e) {}
+  }
+  return (memo[clave] = (memo[clave] || 0) + 1);
+}
+const semana = () => { const d = new Date(Date.now() - 4 * 3600000); const l = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - (d.getUTCDay() + 6) % 7)); return l.toISOString().slice(0, 10); };
 const usos = {};
 const MODELOS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
 const API = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -167,7 +181,7 @@ Si solo deja indicado un medicamento que ya le recetaron (nombre, dosis y frecue
 Seguridad infantil, nunca lo recomiendes: collares o pulseras de ámbar o dentición (riesgo de asfixia), miel a menores de 1 año, geles con benzocaína, almohadas o protectores en la cuna de bebés, andadores, jarabes para la tos en menores de 2 años. Si ella lo menciona, explícale con cariño por qué no y da una alternativa segura.
 Si pide una dieta vegana o vegetariana para un bebé o niño pequeño, ayúdala con respeto y recuérdale en una frase controlar hierro y vitamina B12 con su pediatra.
 No recomiendes médicos, clínicas ni negocios con nombre propio como "el mejor"; sugiere qué buscar (pediatra con buenas referencias, cerca de su zona) y que puede usar la búsqueda de lugares de la app.
-Si pregunta cuánto cuesta la app o su plan, no inventes precios ni digas que es gratis: dile que lo ve en Ajustes o con quien le dio su código de acceso.
+Si pregunta cuánto cuesta la app o sus planes: el plan Gratis cuesta Bs 0 y trae agenda, remedios con avisos, menú, compras, gastos, precios y lugares, más 10 mensajes por semana con Lía con IA para probar. El plan Pro cuesta Bs 29 al mes o Bs 249 al año y trae Lía con IA (notas de voz, fotos, menú según la edad de cada hijo). Las primeras 100 mamás (Mamás fundadoras) pagan Bs 19 al mes. Dile que lo ve todo en Ajustes, en «Planes». No inventes otros precios.
 Escribe para que cualquier mamá entienda, con palabras simples; si ella escribe sin tildes o con faltas, no la corrijas.
 Usa la frase "¿Cómo voy esta semana?" solo si pregunta por sus gastos o su semana, y no la repitas dentro de "respuesta".
 
@@ -180,10 +194,20 @@ module.exports = async (req, res) => {
   let b = req.body;
   if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } }
   b = b || {};
-  const h = crypto.createHash('sha256').update(String(b.codigo || '').toUpperCase().replace(/\s+/g, '')).digest('hex');
-  const tipo = CODIGOS[h];
-  if (!tipo) return res.status(401).json({ error: 'codigo' });
-  if (b.modo === 'probar') return res.status(200).json({ ok: true, tipo, ia: !!process.env.GEMINI_API_KEY });
+  let cod = b.codigo ? tipoDe(b.codigo) : null;
+  const disp = /^[a-z0-9]{12,40}$/i.test(String(b.dispositivo || '')) ? String(b.dispositivo) : '';
+  if (!b.codigo && disp && !b.modo && !b.audio && !b.imagen) cod = { tipo: 'gratis', h: crypto.createHash('sha256').update('disp:' + disp).digest('hex') };
+  if (!cod) return res.status(401).json({ error: 'codigo' });
+  if (cod.tipo === 'vencido') return res.status(401).json({ error: 'vencido', vence: cod.vence });
+  const tipo = cod.tipo, h = cod.h;
+  if (b.modo === 'probar') return res.status(200).json({ ok: true, tipo, vence: cod.vence || null, ia: !!process.env.GEMINI_API_KEY });
+  if (b.modo === 'crear_pro') {
+    if (tipo !== 'creador') return res.status(403).json({ error: 'permiso' });
+    const dias = { 1: 31, 3: 92, 12: 366 }[+b.meses] || 31;
+    const n = crearPro(dias);
+    if (!n) return res.status(503).json({ error: 'sin-clave' });
+    return res.status(200).json(n);
+  }
   const key = process.env.GEMINI_API_KEY;
   if (!key) return res.status(503).json({ error: 'sin-clave' });
   const cat = await modelos(key);
@@ -278,9 +302,20 @@ module.exports = async (req, res) => {
   if (audio.length > 4000000) return res.status(413).json({ error: 'audio-largo' });
   const ctx = JSON.stringify(b.ctx || {}).slice(0, 6000);
 
-  const dia = new Date().toISOString().slice(0, 10), k = dia + h;
-  usos[k] = (usos[k] || 0) + 1;
-  if (usos[k] > LIMITE[tipo]) return res.status(429).json({ error: 'limite' });
+  let restantes;
+  if (tipo === 'gratis') {
+    if (audio || img) return res.status(401).json({ error: 'codigo' });
+    const n = await contar('mad:prueba:' + semana() + ':' + h.slice(0, 24), 8 * 86400);
+    if (n > PRUEBA_SEMANA) return res.status(429).json({ error: 'limite-prueba' });
+    const total = await contar('mad:prueba-dia:' + new Date().toISOString().slice(0, 10), 2 * 86400);
+    if (total > PRUEBA_TOTAL_DIA) return res.status(429).json({ error: 'limite-prueba' });
+    restantes = PRUEBA_SEMANA - n;
+  } else {
+    const dia = new Date().toISOString().slice(0, 10), k = dia + h;
+    usos[k] = (usos[k] || 0) + 1;
+    if (usos[k] > LIMITE[tipo]) return res.status(429).json({ error: 'limite' });
+    restantes = LIMITE[tipo] - usos[k];
+  }
 
   const parts = [{ text: 'Datos: ' + ctx }];
   if (audio) parts.push({ text: 'Mensaje de la mamá (nota de voz):' }, { inlineData: { mimeType: mime, data: audio } });
@@ -351,7 +386,7 @@ module.exports = async (req, res) => {
       frases,
       menu: o.menu && typeof o.menu === 'object' && Array.isArray(o.menu.dias) && o.menu.dias.length ? { para: String(o.menu.para || '').slice(0, 40), desde: String(o.menu.desde || '').slice(0, 10), dias: o.menu.dias.slice(0, 31).map(d => (Array.isArray(d) ? d : [d && d.desayuno, d && (d.media_manana || d.mm), d && d.almuerzo, d && d.merienda, d && d.cena]).slice(0, 5).map(x => String(x || '').slice(0, 90))) } : null,
       transcripcion: String(o.transcripcion || '').slice(0, 4000),
-      restantes: LIMITE[tipo] - usos[k]
+      restantes, plan: tipo
     });
   } catch (e) { res.status(502).json({ error: 'red', detalle: String(e && e.message).slice(0, 120) }); }
 };
