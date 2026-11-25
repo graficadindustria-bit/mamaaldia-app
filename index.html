@@ -1525,6 +1525,7 @@ function novAuto(){let tour=false;try{if(!S||!S.profile||!S.profile.mom)return;t
    Los pasos con "demo" escriben el ejemplo solos, se lo mandan a Lía básica y luego "ver" muestra dónde quedó guardado.
    Todo lo que se crea en el recorrido se borra al terminar: se trabaja sobre una copia y no se guarda nada. */
 const TOUR=[
+ {tab:'hoy',sel:'',t:'¡Qué alegría tenerte aquí! Gracias por instalar Mamá al Día. Soy Lía, y a continuación empezamos el recorrido: yo escribo los ejemplos y tú solo miras.'},
  {a:1,tab:'hoy',sel:'.hello',t:'Esta es tu pantalla Hoy. Aquí ves de un vistazo tu día: la fecha, tu saludo y una frase para empezar con calma.'},
  {a:2,tab:'hoy',sel:'form.ask',t:'En esta barra le cuentas a Lía lo que pasó o lo que viene, como te salga. Escribe, o toca el micrófono y habla. Ella lo ordena en tu agenda, remedios, compras y gastos.'},
  {a:3,tab:'hoy',sel:'.stats',t:'Aquí cuentas tus compromisos, las dosis por dar y tus pendientes del día.'},
@@ -1551,9 +1552,9 @@ function tourIni(){tourI=-1;if(!tourEl){tourEl=document.createElement('div');tou
 function tourBienvenida(){tourI=-1;tourSeq++;const sp=tourEl.querySelector('.tspot');sp.style.cssText='top:50%;left:50%;width:0;height:0';tourEl.classList.add('bienv');
  let w=tourEl.querySelector('.tbienv');if(!w){w=document.createElement('div');w.className='tbienv';w.setAttribute('role','dialog');tourEl.appendChild(w)}
  const nom=(S.profile&&S.profile.mom)?', '+esc(S.profile.mom):'';
- w.innerHTML=`<div class="av hi">${LIA}</div><h3>¡Hola${nom}! 🌸</h3><p>Gracias por instalar <b>Mamá al Día</b>. Soy Lía, tu asistente.</p><p>Te muestro en un recorrido corto cómo se usa la app: yo escribo los ejemplos y te llevo a ver dónde se guarda cada cosa. Tú solo mira, avanza sola.</p>
- <button class="btn block" onclick="tourEmpieza()">▶ Empezar recorrido</button><button class="btn ghost block" style="margin-top:8px" onclick="tourFin()">Ahora no</button><div class="tiny muted" style="margin-top:8px">Puedes verlo cuando quieras en Ajustes › Novedades.</div>`;
- w.hidden=false;try{speak('¡Hola'+(S.profile&&S.profile.mom?', '+S.profile.mom:'')+'! Gracias por instalar Mamá al Día. Soy Lía, tu asistente. Te muestro en un recorrido corto cómo se usa la app.')}catch(e){}}
+ w.innerHTML=`<div class="av hi">${LIA}</div><h3>¡Hola${nom}! 🌸</h3><p>Qué alegría que estés aquí. Gracias por instalar <b>Mamá al Día</b>.</p><p>Soy <b>Lía</b> y desde hoy te ayudo con las citas, los remedios, el menú, las compras y los gastos de tu familia.</p><p>¿Te muestro en un paseo de 3 minutos cómo funciona? Yo hago los ejemplos, tú solo miras. 🔊 Sube el volumen.</p>
+ <button class="btn block" onclick="tourEmpieza()">▶ Sí, muéstrame</button><button class="btn ghost block" style="margin-top:8px" onclick="tourFin()">Más tarde</button><div class="tiny muted" style="margin-top:8px">Puedes verlo cuando quieras en Ajustes › Novedades.</div>`;
+ w.hidden=false}
 function tourEmpieza(){try{ctxOn()}catch(e){}try{vozSeq++;if(vozSrc)vozSrc.stop();speechSynthesis.cancel()}catch(e){}tourEl.classList.remove('bienv');const w=tourEl.querySelector('.tbienv');if(w)w.hidden=true;tourIr(0)}
 let tourPausado=false;
 function tourPausa(){tourPausado=!tourPausado;const b=tourEl.querySelector('.tpausa');b.textContent=tourPausado?'▶ Seguir':'⏸ Pausa';tourEl.classList.toggle('pausado',tourPausado);
@@ -1579,7 +1580,7 @@ function tourIr(i){if(i<0)return;if(i>=TOUR.length){tourFin();return}tourI=i;con
  const bar=tourEl.querySelector('.tbar i');bar.style.transition='none';bar.style.width=(i/TOUR.length*100)+'%';
  const voz=tourHabla(i);let listo=Promise.resolve();
  if(st.demo)listo=tourDemo(st,seq);
- else setTimeout(()=>{if(seq!==tourSeq)return;tourSpot(st.ver?tourBusca(st.ver,!!st.dia):document.querySelector(st.sel),st)},120);
+ else setTimeout(()=>{if(seq!==tourSeq)return;tourSpot(st.ver?tourBusca(st.ver,!!st.dia):st.sel?document.querySelector(st.sel):null,st)},120);
  Promise.all([voz,listo]).then(()=>{if(seq!==tourSeq||tourPausado)return;bar.style.transition='width .5s';bar.style.width=((i+1)/TOUR.length*100)+'%';
   if(i<TOUR.length-1)setTimeout(()=>{if(seq===tourSeq&&!tourPausado)tourIr(i+1)},st.demo?1400:700)})}
 function tourDemo(st,seq){return new Promise(listo=>tourDemo0(st,seq,listo))}
@@ -1603,14 +1604,16 @@ function tourHabla(i){tourCalla();const st=TOUR[i];const my=vozSeq;
    try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(vozTxt(st.t));const v=liaVoice();if(v){u.voice=v;u.lang=v.lang}else u.lang='es-MX';u.rate=1;u.pitch=1.12;
     u.onstart=()=>document.body.classList.add('lia-talk');u.onend=u.onerror=done;speechSynthesis.speak(u)}catch(e){tourEspera(st.t).then(done)}};
   if(st.a){const a=new Audio('guia/'+st.a+'.mp3');tourHabla.a=a;a.onplay=()=>document.body.classList.add('lia-talk');a.onended=done;a.onerror=navegador;a.play().catch(navegador);return}
-  if(aiCode()){const parts=tourPartes[i]||vozTrozos(vozTxt(st.t));let k=0;ctxOn();
-   const sig=()=>{if(my!==vozSeq)return done();if(k>=parts.length)return done();const n=k++;vozIA(parts[n]).then(j=>{if(my!==vozSeq)return done();if(!(j&&playPCM(j,sig))){if(n===0)navegador();else done()}})};
-   sig();return}
-  navegador()})}
-// Pide por adelantado la voz de todos los pasos (queda guardada), así no hay silencios entre pasos.
-const tourPartes={};
-function tourPrecarga(){if(!aiCode()||S.voice===false)return;TOUR.forEach((st,i)=>{if(st.a)return;tourPartes[i]=vozTrozos(vozTxt(st.t))});
- const cola=[];for(const i in tourPartes)for(const p of tourPartes[i])cola.push(p);const uno=()=>{const p=cola.shift();if(p)vozIA(p).catch(()=>{}).finally(uno)};uno();uno();uno()}
+  ctxOn();guiaVoz(st.t).then(j=>{if(my!==vozSeq)return done();if(!(j&&playPCM(j,done)))navegador()})})}
+// Voz de Lía para los pasos del recorrido: el servidor la crea una sola vez y la guarda para todas las mamás;
+// aquí además queda guardada en el celular. Así todo el recorrido tiene la misma voz suave.
+const guiaPend={};
+function guiaVoz(t){if(guiaPend[t])return guiaPend[t];const key='/guia-voz/'+encodeURIComponent(t);
+ const pr=(async()=>{let cache=null;try{cache=await caches.open('lia-guia-v1');const hit=await cache.match(key);if(hit)return await hit.json()}catch(e){}
+  for(let n=0;n<2;n++){try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'guia_voz',texto:t})});
+   if(r.ok){const j=await r.json();if(j&&j.audio){try{if(cache)await cache.put(key,new Response(JSON.stringify(j),{headers:{'content-type':'application/json'}}))}catch(e){}return j}}if(r.status===404)return null}catch(e){}}
+  return null})();guiaPend[t]=pr;pr.then(j=>{if(!j)delete guiaPend[t]});return pr}
+function tourPrecarga(){if(S.voice===false)return;const cola=TOUR.filter(st=>!st.a).map(st=>st.t);const uno=()=>{const t=cola.shift();if(t)guiaVoz(t).finally(uno)};uno();uno()}
 function tourFin(){try{localStorage.setItem('md-tour2','1')}catch(e){}tourSeq++;if(tourEl){tourEl.classList.remove('bienv');const w=tourEl.querySelector('.tbienv');if(w)w.hidden=true}tourPausado=false;if(tourEl)tourEl.hidden=true;tourCalla();tourI=-1;
  if(tourSnap){try{const o=JSON.parse(tourSnap);for(const k of Object.keys(S))if(!(k in o))delete S[k];Object.assign(S,o)}catch(e){}tourSnap=null}foodSeg='menu';selDay=ymd(new Date());S.tab='hoy';save();render()}
 /* ====================== bienvenida ====================== */

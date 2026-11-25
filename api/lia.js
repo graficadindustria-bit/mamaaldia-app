@@ -3,6 +3,19 @@
 // que el organizador de la app convierte en agenda, medicamentos, compras y gastos.
 const crypto = require('crypto');
 const { tipoDe, crearPro } = require('./_codigos');
+const { GUIA_VOCES } = require('./_guia');
+// Voces del recorrido guiado: se crean una sola vez con la voz de Lía y quedan guardadas (Vercel Blob) para todas las mamás.
+let blob = null; try { blob = require('@vercel/blob'); } catch (e) {}
+const hayBlob = () => blob && (process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+async function guiaLeer(h) {
+  if (!hayBlob()) return null;
+  try { const r = await blob.get('guia-voz/' + h + '.json', { access: 'private', useCache: false }); if (!r || r.statusCode !== 200) return null; return JSON.parse(await new Response(r.stream).text()); } catch (e) { return null; }
+}
+async function guiaGuardar(h, o) {
+  if (!hayBlob()) return;
+  try { await blob.put('guia-voz/' + h + '.json', JSON.stringify(o), { access: 'private', contentType: 'application/json', allowOverwrite: true, addRandomSuffix: false }); } catch (e) {}
+}
+const guiaMemo = {};
 const LIMITE = { creador: 300, invitada: 80, pro: 60, prueba: 40 }; // mensajes por día (mejor esfuerzo)
 const PRUEBA_SEMANA = 10, PRUEBA_TOTAL_DIA = 400, DIAS_PRUEBA = 40, PRUEBAS_NUEVAS_DIA = 300; // plan Gratis: 10 mensajes con IA por semana y por celular; tope total por día
 // Contador: en Redis (Upstash) si está conectado; si no, en memoria (mejor esfuerzo).
@@ -194,7 +207,18 @@ module.exports = async (req, res) => {
   let b = req.body;
   if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } }
   b = b || {};
+  // Voz de un paso del recorrido guiado (sin código: solo textos del recorrido, que se crean una vez y se guardan)
+  let guiaH = '';
+  if (b.modo === 'guia_voz') {
+    const t = String(b.texto || '');
+    guiaH = crypto.createHash('sha256').update(t).digest('hex').slice(0, 32);
+    if (!GUIA_VOCES.includes(guiaH)) return res.status(404).json({ error: 'no-es-del-recorrido' });
+    const ya = guiaMemo[guiaH] || await guiaLeer(guiaH);
+    if (ya && ya.audio) { guiaMemo[guiaH] = ya; return res.status(200).json(ya); }
+    b.modo = 'voz'; b.texto = t; b.codigo = '';
+  }
   let cod = b.codigo ? tipoDe(b.codigo) : null;
+  if (guiaH) cod = { tipo: 'guia', h: guiaH };
   const disp = /^[a-z0-9]{12,40}$/i.test(String(b.dispositivo || '')) ? String(b.dispositivo) : '';
   // Prueba completa de 40 días: se entrega una vez por celular (y hasta PRUEBAS_NUEVAS_DIA por día en total)
   if (b.modo === 'prueba_40' && !b.codigo) {
@@ -300,7 +324,9 @@ module.exports = async (req, res) => {
         if (r2 && r2.ok) { const j2 = await r2.json(); const p2 = ((((j2.candidates || [])[0] || {}).content || {}).parts || []).find(p => p.inlineData); if (p2 && largo(p2) < largo(part)) { part = p2; j = j2; } }
       }
       const rate = +((/rate=(\d+)/.exec(part.inlineData.mimeType || '') || [])[1] || 24000);
-      return res.status(200).json({ audio: part.inlineData.data, mime: part.inlineData.mimeType, rate, modelo: pedir.ultimo });
+      const sal = { audio: part.inlineData.data, mime: part.inlineData.mimeType, rate, modelo: pedir.ultimo };
+      if (guiaH) { guiaMemo[guiaH] = sal; await guiaGuardar(guiaH, sal); }
+      return res.status(200).json(sal);
     } catch (e) { return res.status(502).json({ error: 'red' }); }
   }
 

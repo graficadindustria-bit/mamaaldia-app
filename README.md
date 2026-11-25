@@ -17,3 +17,6 @@ Reloj: cron-job.org cada minuto llama a /api/avisos?tick=1. Guarda los avisos en
 - Gratis: sin código. Lía con IA de prueba: 10 mensajes de texto por semana por celular (tope total por día). Se cuenta en Redis si está conectado.
 - Pro: códigos `MD-P...` que llevan su fecha de vencimiento y una firma. Se crean desde la app (Ajustes › Crear código Pro) con el código de creador. La firma usa `PRO_SECRETO` o, si no existe, una clave derivada de `GEMINI_API_KEY` (si se cambia esa clave, los códigos Pro dejan de valer).
 - Número de WhatsApp para pagar: constante `WA_PRO` en index.html.
+
+## Voz del recorrido guiado
+Los pasos con `a:N` usan `guia/N.mp3`. Los demás piden su voz a `/api/lia` (modo `guia_voz`): el servidor la crea una sola vez con la voz de Lía y la guarda en Vercel Blob (`guia-voz/`). Solo acepta textos cuya huella está en `api/_guia.js`. Si cambias un texto del recorrido, regenera esa lista con el script de node que lee `const TOUR=[...]` de index.html.
