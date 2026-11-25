@@ -223,6 +223,8 @@ dialog h3{font-size:19px;margin-bottom:4px}
 .tcard.arriba{bottom:auto;top:calc(16px + env(safe-area-inset-top,0px))}
 .tcard .tt{margin:0;font-size:16px;line-height:1.45}
 .tcard .tb{display:flex;gap:8px;align-items:center}
+.tbar{height:4px;border-radius:4px;background:var(--line);overflow:hidden}.tbar i{display:block;height:100%;width:0;background:var(--accent)}
+.tour.pausado .tspot{outline-style:dashed}
 @media (prefers-reduced-motion:reduce){.tspot{transition:none}}
 </style>
 </head>
@@ -1539,8 +1541,11 @@ const TOUR=[
  {a:6,tab:'lia',sel:'.chatwrap',wake:1,t:'Y si no quieres tocar nada, usa Hola Lía. Ya viene activado: con la app abierta, solo di Hola Lía, y empiezo a escucharte. Cuando terminas de hablar, lo envío sola. Si lo apagaste, actívalo con este botón o en Ajustes.'},
  {tab:'comidas',sel:'header .iconbtn',t:'En Ajustes enciendes los avisos, ves tu plan, Gratis o Pro, y cambias los colores. Los ejemplos que vimos se borran al terminar, tus datos quedan como estaban. Listo, ya conoces la app. Aquí estoy cuando me necesites.'}];
 let tourI=-1,tourEl=null,tourSnap=null,tourSeq=0;
-function tourIni(){try{localStorage.setItem('md-tour','1')}catch(e){}tourI=-1;if(!tourEl){tourEl=document.createElement('div');tourEl.className='tour';tourEl.innerHTML='<div class="tspot"></div><div class="tcard" role="dialog" aria-live="polite"><div class="tn tiny muted"></div><p class="tt"></p><div class="tb"><button class="btn ghost sm" onclick="tourFin()">Salir</button><span style="flex:1"></span><button class="btn ghost sm" onclick="tourIr(tourI-1)">Atrás</button><button class="btn sm" onclick="tourIr(tourI+1)">Siguiente</button></div></div>';document.body.appendChild(tourEl)}
- if(!tourSnap){try{save()}catch(e){}tourSnap=JSON.stringify(S)}tourEl.hidden=false;tourIr(0)}
+function tourIni(){try{localStorage.setItem('md-tour','1')}catch(e){}tourI=-1;if(!tourEl){tourEl=document.createElement('div');tourEl.className='tour';tourEl.innerHTML='<div class="tspot"></div><div class="tcard" role="dialog" aria-live="polite"><div class="tn tiny muted"></div><p class="tt"></p><div class="tbar"><i></i></div><div class="tb"><button class="btn ghost sm" onclick="tourFin()">Salir</button><span style="flex:1"></span><button class="btn ghost sm" onclick="tourIr(tourI-1)" aria-label="Paso anterior">◀</button><button class="btn ghost sm tpausa" onclick="tourPausa()">⏸ Pausa</button><button class="btn sm tsig" onclick="tourIr(tourI+1)" aria-label="Paso siguiente">▶</button></div></div>';document.body.appendChild(tourEl)}
+ if(!tourSnap){try{save()}catch(e){}tourSnap=JSON.stringify(S)}tourPausado=false;tourEl.hidden=false;try{ctxOn()}catch(e){}tourPrecarga();tourIr(0)}
+let tourPausado=false;
+function tourPausa(){tourPausado=!tourPausado;const b=tourEl.querySelector('.tpausa');b.textContent=tourPausado?'▶ Seguir':'⏸ Pausa';tourEl.classList.toggle('pausado',tourPausado);
+ if(tourPausado){tourSeq++;tourCalla()}else tourIr(tourI)}
 function tourBusca(txt,primero){const m=$('main')||document;const w=m.clientWidth||innerWidth;
  const hojas=[...m.querySelectorAll('*')].filter(e=>e.offsetHeight&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim().startsWith(txt)));
  let e=primero?hojas[0]:hojas[hojas.length-1];if(!e)return null;while(e.parentElement&&e!==m&&(e.offsetHeight<40||e.offsetWidth<w*.6))e=e.parentElement;return e}
@@ -1555,21 +1560,44 @@ function tourIr(i){if(i<0)return;if(i>=TOUR.length){tourFin();return}tourI=i;con
  if(S.tab!==st.tab||st.seg||st.dia){S.tab=st.tab;render()}
  tourEl.querySelector('.tn').textContent=`Paso ${i+1} de ${TOUR.length}`;tourEl.querySelector('.tt').textContent=st.t;
  {const c=tourEl.querySelector('.tcard');const v=c.querySelector('.tw');if(v)v.remove();if(st.wake&&SRc()&&!S.wake){const b=document.createElement('button');b.className='btn soft sm tw';b.textContent='🎙️ Activar "Hola Lía"';b.onclick=activarHolaLia;c.insertBefore(b,c.querySelector('.tb'))}}
- tourEl.querySelector('.tb .btn:not(.ghost)').textContent=i===TOUR.length-1?'Terminar':'Siguiente';tourHabla(i);
- if(st.demo){tourDemo(st,seq);return}
- setTimeout(()=>{if(seq!==tourSeq)return;tourSpot(st.ver?tourBusca(st.ver,!!st.dia):document.querySelector(st.sel),st)},120)}
-function tourDemo(st,seq){const box=()=>$('#ci');tourSpot(document.querySelector('.composer form.ask')||box(),st);
+ {const sg=tourEl.querySelector('.tsig');sg.textContent=i===TOUR.length-1?'Terminar':'▶';sg.setAttribute('aria-label',i===TOUR.length-1?'Terminar':'Paso siguiente')}
+ tourEl.classList.remove('pausado');tourPausado=false;tourEl.querySelector('.tpausa').textContent='⏸ Pausa';
+ const bar=tourEl.querySelector('.tbar i');bar.style.transition='none';bar.style.width=(i/TOUR.length*100)+'%';
+ const voz=tourHabla(i);let listo=Promise.resolve();
+ if(st.demo)listo=tourDemo(st,seq);
+ else setTimeout(()=>{if(seq!==tourSeq)return;tourSpot(st.ver?tourBusca(st.ver,!!st.dia):document.querySelector(st.sel),st)},120);
+ Promise.all([voz,listo]).then(()=>{if(seq!==tourSeq||tourPausado)return;bar.style.transition='width .5s';bar.style.width=((i+1)/TOUR.length*100)+'%';
+  if(i<TOUR.length-1)setTimeout(()=>{if(seq===tourSeq&&!tourPausado)tourIr(i+1)},st.demo?1400:700)})}
+function tourDemo(st,seq){return new Promise(listo=>tourDemo0(st,seq,listo))}
+function tourDemo0(st,seq,listo){const box=()=>$('#ci');tourSpot(document.querySelector('.composer form.ask')||box(),st);
  // si ya se hizo este ejemplo (volviendo con "Atrás"), solo se muestra
- const ya=S.chat.findIndex(m=>m.tour===st.demo);if(ya>=0){setTimeout(()=>{if(seq===tourSeq)tourSpot(tourUltima(),st)},400);return}
- let k=0;const t=st.demo;const paso=()=>{if(seq!==tourSeq)return;const i=box();if(!i)return;i.value=t.slice(0,++k);if(k<t.length)setTimeout(paso,45);else setTimeout(enviar,650)};
+ const ya=S.chat.findIndex(m=>m.tour===st.demo);if(ya>=0){setTimeout(()=>{if(seq===tourSeq)tourSpot(tourUltima(),st);listo()},400);return}
+ let k=0;const t=st.demo;const paso=()=>{if(seq!==tourSeq)return listo();const i=box();if(!i)return listo();i.value=t.slice(0,++k);if(k<t.length)setTimeout(paso,38);else setTimeout(enviar,450)};
  const enviar=()=>{if(seq!==tourSeq)return;const i=box();if(i)i.value='';S.chat.push({id:uid(),from:'me',text:t,ts:Date.now(),tour:t});if(!menuBasico(t))liaReply(t);render();
-  const m=$('.msgs');if(m)m.scrollTop=m.scrollHeight;setTimeout(()=>{if(seq===tourSeq)tourSpot(tourUltima(),st)},250)};
- setTimeout(paso,900)}
+  const m=$('.msgs');if(m)m.scrollTop=m.scrollHeight;setTimeout(()=>{if(seq===tourSeq)tourSpot(tourUltima(),st);listo()},250)};
+ setTimeout(paso,500)}
 function tourUltima(){const r=document.querySelectorAll('.msgs .lia-row');return r[r.length-1]||$('.chatwrap')}
-function tourHabla(i){vozSeq++;try{if(vozSrc)vozSrc.stop()}catch(e){}try{speechSynthesis.cancel()}catch(e){}try{if(tourHabla.a)tourHabla.a.pause()}catch(e){}if(S.voice===false)return;
- const st=TOUR[i];if(!st.a){speak(st.t);return}
- const a=new Audio('guia/'+st.a+'.mp3');tourHabla.a=a;a.onplay=()=>document.body.classList.add('lia-talk');a.onended=a.onpause=()=>document.body.classList.remove('lia-talk');a.play().catch(()=>{if(tourI===i)speak(st.t)})}
-function tourFin(){tourSeq++;if(tourEl)tourEl.hidden=true;try{if(tourHabla.a)tourHabla.a.pause()}catch(e){}vozSeq++;try{if(vozSrc)vozSrc.stop()}catch(e){}tourI=-1;
+// Voz del recorrido: termina (resuelve) cuando Lía acaba de hablar, así el paso avanza solo.
+function tourCalla(){vozSeq++;try{if(vozSrc)vozSrc.stop()}catch(e){}try{speechSynthesis.cancel()}catch(e){}try{if(tourHabla.a){tourHabla.a.onended=tourHabla.a.onerror=null;tourHabla.a.pause()}}catch(e){}document.body.classList.remove('lia-talk')}
+function tourEspera(t){return new Promise(r=>setTimeout(r,Math.max(2500,String(t).length*62)))}
+function tourHabla(i){tourCalla();const st=TOUR[i];const my=vozSeq;
+ if(S.voice===false)return tourEspera(st.t);
+ return new Promise(fin=>{let hecho=false;const ok=()=>{if(hecho)return;hecho=true;document.body.classList.remove('lia-talk');fin()};
+  // seguro: si la voz no suena (celular en silencio, sin permiso), igual avanza
+  const seguro=setTimeout(ok,Math.max(7000,st.t.length*95));const done=()=>{clearTimeout(seguro);ok()};
+  const navegador=()=>{if(my!==vozSeq)return done();if(!('speechSynthesis' in window)){tourEspera(st.t).then(done);return}
+   try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(vozTxt(st.t));const v=liaVoice();if(v){u.voice=v;u.lang=v.lang}else u.lang='es-MX';u.rate=1;u.pitch=1.12;
+    u.onstart=()=>document.body.classList.add('lia-talk');u.onend=u.onerror=done;speechSynthesis.speak(u)}catch(e){tourEspera(st.t).then(done)}};
+  if(st.a){const a=new Audio('guia/'+st.a+'.mp3');tourHabla.a=a;a.onplay=()=>document.body.classList.add('lia-talk');a.onended=done;a.onerror=navegador;a.play().catch(navegador);return}
+  if(aiCode()){const parts=tourPartes[i]||vozTrozos(vozTxt(st.t));let k=0;ctxOn();
+   const sig=()=>{if(my!==vozSeq)return done();if(k>=parts.length)return done();const n=k++;vozIA(parts[n]).then(j=>{if(my!==vozSeq)return done();if(!(j&&playPCM(j,sig))){if(n===0)navegador();else done()}})};
+   sig();return}
+  navegador()})}
+// Pide por adelantado la voz de todos los pasos (queda guardada), así no hay silencios entre pasos.
+const tourPartes={};
+function tourPrecarga(){if(!aiCode()||S.voice===false)return;TOUR.forEach((st,i)=>{if(st.a)return;tourPartes[i]=vozTrozos(vozTxt(st.t))});
+ const cola=[];for(const i in tourPartes)for(const p of tourPartes[i])cola.push(p);const uno=()=>{const p=cola.shift();if(p)vozIA(p).catch(()=>{}).finally(uno)};uno();uno();uno()}
+function tourFin(){tourSeq++;tourPausado=false;if(tourEl)tourEl.hidden=true;tourCalla();tourI=-1;
  if(tourSnap){try{const o=JSON.parse(tourSnap);for(const k of Object.keys(S))if(!(k in o))delete S[k];Object.assign(S,o)}catch(e){}tourSnap=null}foodSeg='menu';selDay=ymd(new Date());S.tab='hoy';save();render()}
 /* ====================== bienvenida ====================== */
 function renderWelcome(){
