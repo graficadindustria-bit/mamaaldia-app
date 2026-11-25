@@ -790,7 +790,7 @@ const CODE_KEY='mamaaldia-codigo';
 function aiCode(){try{return localStorage.getItem(CODE_KEY)||''}catch(e){return ''}}
 function setCode(c){try{if(c)localStorage.setItem(CODE_KEY,c);else localStorage.removeItem(CODE_KEY)}catch(e){}}
 /* ---- planes: Gratis, Pro y Familia ---- */
-const WA_PRO='';// número de WhatsApp para pagar el Pro (con código de país, solo números, ej. 5917xxxxxxx). Vacío: se pide el código a quien recomendó la app.
+const WA_PRO='59178794833';// número de WhatsApp para pagar el Pro (con código de país, solo números, ej. 5917xxxxxxx). Vacío: se pide el código a quien recomendó la app.
 const PLAN_KEY='mamaaldia-plan';
 function plan(){try{return JSON.parse(localStorage.getItem(PLAN_KEY)||'null')||{}}catch(e){return {}}}
 function setPlan(o){try{localStorage.setItem(PLAN_KEY,JSON.stringify(Object.assign(plan(),o)))}catch(e){}}
