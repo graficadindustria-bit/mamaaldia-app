@@ -19,29 +19,31 @@ function secreto() {
   return s ? crypto.createHash('sha256').update(s).digest() : null;
 }
 const AZ = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // sin I ni O para no confundir con 1 y 0
-function firma(cuerpo) {
+function firma(cuerpo, clase) {
   const k = secreto(); if (!k) return '';
-  const d = crypto.createHmac('sha256', k).update('pro:' + cuerpo).digest();
+  const d = crypto.createHmac('sha256', k).update((clase === 'T' ? 'prueba:' : 'pro:') + cuerpo).digest();
   let o = ''; for (let i = 0; i < 6; i++) o += AZ[d[i] % AZ.length]; return o;
 }
 const ymd = dias => new Date(dias * 86400000).toISOString().slice(0, 10);
-function crearPro(dias) {
+// clase 'P' = Pro pagado; clase 'T' = prueba completa de 40 días (se entrega sola a cada celular nuevo)
+function crearPro(dias, clase) {
+  clase = clase === 'T' ? 'T' : 'P';
   const vence = Math.floor(Date.now() / 86400000) + Math.max(1, Math.min(800, Math.round(dias)));
   const v = vence.toString(36).toUpperCase().padStart(4, '0');
   let r = ''; const b = crypto.randomBytes(3); for (let i = 0; i < 3; i++) r += AZ[b[i] % AZ.length];
-  const f = firma(v + r); if (!f) return null;
-  return { codigo: 'MD-P' + v + r + f, vence: ymd(vence) };
+  const f = firma(v + r, clase); if (!f) return null;
+  return { codigo: 'MD-' + clase + v + r + f, vence: ymd(vence) };
 }
 // Devuelve { tipo, vence?, h } o null si el código no vale. tipo: creador | invitada | pro | vencido
 function tipoDe(codigo) {
   const c = norm(codigo), h = hashDe(c);
   if (CODIGOS[h]) return { tipo: CODIGOS[h], h };
-  const m = /^MD-P([0-9A-Z]{4})([0-9A-Z]{3})([0-9A-Z]{6})$/.exec(c);
+  const m = /^MD-([PT])([0-9A-Z]{4})([0-9A-Z]{3})([0-9A-Z]{6})$/.exec(c);
   if (!m) return null;
-  const f = firma(m[1] + m[2]);
-  if (!f || !crypto.timingSafeEqual(Buffer.from(f), Buffer.from(m[3]))) return null;
-  const vence = parseInt(m[1], 36);
-  if (Math.floor(Date.now() / 86400000) > vence) return { tipo: 'vencido', vence: ymd(vence), h };
-  return { tipo: 'pro', vence: ymd(vence), h };
+  const f = firma(m[2] + m[3], m[1]);
+  if (!f || !crypto.timingSafeEqual(Buffer.from(f), Buffer.from(m[4]))) return null;
+  const vence = parseInt(m[2], 36), prueba = m[1] === 'T';
+  if (Math.floor(Date.now() / 86400000) > vence) return { tipo: 'vencido', prueba, vence: ymd(vence), h };
+  return { tipo: prueba ? 'prueba' : 'pro', vence: ymd(vence), h };
 }
 module.exports = { CODIGOS, tipoDe, crearPro, hashDe };

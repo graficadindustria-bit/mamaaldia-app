@@ -3,8 +3,8 @@
 // que el organizador de la app convierte en agenda, medicamentos, compras y gastos.
 const crypto = require('crypto');
 const { tipoDe, crearPro } = require('./_codigos');
-const LIMITE = { creador: 300, invitada: 80, pro: 60 }; // mensajes por día (mejor esfuerzo)
-const PRUEBA_SEMANA = 10, PRUEBA_TOTAL_DIA = 400; // plan Gratis: 10 mensajes con IA por semana y por celular; tope total por día
+const LIMITE = { creador: 300, invitada: 80, pro: 60, prueba: 40 }; // mensajes por día (mejor esfuerzo)
+const PRUEBA_SEMANA = 10, PRUEBA_TOTAL_DIA = 400, DIAS_PRUEBA = 40, PRUEBAS_NUEVAS_DIA = 300; // plan Gratis: 10 mensajes con IA por semana y por celular; tope total por día
 // Contador: en Redis (Upstash) si está conectado; si no, en memoria (mejor esfuerzo).
 const RURL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL, RTOK = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const memo = {};
@@ -181,7 +181,7 @@ Si solo deja indicado un medicamento que ya le recetaron (nombre, dosis y frecue
 Seguridad infantil, nunca lo recomiendes: collares o pulseras de ámbar o dentición (riesgo de asfixia), miel a menores de 1 año, geles con benzocaína, almohadas o protectores en la cuna de bebés, andadores, jarabes para la tos en menores de 2 años. Si ella lo menciona, explícale con cariño por qué no y da una alternativa segura.
 Si pide una dieta vegana o vegetariana para un bebé o niño pequeño, ayúdala con respeto y recuérdale en una frase controlar hierro y vitamina B12 con su pediatra.
 No recomiendes médicos, clínicas ni negocios con nombre propio como "el mejor"; sugiere qué buscar (pediatra con buenas referencias, cerca de su zona) y que puede usar la búsqueda de lugares de la app.
-Si pregunta cuánto cuesta la app o sus planes: el plan Gratis cuesta Bs 0 y trae agenda, remedios con avisos, menú, compras, gastos, precios y lugares, más 10 mensajes por semana con Lía con IA para probar. El plan Pro cuesta Bs 29 al mes o Bs 249 al año y trae Lía con IA (notas de voz, fotos, menú según la edad de cada hijo). Las primeras 100 mamás (Mamás fundadoras) pagan Bs 19 al mes. Dile que lo ve todo en Ajustes, en «Planes». No inventes otros precios.
+Si pregunta cuánto cuesta la app o sus planes: toda mamá nueva tiene 40 días de prueba completa (todo lo del plan Pro, gratis). Después, el plan Gratis cuesta Bs 0 y trae agenda, remedios con avisos, menú, compras, gastos, precios y lugares, más 10 mensajes por semana con Lía con IA para probar. El plan Pro cuesta Bs 29 al mes o Bs 249 al año y trae Lía con IA (notas de voz, fotos, menú según la edad de cada hijo). Las primeras 100 mamás (Mamás fundadoras) pagan Bs 19 al mes. Dile que lo ve todo en Ajustes, en «Planes». No inventes otros precios.
 Escribe para que cualquier mamá entienda, con palabras simples; si ella escribe sin tildes o con faltas, no la corrijas.
 Usa la frase "¿Cómo voy esta semana?" solo si pregunta por sus gastos o su semana, y no la repitas dentro de "respuesta".
 
@@ -196,9 +196,19 @@ module.exports = async (req, res) => {
   b = b || {};
   let cod = b.codigo ? tipoDe(b.codigo) : null;
   const disp = /^[a-z0-9]{12,40}$/i.test(String(b.dispositivo || '')) ? String(b.dispositivo) : '';
+  // Prueba completa de 40 días: se entrega una vez por celular (y hasta PRUEBAS_NUEVAS_DIA por día en total)
+  if (b.modo === 'prueba_40' && !b.codigo) {
+    if (!disp) return res.status(400).json({ error: 'dispositivo' });
+    const dh = crypto.createHash('sha256').update('disp:' + disp).digest('hex').slice(0, 24);
+    if (await contar('mad:prueba40:' + dh, 400 * 86400) > 1) return res.status(409).json({ error: 'ya-usada' });
+    if (await contar('mad:prueba40-dia:' + new Date().toISOString().slice(0, 10), 2 * 86400) > PRUEBAS_NUEVAS_DIA) return res.status(429).json({ error: 'limite' });
+    const n = crearPro(DIAS_PRUEBA, 'T');
+    if (!n) return res.status(503).json({ error: 'sin-clave' });
+    return res.status(200).json(n);
+  }
   if (!b.codigo && disp && !b.modo && !b.audio && !b.imagen) cod = { tipo: 'gratis', h: crypto.createHash('sha256').update('disp:' + disp).digest('hex') };
   if (!cod) return res.status(401).json({ error: 'codigo' });
-  if (cod.tipo === 'vencido') return res.status(401).json({ error: 'vencido', vence: cod.vence });
+  if (cod.tipo === 'vencido') return res.status(401).json({ error: 'vencido', prueba: !!cod.prueba, vence: cod.vence });
   const tipo = cod.tipo, h = cod.h;
   if (b.modo === 'probar') return res.status(200).json({ ok: true, tipo, vence: cod.vence || null, ia: !!process.env.GEMINI_API_KEY });
   if (b.modo === 'crear_pro') {
