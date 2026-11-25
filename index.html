@@ -221,6 +221,9 @@ dialog h3{font-size:19px;margin-bottom:4px}
 .tspot{position:fixed;border-radius:18px;box-shadow:0 0 0 9999px rgba(40,28,24,.55);transition:all .35s ease;pointer-events:none;outline:3px solid var(--accent2)}
 .tcard{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:480px;margin:0 auto;background:var(--surface);color:var(--ink);border-radius:20px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:6px}
 .tcard.arriba{bottom:auto;top:calc(16px + env(safe-area-inset-top,0px))}
+.tour.bienv .tcard,.tour.bienv .tspot{display:none}.tour.bienv{background:rgba(40,28,24,.55)}
+.tbienv{position:fixed;left:16px;right:16px;top:50%;transform:translateY(-50%);max-width:420px;margin:0 auto;background:var(--surface);color:var(--ink);border-radius:24px;padding:22px 20px;box-shadow:0 14px 40px rgba(0,0,0,.3);text-align:center}
+.tbienv .av{width:84px;height:84px;margin:0 auto 6px}.tbienv .av canvas{width:84px;height:84px}.tbienv h3{margin:6px 0 8px;font-size:22px}.tbienv p{margin:0 0 10px;line-height:1.45}.tbienv .btn{margin-top:6px}
 .tcard .tt{margin:0;font-size:16px;line-height:1.45}
 .tcard .tb{display:flex;gap:8px;align-items:center}
 .tbar{height:4px;border-radius:4px;background:var(--line);overflow:hidden}.tbar i{display:block;height:100%;width:0;background:var(--accent)}
@@ -1543,7 +1546,15 @@ const TOUR=[
  {tab:'comidas',sel:'header .iconbtn',t:'En Ajustes enciendes los avisos, ves tu plan, Gratis o Pro, y cambias los colores. Los ejemplos que vimos se borran al terminar, tus datos quedan como estaban. Listo, ya conoces la app. Aquí estoy cuando me necesites.'}];
 let tourI=-1,tourEl=null,tourSnap=null,tourSeq=0;
 function tourIni(){tourI=-1;if(!tourEl){tourEl=document.createElement('div');tourEl.className='tour';tourEl.innerHTML='<div class="tspot"></div><div class="tcard" role="dialog" aria-live="polite"><div class="tn tiny muted"></div><p class="tt"></p><div class="tbar"><i></i></div><div class="tb"><button class="btn ghost sm" onclick="tourFin()">Salir</button><span style="flex:1"></span><button class="btn ghost sm" onclick="tourIr(tourI-1)" aria-label="Paso anterior">◀</button><button class="btn ghost sm tpausa" onclick="tourPausa()">⏸ Pausa</button><button class="btn sm tsig" onclick="tourIr(tourI+1)" aria-label="Paso siguiente">▶</button></div></div>';document.body.appendChild(tourEl)}
- if(!tourSnap){try{save()}catch(e){}tourSnap=JSON.stringify(S)}tourPausado=false;tourEl.hidden=false;try{ctxOn()}catch(e){}tourPrecarga();tourIr(0)}
+ if(!tourSnap){try{save()}catch(e){}tourSnap=JSON.stringify(S)}tourPausado=false;tourEl.hidden=false;try{ctxOn()}catch(e){}tourPrecarga();tourBienvenida()}
+// Pantalla de bienvenida: saluda y espera un toque (ese toque también deja lista la voz de Lía en el celular)
+function tourBienvenida(){tourI=-1;tourSeq++;const sp=tourEl.querySelector('.tspot');sp.style.cssText='top:50%;left:50%;width:0;height:0';tourEl.classList.add('bienv');
+ let w=tourEl.querySelector('.tbienv');if(!w){w=document.createElement('div');w.className='tbienv';w.setAttribute('role','dialog');tourEl.appendChild(w)}
+ const nom=(S.profile&&S.profile.mom)?', '+esc(S.profile.mom):'';
+ w.innerHTML=`<div class="av hi">${LIA}</div><h3>¡Hola${nom}! 🌸</h3><p>Gracias por instalar <b>Mamá al Día</b>. Soy Lía, tu asistente.</p><p>Te muestro en un recorrido corto cómo se usa la app: yo escribo los ejemplos y te llevo a ver dónde se guarda cada cosa. Tú solo mira, avanza sola.</p>
+ <button class="btn block" onclick="tourEmpieza()">▶ Empezar recorrido</button><button class="btn ghost block" style="margin-top:8px" onclick="tourFin()">Ahora no</button><div class="tiny muted" style="margin-top:8px">Puedes verlo cuando quieras en Ajustes › Novedades.</div>`;
+ w.hidden=false;try{speak('¡Hola'+(S.profile&&S.profile.mom?', '+S.profile.mom:'')+'! Gracias por instalar Mamá al Día. Soy Lía, tu asistente. Te muestro en un recorrido corto cómo se usa la app.')}catch(e){}}
+function tourEmpieza(){try{ctxOn()}catch(e){}try{vozSeq++;if(vozSrc)vozSrc.stop();speechSynthesis.cancel()}catch(e){}tourEl.classList.remove('bienv');const w=tourEl.querySelector('.tbienv');if(w)w.hidden=true;tourIr(0)}
 let tourPausado=false;
 function tourPausa(){tourPausado=!tourPausado;const b=tourEl.querySelector('.tpausa');b.textContent=tourPausado?'▶ Seguir':'⏸ Pausa';tourEl.classList.toggle('pausado',tourPausado);
  if(tourPausado){tourSeq++;tourCalla()}else tourIr(tourI)}
@@ -1600,7 +1611,7 @@ function tourHabla(i){tourCalla();const st=TOUR[i];const my=vozSeq;
 const tourPartes={};
 function tourPrecarga(){if(!aiCode()||S.voice===false)return;TOUR.forEach((st,i)=>{if(st.a)return;tourPartes[i]=vozTrozos(vozTxt(st.t))});
  const cola=[];for(const i in tourPartes)for(const p of tourPartes[i])cola.push(p);const uno=()=>{const p=cola.shift();if(p)vozIA(p).catch(()=>{}).finally(uno)};uno();uno();uno()}
-function tourFin(){try{localStorage.setItem('md-tour2','1')}catch(e){}tourSeq++;tourPausado=false;if(tourEl)tourEl.hidden=true;tourCalla();tourI=-1;
+function tourFin(){try{localStorage.setItem('md-tour2','1')}catch(e){}tourSeq++;if(tourEl){tourEl.classList.remove('bienv');const w=tourEl.querySelector('.tbienv');if(w)w.hidden=true}tourPausado=false;if(tourEl)tourEl.hidden=true;tourCalla();tourI=-1;
  if(tourSnap){try{const o=JSON.parse(tourSnap);for(const k of Object.keys(S))if(!(k in o))delete S[k];Object.assign(S,o)}catch(e){}tourSnap=null}foodSeg='menu';selDay=ymd(new Date());S.tab='hoy';save();render()}
 /* ====================== bienvenida ====================== */
 function renderWelcome(){
