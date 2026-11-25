@@ -318,7 +318,7 @@ module.exports = async (req, res) => {
       // A veces la voz agrega frases que no estaban en el texto: si el audio dura mucho más de lo esperado, se pide otra vez.
       const largo = pt => { const n = Math.floor(String(pt.inlineData.data).length * 3 / 4); return (n - (/wav/.test(pt.inlineData.mimeType || '') ? 44 : 0)) / 48000; };
       const esperado = frase.length / 13 + 1.2;
-      if (largo(part) > esperado * 1.35 && Date.now() - limiteT < -15000) {
+      if (!guiaH && largo(part) > esperado * 1.35 && Date.now() - limiteT < -15000) {
         const ult = pedir.ultimo;
         const r2 = await pedir([...new Set([ult].concat(lt))], cuerpoVoz(b.lang === undefined ? 'es-US' : b.lang), key, 15000);
         if (r2 && r2.ok) { const j2 = await r2.json(); const p2 = ((((j2.candidates || [])[0] || {}).content || {}).parts || []).find(p => p.inlineData); if (p2 && largo(p2) < largo(part)) { part = p2; j = j2; } }

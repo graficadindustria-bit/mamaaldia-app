@@ -1555,7 +1555,9 @@ function tourBienvenida(){tourI=-1;tourSeq++;const sp=tourEl.querySelector('.tsp
  w.innerHTML=`<div class="av hi">${LIA}</div><h3>¡Hola${nom}! 🌸</h3><p>Qué alegría que estés aquí. Gracias por instalar <b>Mamá al Día</b>.</p><p>Soy <b>Lía</b> y desde hoy te ayudo con las citas, los remedios, el menú, las compras y los gastos de tu familia.</p><p>¿Te muestro en un paseo de 3 minutos cómo funciona? Yo hago los ejemplos, tú solo miras. 🔊 Sube el volumen.</p>
  <button class="btn block" onclick="tourEmpieza()">▶ Sí, muéstrame</button><button class="btn ghost block" style="margin-top:8px" onclick="tourFin()">Más tarde</button><div class="tiny muted" style="margin-top:8px">Puedes verlo cuando quieras en Ajustes › Novedades.</div>`;
  w.hidden=false}
-function tourEmpieza(){try{ctxOn()}catch(e){}try{vozSeq++;if(vozSrc)vozSrc.stop();speechSynthesis.cancel()}catch(e){}tourEl.classList.remove('bienv');const w=tourEl.querySelector('.tbienv');if(w)w.hidden=true;tourIr(0)}
+async function tourEmpieza(){try{ctxOn()}catch(e){}try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}
+ const b=tourEl.querySelector('.tbienv .btn');if(b){b.disabled=true;b.textContent='Un momento, preparo la voz…'}
+ await tourElegirVoz();if(!tourEl||tourEl.hidden)return;tourEl.classList.remove('bienv');const w=tourEl.querySelector('.tbienv');if(w)w.hidden=true;tourIr(0)}
 let tourPausado=false;
 function tourPausa(){tourPausado=!tourPausado;const b=tourEl.querySelector('.tpausa');b.textContent=tourPausado?'▶ Seguir':'⏸ Pausa';tourEl.classList.toggle('pausado',tourPausado);
  if(tourPausado){tourSeq++;tourCalla()}else tourIr(tourI)}
@@ -1603,6 +1605,7 @@ function tourHabla(i){tourCalla();const st=TOUR[i];const my=vozSeq;
   const navegador=()=>{if(my!==vozSeq)return done();if(!('speechSynthesis' in window)){tourEspera(st.t).then(done);return}
    try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(vozTxt(st.t));const v=liaVoice();if(v){u.voice=v;u.lang=v.lang}else u.lang='es-MX';u.rate=1;u.pitch=1.12;
     u.onstart=()=>document.body.classList.add('lia-talk');u.onend=u.onerror=done;speechSynthesis.speak(u)}catch(e){tourEspera(st.t).then(done)}};
+  if(tourModo==='celular'){navegador();return}
   if(st.a){const a=new Audio('guia/'+st.a+'.mp3');tourHabla.a=a;a.onplay=()=>document.body.classList.add('lia-talk');a.onended=done;a.onerror=navegador;a.play().catch(navegador);return}
   ctxOn();guiaVoz(st.t).then(j=>{if(my!==vozSeq)return done();if(!(j&&playPCM(j,done)))navegador()})})}
 // Voz de Lía para los pasos del recorrido: el servidor la crea una sola vez y la guarda para todas las mamás;
@@ -1613,7 +1616,12 @@ function guiaVoz(t){if(guiaPend[t])return guiaPend[t];const key='/guia-voz/'+enc
   for(let n=0;n<2;n++){try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'guia_voz',texto:t})});
    if(r.ok){const j=await r.json();if(j&&j.audio){try{if(cache)await cache.put(key,new Response(JSON.stringify(j),{headers:{'content-type':'application/json'}}))}catch(e){}return j}}if(r.status===404)return null}catch(e){}}
   return null})();guiaPend[t]=pr;pr.then(j=>{if(!j)delete guiaPend[t]});return pr}
-function tourPrecarga(){if(S.voice===false)return;const cola=TOUR.filter(st=>!st.a).map(st=>st.t);const uno=()=>{const t=cola.shift();if(t)guiaVoz(t).finally(uno)};uno();uno()}
+let tourModo='suave',tourListo=null;
+function tourPrecarga(){if(S.voice===false){tourListo=Promise.resolve(false);return}const todos=TOUR.filter(st=>!st.a).map(st=>st.t);const cola=todos.slice();const res=[];
+ tourListo=new Promise(fin=>{let vivos=0;const uno=()=>{const t=cola.shift();if(!t){if(--vivos===0)fin(res.every(Boolean)&&res.length===todos.length);return}guiaVoz(t).then(j=>{res.push(!!j)}).finally(uno)};vivos=2;uno();uno()})}
+// Al tocar "Sí, muéstrame": si la voz suave de todos los pasos ya está lista se usa en todo el recorrido;
+// si no, todo el recorrido usa la voz del celular. Nunca se mezclan, y no hay esperas entre pasos.
+async function tourElegirVoz(){if(S.voice===false){tourModo='celular';return}const tope=new Promise(r=>setTimeout(()=>r(false),3500));let ok=false;try{ok=await Promise.race([tourListo||Promise.resolve(false),tope])}catch(e){}tourModo=ok?'suave':'celular'}
 function tourFin(){try{localStorage.setItem('md-tour2','1')}catch(e){}tourSeq++;if(tourEl){tourEl.classList.remove('bienv');const w=tourEl.querySelector('.tbienv');if(w)w.hidden=true}tourPausado=false;if(tourEl)tourEl.hidden=true;tourCalla();tourI=-1;
  if(tourSnap){try{const o=JSON.parse(tourSnap);for(const k of Object.keys(S))if(!(k in o))delete S[k];Object.assign(S,o)}catch(e){}tourSnap=null}foodSeg='menu';selDay=ymd(new Date());S.tab='hoy';save();render()}
 /* ====================== bienvenida ====================== */
