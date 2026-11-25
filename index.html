@@ -1006,7 +1006,7 @@ requestAnimationFrame(orbLoop);
 let wakeSR=null;
 function activarHolaLia(){if(!SRc()){toast('Este navegador no permite "Hola Lía". Prueba con Chrome.');return}S.wake=true;save();toast('Listo: di "Hola Lía" cuando quieras');try{wakeTick()}catch(e){}if(tourI<0)render();else{const b=document.querySelector('.tcard .tw');if(b)b.remove()}}
 function wakeStop(){const g=wakeSR;wakeSR=null;if(g){g.onend=null;try{g.abort()}catch(e){}}}
-function wakeOk(){return S&&S.wake&&SRc()&&!document.hidden&&!rec&&!busy&&!document.body.classList.contains('lia-talk')&&!($('#dlg')||{}).open}
+function wakeOk(){return S&&S.wake&&SRc()&&!tourSnap&&!document.hidden&&!rec&&!busy&&!document.body.classList.contains('lia-talk')&&!($('#dlg')||{}).open}
 let wakeWait=0,talkStuck=0;
 // Si la marca de "Lía está hablando" quedó pegada sin que nada suene, la quitamos (si no, Hola Lía no vuelve a escuchar)
 function talkCheck(){if(!document.body.classList.contains('lia-talk')){talkStuck=0;return}let sonando=!!vozSrc||!!esperaA;try{sonando=sonando||speechSynthesis.speaking}catch(e){}try{const ta=typeof tourHabla==='function'&&tourHabla.a;if(ta&&!ta.paused&&!ta.ended)sonando=true}catch(e){}
@@ -1015,7 +1015,7 @@ function wakeTick(){try{talkCheck()}catch(e){}
  // escucha vieja o trabada: la reiniciamos (el navegador a veces la deja muda sin avisar)
  if(wakeSR&&!rec){const g=wakeSR,now=Date.now();if((!g.on&&now-g.t0>8000)||(now-g.t0>55000&&now-(g.ev||0)>3000)){wakeStop();return}}
  if(Date.now()<wakeWait)return;
- if(!wakeOk()){if(wakeSR&&(rec||busy||document.hidden||document.body.classList.contains('lia-talk')))wakeStop();return}if(wakeSR)return;
+ if(!wakeOk()){if(wakeSR&&(tourSnap||rec||busy||document.hidden||document.body.classList.contains('lia-talk')))wakeStop();return}if(wakeSR)return;
  const g=new (SRc())();wakeSR=g;g.t0=Date.now();g.lang='es-BO';g.continuous=true;g.interimResults=true;
  g.onstart=g.onaudiostart=()=>{g.on=true};g.onsoundstart=g.onspeechstart=()=>{g.ev=Date.now()};
  g.onresult=ev=>{g.ev=Date.now();let t='';for(let i=ev.resultIndex;i<ev.results.length;i++)t+=' '+ev.results[i][0].transcript;
@@ -1065,6 +1065,7 @@ async function vozIA(text){const key='/lia-voz/'+encodeURIComponent(text.slice(0
  return j}
 function playPCM(j,onDone){const a=ctxOn();if(!a)return false;const bin=atob(j.audio);let o=0,rate=j.rate||24000;if(bin.slice(0,4)==='RIFF'){rate=(bin.charCodeAt(24)|bin.charCodeAt(25)<<8|bin.charCodeAt(26)<<16)||rate;const d=bin.indexOf('data',12);o=d>0?d+8:44}const n=(bin.length-o)>>1;const buf=a.createBuffer(1,n,rate);const ch=buf.getChannelData(0);
  for(let i=0;i<n;i++){let v=bin.charCodeAt(o+2*i)|(bin.charCodeAt(o+2*i+1)<<8);if(v>=32768)v-=65536;ch[i]=v/32768}
+ {const f=Math.min(n>>2,Math.round(rate*.012));for(let i=0;i<f;i++){const k=i/f;ch[i]*=k;ch[n-1-i]*=k}}
  try{if(vozSrc)vozSrc.stop()}catch(e){}const src=a.createBufferSource();const g=a.createGain();g.gain.value=.95;src.buffer=buf;if(!liaAn||liaAn.context!==a){liaAn=a.createAnalyser();liaAn.fftSize=512;liaAn.connect(a.destination);liaBuf=null}src.connect(g).connect(liaAn);vozSrc=src;
  document.body.classList.add('lia-talk');src.onended=()=>{if(vozSrc!==src)return;if(onDone){vozSrc=null;onDone()}if(!vozSrc)document.body.classList.remove('lia-talk')};src.start(a.currentTime+.05);return true}
 function vozTxt(t){return String(t).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\*\*/g,'').replace(/^\s*[-•]\s+/gm,'').replace(/\bBs\.?\s*(\d+(?:[.,]\d+)?)/g,'$1 bolivianos').replace(/\s+\./g,'.').replace(/\s*\n+\s*/g,'. ').replace(/:\./g,':').replace(/\.\.+/g,'.').replace(/\s+/g,' ').trim().slice(0,1500)}
@@ -1460,7 +1461,7 @@ function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3><button class="bt
  ${SRc()?`<label class="chips" style="margin-top:6px"><label><input type="checkbox" id="sWake" ${S.wake?'checked':''}>Escuchar "Hola Lía" (con la app abierta)</label></label><div class="tiny muted">Di "Hola Lía" y empieza a grabar sola; cuando terminas de hablar, lo envía. Deja el micrófono encendido y gasta algo más de batería.</div>`:''}
  <div class="dlg-act"><button class="btn" onclick="saveSettings()">Guardar</button></div>
  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0 6px">
- <button class="btn ghost block" style="margin-top:8px" onclick="askNotif(true)">Activar avisos en este celular</button><button class="btn ghost block" style="margin-top:8px" onclick="pushTest()">Probar un aviso</button><div class="tiny muted" style="margin-top:4px">Te avisa aunque la app esté cerrada. En iPhone, primero agrega la app a tu pantalla de inicio.</div>
+ ${(()=>{try{return Notification.permission==='granted'}catch(e){return false}})()?'<div class="pl-box" style="margin-top:8px"><b>🔔 Avisos activados</b><span class="tiny muted">en este celular</span></div>':'<button class="btn block" style="margin-top:8px" onclick="askNotif(true)">🔔 Activar avisos en este celular</button>'}<button class="btn ghost block" style="margin-top:8px" onclick="pushTest()">Probar un aviso</button><div class="tiny muted" style="margin-top:4px">Te avisa aunque la app esté cerrada. En iPhone, primero agrega la app a tu pantalla de inicio.</div>
  <button class="btn ghost block" style="margin-top:8px" onclick="exportData()">Descargar respaldo</button>
  <label class="btn ghost block" style="margin-top:8px;display:grid;place-items:center">Cargar respaldo<input type="file" accept=".json" hidden onchange="importData(this.files[0])"></label>
  <button class="btn ghost block" style="margin-top:8px;color:var(--danger)" onclick="confirmInline('¿Borrar todos tus datos de este celular?',()=>{localStorage.removeItem(KEY);S=null;render()})">Borrar todo</button>
@@ -1515,8 +1516,8 @@ function novedades(auto){try{localStorage.setItem('md-nov',NOV_V)}catch(e){}
  <button class="btn" style="width:100%;margin-top:14px" onclick="$('#dlg').close();tourIni()">▶ Recorrido guiado con Lía</button>
  <button class="btn ghost" style="width:100%;margin-top:8px" onclick="$('#dlg').close()">${auto?'Ahora no':'Cerrar'}</button>`)}
 // Al abrir la app: la primera vez se abre solo el recorrido guiado; después, las novedades cuando hay nuevas.
-function novAuto(){let tour=false;try{if(!S||!S.profile||!S.profile.mom)return;tour=!localStorage.getItem('md-tour');if(!tour&&localStorage.getItem('md-nov')===NOV_V)return}catch(e){return}
- setTimeout(()=>{if(tourSnap)return;if(!$('#dlg').open&&!document.querySelector('.calma')){if(tour){try{localStorage.setItem('md-nov',NOV_V)}catch(e){}tourIni()}else novedades(true)}else setTimeout(novAuto,2500)},tour?2500:5200)}
+function novAuto(){let tour=false;try{if(!S||!S.profile||!S.profile.mom)return;tour=!localStorage.getItem('md-tour2');if(!tour&&localStorage.getItem('md-nov')===NOV_V)return}catch(e){return}
+ setTimeout(()=>{if(tourSnap)return;if(!$('#dlg').open&&!document.querySelector('.calma')){if(tour){try{localStorage.setItem('md-nov',NOV_V)}catch(e){}tourIni()}else novedades(true)}else setTimeout(novAuto,tour?600:2500)},tour?1200:5200)}
 /* Recorrido guiado. Los pasos con "a" usan el audio grabado guia/N.mp3; los demás hablan con la voz de la app.
    Los pasos con "demo" escriben el ejemplo solos, se lo mandan a Lía básica y luego "ver" muestra dónde quedó guardado.
    Todo lo que se crea en el recorrido se borra al terminar: se trabaja sobre una copia y no se guarda nada. */
@@ -1525,7 +1526,7 @@ const TOUR=[
  {a:2,tab:'hoy',sel:'form.ask',t:'En esta barra le cuentas a Lía lo que pasó o lo que viene, como te salga. Escribe, o toca el micrófono y habla. Ella lo ordena en tu agenda, remedios, compras y gastos.'},
  {a:3,tab:'hoy',sel:'.stats',t:'Aquí cuentas tus compromisos, las dosis por dar y tus pendientes del día.'},
  {a:4,tab:'hoy',round:1,sel:'nav.tabs .lia .face',t:'Este es mi botón. Tócalo para conversar conmigo. Puedes pedirme ideas de comida, consejos de crianza, o preguntarme: cómo voy esta semana.'},
- {a:5,tab:'lia',sel:'.chatwrap',t:'Aquí conversamos. Mantén apretado el micrófono para mandarme una nota de voz. Por ejemplo: cita con la pediatra el jueves a las diez. Yo la agendo y te aviso a tiempo.'},
+ {a:5,tab:'lia',sel:'.composer form.ask',t:'Aquí conversamos. Mantén apretado el micrófono para mandarme una nota de voz. Por ejemplo: cita con la pediatra el jueves a las diez. Yo la agendo y te aviso a tiempo.'},
  {tab:'lia',demo:'Cita con la pediatra el jueves a las 10',t:'Mira cómo funciona. Te escribo un ejemplo: cita con la pediatra el jueves a las diez. Lía entiende el día y la hora, y lo guarda como cita.'},
  {tab:'agenda',ver:'Cita con la pediatra',dia:'Cita con la pediatra',t:'Se guardó aquí, en tu Agenda, en el día jueves. Antes de la hora te llega un aviso al celular, aunque tengas la app cerrada.'},
  {tab:'lia',demo:'Paracetamol 5 ml cada 6 horas por 3 días',t:'Ahora un remedio: paracetamol, cinco mililitros cada seis horas por tres días. Lía calcula cada dosis.'},
@@ -1538,10 +1539,10 @@ const TOUR=[
  {tab:'comidas',seg:'precios',ver:'Pollo',t:'Se guardó en Precios. La próxima vez que anotes el pollo, te digo si está barato o caro comparado con lo que pagaste antes.'},
  {tab:'lia',demo:'Arma el menú de esta semana',t:'Por último, el menú: arma el menú de esta semana. Lía lo hace según la edad de tu peque, sus alergias y lo que no le gusta.'},
  {tab:'comidas',seg:'menu',sel:'main',t:'Aquí está tu menú de la semana, día por día, con su costo y la lista de compras. Si tienes varios hijos, me dices para quién es.'},
- {a:6,tab:'lia',sel:'.chatwrap',wake:1,t:'Y si no quieres tocar nada, usa Hola Lía. Ya viene activado: con la app abierta, solo di Hola Lía, y empiezo a escucharte. Cuando terminas de hablar, lo envío sola. Si lo apagaste, actívalo con este botón o en Ajustes.'},
+ {a:6,tab:'lia',sel:'.msgs .lia-row',wake:1,t:'Y si no quieres tocar nada, usa Hola Lía. Ya viene activado: con la app abierta, solo di Hola Lía, y empiezo a escucharte. Cuando terminas de hablar, lo envío sola. Si lo apagaste, actívalo con este botón o en Ajustes.'},
  {tab:'comidas',sel:'header .iconbtn',t:'En Ajustes enciendes los avisos, ves tu plan, Gratis o Pro, y cambias los colores. Los ejemplos que vimos se borran al terminar, tus datos quedan como estaban. Listo, ya conoces la app. Aquí estoy cuando me necesites.'}];
 let tourI=-1,tourEl=null,tourSnap=null,tourSeq=0;
-function tourIni(){try{localStorage.setItem('md-tour','1')}catch(e){}tourI=-1;if(!tourEl){tourEl=document.createElement('div');tourEl.className='tour';tourEl.innerHTML='<div class="tspot"></div><div class="tcard" role="dialog" aria-live="polite"><div class="tn tiny muted"></div><p class="tt"></p><div class="tbar"><i></i></div><div class="tb"><button class="btn ghost sm" onclick="tourFin()">Salir</button><span style="flex:1"></span><button class="btn ghost sm" onclick="tourIr(tourI-1)" aria-label="Paso anterior">◀</button><button class="btn ghost sm tpausa" onclick="tourPausa()">⏸ Pausa</button><button class="btn sm tsig" onclick="tourIr(tourI+1)" aria-label="Paso siguiente">▶</button></div></div>';document.body.appendChild(tourEl)}
+function tourIni(){tourI=-1;if(!tourEl){tourEl=document.createElement('div');tourEl.className='tour';tourEl.innerHTML='<div class="tspot"></div><div class="tcard" role="dialog" aria-live="polite"><div class="tn tiny muted"></div><p class="tt"></p><div class="tbar"><i></i></div><div class="tb"><button class="btn ghost sm" onclick="tourFin()">Salir</button><span style="flex:1"></span><button class="btn ghost sm" onclick="tourIr(tourI-1)" aria-label="Paso anterior">◀</button><button class="btn ghost sm tpausa" onclick="tourPausa()">⏸ Pausa</button><button class="btn sm tsig" onclick="tourIr(tourI+1)" aria-label="Paso siguiente">▶</button></div></div>';document.body.appendChild(tourEl)}
  if(!tourSnap){try{save()}catch(e){}tourSnap=JSON.stringify(S)}tourPausado=false;tourEl.hidden=false;try{ctxOn()}catch(e){}tourPrecarga();tourIr(0)}
 let tourPausado=false;
 function tourPausa(){tourPausado=!tourPausado;const b=tourEl.querySelector('.tpausa');b.textContent=tourPausado?'▶ Seguir':'⏸ Pausa';tourEl.classList.toggle('pausado',tourPausado);
@@ -1553,7 +1554,9 @@ function tourSpot(el,st){const sp=tourEl.querySelector('.tspot');const card=tour
  el.scrollIntoView({block:'center',behavior:'instant'});setTimeout(()=>{const r=el.getBoundingClientRect();
   if(st.round){const d=Math.max(r.width,r.height)+20,cx=r.left+r.width/2,cy=r.top+r.height/2;sp.style.cssText=`top:${cy-d/2}px;left:${cx-d/2}px;width:${d}px;height:${d}px;border-radius:50%`}
   else{const pad=6;sp.style.cssText=`top:${Math.max(4,r.top-pad)}px;left:${Math.max(4,r.left-pad)}px;width:${Math.min(innerWidth-8,r.width+pad*2)}px;height:${Math.min(innerHeight*.6,r.height+pad*2)}px`}
-  card.classList.toggle('arriba',r.top+r.height/2>innerHeight*.5)},120)}
+  card.classList.toggle('arriba',r.top+r.height/2>innerHeight*.5);
+  const choca=()=>{const c=card.getBoundingClientRect(),q=sp.getBoundingClientRect();return Math.max(0,Math.min(c.bottom,q.bottom)-Math.max(c.top,q.top))};
+  setTimeout(()=>{const a=choca();if(a>4){card.classList.toggle('arriba');if(choca()>a)card.classList.toggle('arriba')}},400)},120)}
 function tourIr(i){if(i<0)return;if(i>=TOUR.length){tourFin();return}tourI=i;const seq=++tourSeq;const st=TOUR[i];
  if(st.seg)foodSeg=st.seg;else if(st.tab==='comidas'&&!st.seg)foodSeg='menu';
  if(st.dia){const e=S.events.slice().reverse().find(x=>x.title&&x.title.includes(st.dia)&&x.date);if(e)selDay=e.date}
@@ -1597,7 +1600,7 @@ function tourHabla(i){tourCalla();const st=TOUR[i];const my=vozSeq;
 const tourPartes={};
 function tourPrecarga(){if(!aiCode()||S.voice===false)return;TOUR.forEach((st,i)=>{if(st.a)return;tourPartes[i]=vozTrozos(vozTxt(st.t))});
  const cola=[];for(const i in tourPartes)for(const p of tourPartes[i])cola.push(p);const uno=()=>{const p=cola.shift();if(p)vozIA(p).catch(()=>{}).finally(uno)};uno();uno();uno()}
-function tourFin(){tourSeq++;tourPausado=false;if(tourEl)tourEl.hidden=true;tourCalla();tourI=-1;
+function tourFin(){try{localStorage.setItem('md-tour2','1')}catch(e){}tourSeq++;tourPausado=false;if(tourEl)tourEl.hidden=true;tourCalla();tourI=-1;
  if(tourSnap){try{const o=JSON.parse(tourSnap);for(const k of Object.keys(S))if(!(k in o))delete S[k];Object.assign(S,o)}catch(e){}tourSnap=null}foodSeg='menu';selDay=ymd(new Date());S.tab='hoy';save();render()}
 /* ====================== bienvenida ====================== */
 function renderWelcome(){
@@ -1628,7 +1631,7 @@ function startForm(){$('#root').innerHTML=`<div class="welcome" style="justify-c
  <button class="btn ghost block" style="margin-top:8px" onclick="render()">Volver</button></div>`}
 function finishForm(){const m=$('#fM').value.trim();if(!m){toast('Escribe tu nombre');return}if(!$('#fOk').checked){toast('Marca la casilla para continuar');return}
  S=blank();Object.assign(S.profile,{mom:cap(m),kid:cap($('#fK').value.trim()),birth:$('#fB').value,budget:+$('#fP').value||150,adults:+$('#fA').value,city:$('#fCity').value,cond:$('#fCond').value.trim(),allergies:[...document.querySelectorAll('.fAl:checked')].map(x=>x.value)});
- kids();makeMenu();S.tab='hoy';save();render();setTimeout(prueba40,300);setTimeout(()=>{try{localStorage.setItem('md-nov',NOV_V)}catch(e){}if(!tourSnap)tourIni()},1200)}
+ kids();makeMenu();S.tab='hoy';S.wake=true;S.voice=true;save();try{askNotif()}catch(e){}render();setTimeout(prueba40,300);setTimeout(()=>{try{localStorage.setItem('md-nov',NOV_V)}catch(e){}if(!tourSnap)tourIni()},1200)}
 function loadDemo(){
  S=blank();const now=new Date();const t=ymd(now);const b=addDays(now,-(3*365+40));
  Object.assign(S.profile,{mom:'Andrea',kid:'Sofi',birth:ymd(b),budget:150,adults:0,allergies:[],dislikes:[]});
@@ -1668,7 +1671,7 @@ function avisoHablar(t){if(!t)return;S.tab='hoy';render();setTimeout(()=>speak(S
 try{const q=new URLSearchParams(location.search).get('aviso');if(q){history.replaceState(null,'',location.pathname);document.addEventListener('pointerdown',()=>{},{once:true});setTimeout(()=>avisoHablar(q),900)}}catch(e){}
 try{navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',ev=>{if(ev.data&&ev.data.aviso)avisoHablar(ev.data.aviso)})}catch(e){}
 setInterval(()=>{if(S&&S.profile.mom){tick();if(S.tab==='hoy'&&!rec&&!busy&&!$('#dlg').open&&document.activeElement.tagName!=='INPUT')render()}},30000);
-setTimeout(tick,1500);setTimeout(prefetchHello,2500);setTimeout(refreshPlan,5000);
+setTimeout(tick,1500);setTimeout(prefetchHello,2500);setTimeout(refreshPlan,1500);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
