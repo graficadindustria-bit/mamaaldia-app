@@ -1697,6 +1697,7 @@ function startForm(){$('#root').innerHTML=`<div class="welcome" style="justify-c
  <h1 style="font-size:26px;margin-top:10px">Cuéntame de ustedes</h1><p>Solo lo necesario para ordenar tu día.</p>
  <label class="f">Tu nombre</label><input class="inp" id="fM" placeholder="Andrea">
  <div class="row"><div style="flex:1"><label class="f">Nombre de tu hijo o hija (0 a 18 años)</label><input class="inp" id="fK" placeholder="Sofi"></div><div style="flex:1"><label class="f">Fecha de nacimiento</label><input class="inp" type="date" id="fB"></div></div>
+ <div id="fMore"></div><button class="btn ghost sm" style="margin-top:8px" onclick="formKid()">+ Agregar otro hijo o hija</button>
  <label class="f">Ciudad</label><select class="inp" id="fCity">${['Santa Cruz','La Paz','Cochabamba','El Alto','Sucre','Tarija','Oruro','Potosí','Otra'].map(c=>`<option>${c}</option>`).join('')}</select>
  <label class="f">Presupuesto de comida por semana (Bs)</label><input class="inp" id="fP" type="number" inputmode="numeric" value="150">
  <label class="f">Adultos que comen el mismo menú</label><select class="inp" id="fA"><option value="0">Ninguno (solo la peque)</option><option>1</option><option>2</option><option>3</option></select>
@@ -1705,9 +1706,10 @@ function startForm(){$('#root').innerHTML=`<div class="welcome" style="justify-c
  <label class="chips" style="margin-top:16px"><label style="border-radius:14px;align-items:flex-start"><input type="checkbox" id="fOk" style="margin-top:4px"><span class="small">Entiendo que es una versión de prueba, que las porciones y la información de salud son guía general y que siempre consulto al pediatra.</span></label></label>
  <button class="btn block" style="margin-top:16px" onclick="finishForm()">Listo</button>
  <button class="btn ghost block" style="margin-top:8px" onclick="render()">Volver</button></div>`}
+function formKid(){const d=document.createElement('div');d.className='row fKid';d.style.marginTop='8px';d.innerHTML='<div style="flex:1"><input class="inp fKn" placeholder="Nombre"></div><div style="flex:1"><input class="inp fKb" type="date"></div><button class="btn sm ghost" aria-label="Quitar" onclick="this.closest(\'.fKid\').remove()">✕</button>';$('#fMore').appendChild(d);d.querySelector('.fKn').focus()}
 function finishForm(){const m=$('#fM').value.trim();if(!m){toast('Escribe tu nombre');return}if(!$('#fOk').checked){toast('Marca la casilla para continuar');return}
  S=blank();Object.assign(S.profile,{mom:cap(m),kid:cap($('#fK').value.trim()),birth:$('#fB').value,budget:+$('#fP').value||150,adults:+$('#fA').value,city:$('#fCity').value,cond:$('#fCond').value.trim(),allergies:[...document.querySelectorAll('.fAl:checked')].map(x=>x.value)});
- kids();makeMenu();S.tab='hoy';S.wake=true;S.voice=true;save();try{askNotif()}catch(e){}render();setTimeout(prueba40,300);setTimeout(()=>{try{localStorage.setItem('md-nov',NOV_V)}catch(e){}if(!tourSnap)tourIni()},1200)}
+ kids();document.querySelectorAll('.fKid').forEach(r=>{const n=cap(r.querySelector('.fKn').value.trim()),b=r.querySelector('.fKb').value;if(n||b)S.kids.push({id:'k'+uid(),name:n,birth:b,cond:''})});makeMenu();S.tab='hoy';S.wake=true;S.voice=true;save();try{askNotif()}catch(e){}render();setTimeout(prueba40,300);setTimeout(()=>{try{localStorage.setItem('md-nov',NOV_V)}catch(e){}if(!tourSnap)tourIni()},1200)}
 function loadDemo(){
  S=blank();const now=new Date();const t=ymd(now);const b=addDays(now,-(3*365+40));
  Object.assign(S.profile,{mom:'Andrea',kid:'Sofi',birth:ymd(b),budget:150,adults:0,allergies:[],dislikes:[]});
