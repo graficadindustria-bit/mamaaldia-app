@@ -7,8 +7,8 @@
 <script>function aplicarTema(t){var d=t==='oscuro'||(t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');var m=document.getElementById('mtc');if(m)m.content=d?'#211A17':'#F2E4DA'}try{aplicarTema((JSON.parse(localStorage.getItem('mamaaldia-v1')||'{}').tema)||'claro')}catch(e){aplicarTema('claro')}</script>
 <meta name="description" content="Mamá al Día: escribe como te salga y Lía te ordena agenda, medicamentos, menú y compras. Versión de prueba.">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="favicon.png?v=4">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=4">
+<link rel="icon" href="favicon.png?v=5">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mamá al Día">
@@ -1111,7 +1111,7 @@ function render(){
  if(!S||!S.profile.mom){renderWelcome();return}
  const tab=S.tab||'hoy';
  $('#root').innerHTML=`<div class="app">
- <header class="top"><div class="brand"><img src="icon-192.png" alt="">Mamá al Día</div><div class="sp"></div><button class="iconbtn" aria-label="Ajustes" onclick="openSettings()">${IC.gear}</button></header>
+ <header class="top"><div class="brand"><img src="marca.png?v=1" alt="">Mamá al Día</div><div class="sp"></div><button class="iconbtn" aria-label="Ajustes" onclick="openSettings()">${IC.gear}</button></header>
  <main>${tab==='hoy'?vHoy():tab==='agenda'?vAgenda():tab==='lia'?vLia():tab==='salud'?vSalud():vComidas()}</main>
  <nav class="tabs"><div class="in">
   ${navBtn('hoy','Hoy',IC.home)}${navBtn('agenda','Agenda',IC.cal)}
