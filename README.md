@@ -20,3 +20,8 @@ Reloj: cron-job.org cada minuto llama a /api/avisos?tick=1. Guarda los avisos en
 
 ## Voz del recorrido guiado
 Los pasos con `a:N` usan `guia/N.mp3`. Los demás piden su voz a `/api/lia` (modo `guia_voz`): el servidor la crea una sola vez con la voz de Lía y la guarda en Vercel Blob (`guia-voz/`). Solo acepta textos cuya huella está en `api/_guia.js`. Si cambias un texto del recorrido, regenera esa lista con el script de node que lee `const TOUR=[...]` de index.html.
+
+## Encuesta de planes (base de contactos)
+- A los 14 días de la prueba de 40 días, la app le muestra a la mamá (una vez) una encuesta corta: qué usa, si pagaría el plan Pro, cómo pagaría, si quiere que le avisen cuando la app esté en Play Store, y su celular.
+- Si toca "Más tarde", vuelve a aparecer a los 3 días (máximo 3 veces).
+- Las respuestas se guardan en Redis (`mad:encuesta`, una por celular). Solo el código de creador las ve en Ajustes › "Ver respuestas de la encuesta", con botón para descargarlas para Excel.

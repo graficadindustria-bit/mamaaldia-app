@@ -118,6 +118,7 @@ nav.tabs .lia .face{position:absolute;left:50%;top:-22px;transform:translateX(-5
 .org{display:flex;flex-direction:column;gap:6px;margin-top:8px;white-space:normal}
 .org .it{display:flex;gap:8px;align-items:flex-start;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:14px}
 .org .it .chip{flex:none}
+.enc-op{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:9px 11px;margin-top:6px;font-size:14.5px;cursor:pointer}.enc-op:has(input:checked){border:2px solid var(--accent);background:var(--asoft)}.enc-op input{accent-color:var(--accent);width:18px;height:18px;margin:0}.enc-q{font-weight:800;margin-top:14px}.enc-ops{display:flex;flex-wrap:wrap;gap:0 6px}.enc-ops .enc-op{flex:1 1 40%}.enc-row{border:1px solid var(--line);border-radius:12px;padding:9px 11px;margin-top:8px;font-size:13.5px}
 .pl-card{border:1px solid var(--line);border-radius:16px;padding:12px;margin-top:10px}.pl-card.on{border:2px solid var(--accent)}
 .pl-h{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;font-size:17px}.pl-h span{text-align:right;font-weight:800;color:var(--accent);font-size:15px}.pl-h small{font-weight:600;font-size:12px;opacity:.8}
 .pl-it{display:flex;gap:8px;font-size:14px;margin:3px 0}.pl-it span:first-child{color:var(--accent);font-weight:800;width:12px;flex:none}
@@ -834,6 +835,53 @@ async function grabarGuia(){const ts=TOUR.filter(st=>!st.a).map(st=>st.t);let ok
  const pinta=()=>dlg(`<h3>Voz suave del recorrido</h3><div class="small">Listos: <b>${ok}</b> de ${ts.length}${mal?` · Fallaron: <b>${mal}</b>`:''}</div>${ult?`<div class="tiny muted" style="margin-top:6px">Último error: ${esc(ult)}</div>`:''}<div class="small muted" style="margin-top:8px">${ok+mal<ts.length?'Grabando, no cierres la app…':ok===ts.length?'✅ Todo listo: el recorrido ya usa la voz suave para todas las mamás.':'Algunos pasos no se grabaron. Si dice 429, se acabó el cupo diario de la voz: inténtalo mañana temprano. Los que ya se grabaron quedan guardados.'}</div><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cerrar</button>${ok+mal>=ts.length&&mal?'<button class="btn" onclick="grabarGuia()">Reintentar</button>':''}</div>`);
  pinta();try{await caches.delete('lia-guia-v1')}catch(e){}for(const k in guiaPend)delete guiaPend[k];
  for(const t of ts){guiaVoz.err='';const j=await guiaVoz(t);if(j)ok++;else{mal++;ult=guiaVoz.err||'sin respuesta'}if($('#dlg').open)pinta()}}
+const ENC_DIAS=14;
+// Encuesta de planes: a los ENC_DIAS días de la prueba se pregunta una vez si pagaría el plan Pro (se guarda con su celular)
+function pruebaDias(){const p=plan();let ini='';try{ini=localStorage.getItem('mamaaldia-p40')||''}catch(e){}
+ let d=/^\d{4}-\d\d-\d\d$/.test(ini)?fromYmd(ini):null;if(!d&&p.vence&&(p.tipo==='prueba'||p.prueba)){d=fromYmd(p.vence);d.setDate(d.getDate()-40)}
+ if(!d)return -1;return Math.floor((new Date().setHours(0,0,0,0)-d.getTime())/864e5)}
+function encuestaAuto(){try{const p=plan();if(!S||!S.profile||!S.profile.mom||tourSnap)return;if(!(p.tipo==='prueba'||(p.tipo==='vencido'&&p.prueba)))return;
+ if(localStorage.getItem('md-enc')==='hecha'||pruebaDias()<ENC_DIAS)return;const t=JSON.parse(localStorage.getItem('md-enc-tarde')||'{}');
+ if(t.n>=3)return;if(t.f&&(Date.now()-t.f)<3*864e5)return;if($('#dlg').open||document.querySelector('.calma')){setTimeout(encuestaAuto,8000);return}encuestaDlg()}catch(e){}}
+function encuestaTarde(){try{const t=JSON.parse(localStorage.getItem('md-enc-tarde')||'{}');localStorage.setItem('md-enc-tarde',JSON.stringify({n:(t.n||0)+1,f:Date.now()}))}catch(e){}closeDlg()}
+function encuestaDlg(vista){const op=(n,v,t,tipo)=>`<label class="enc-op"><input type="${tipo||'radio'}" name="${n}" value="${esc(v)}">${t}</label>`;
+ dlg(`<h3>¿Nos ayudas con 1 minuto? 🌸</h3><div class="small muted">Ya llevas ${vista?ENC_DIAS:Math.max(ENC_DIAS,pruebaDias())} días con Mamá al Día. Queremos saber si te gustaría seguir con el plan Pro cuando termine tu prueba.</div>
+ <div class="enc-q">1. ¿Qué es lo que más usas?</div><div class="enc-ops">${op('usa','Lía','Lía','checkbox')}${op('usa','Agenda','Agenda','checkbox')}${op('usa','Remedios','Remedios','checkbox')}${op('usa','Menú','Menú','checkbox')}${op('usa','Compras y gastos','Compras y gastos','checkbox')}${op('usa','Lugares','Lugares','checkbox')}</div>
+ <div class="enc-q">2. Cuando termine tu prueba, ¿pagarías el plan Pro?</div>${op('pg','Sí, Bs 29 al mes','Sí, Bs 29 al mes')}${op('pg','Sí, Bs 249 al año','Sí, Bs 249 al año')}${op('pg','Sí, pero a menor precio','Sí, pero a un precio menor')}${op('pg','No por ahora','No por ahora')}
+ <div id="encMonto" hidden><div class="enc-q">¿Cuánto podrías pagar al mes?</div><div class="enc-ops">${op('mt','Bs 10','Bs 10')}${op('mt','Bs 15','Bs 15')}${op('mt','Bs 19','Bs 19')}${op('mt','Bs 25','Bs 25')}</div></div>
+ <div class="enc-q">3. ¿Cómo te queda mejor pagar?</div><div class="enc-ops">${op('pm','QR del banco','QR del banco')}${op('pm','Tigo Money','Tigo Money')}${op('pm','Efectivo','Efectivo')}${op('pm','Otro','Otro')}</div>
+ <div class="enc-q">4. ¿Te avisamos por WhatsApp cuando Mamá al Día esté en Play Store?</div><div class="enc-ops">${op('av','Sí','Sí, avísenme')}${op('av','No','No, gracias')}</div>
+ <div class="enc-q">5. Tus datos</div><input class="inp" id="encNom" placeholder="Tu nombre" value="${esc(S.profile.mom||'')}" style="margin-top:6px">
+ <input class="inp" id="encCel" type="tel" inputmode="numeric" placeholder="Tu celular (WhatsApp), ej. 71234567" maxlength="16" style="margin-top:6px">
+ <input class="inp" id="encCiu" placeholder="Tu ciudad" value="${esc(S.profile.city||'')}" style="margin-top:6px">
+ <textarea class="inp" id="encCom" rows="2" placeholder="¿Algo que te gustaría que mejore? (opcional)" style="margin-top:6px"></textarea>
+ <div class="tiny muted" style="margin-top:6px">Tu celular es solo para escribirte sobre tu plan y avisarte de novedades de la app. No lo compartimos con nadie.</div>
+ <div class="dlg-act"><button class="btn ghost" onclick="${vista?'closeDlg()':'encuestaTarde()'}">Más tarde</button><button class="btn" id="encBtn" onclick="encuestaEnviar(${vista?1:0})">Enviar</button></div>`);
+ document.querySelectorAll('#dlgIn input[name=pg]').forEach(e=>e.onchange=()=>{$('#encMonto').hidden=e.value!=='Sí, pero a menor precio'})}
+async function encuestaEnviar(vista){const v=n=>{const e=document.querySelector('#dlgIn input[name='+n+']:checked');return e?e.value:''};
+ const cel=$('#encCel').value.replace(/\D/g,'').replace(/^591/,'');
+ if(!v('pg')){toast('Elige si pagarías el plan Pro');return}if(!/^[67]\d{7}$/.test(cel)){toast('Escribe tu celular de 8 números');$('#encCel').focus();return}
+ const r={nombre:$('#encNom').value,celular:cel,ciudad:$('#encCiu').value,pagaria:v('pg'),monto:v('pg')==='Sí, pero a menor precio'?v('mt'):'',pago:v('pm'),
+  usa:[...document.querySelectorAll('#dlgIn input[name=usa]:checked')].map(e=>e.value).join(', '),comentario:$('#encCom').value,aviso:v('av'),plan:plan().tipo||'',dias:String(pruebaDias())};
+ if(vista){closeDlg();toast('Vista previa: así la recibe cada mamá (no se guardó)');return}
+ const b=$('#encBtn');b.disabled=true;b.textContent='Enviando…';
+ try{const x=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'encuesta',dispositivo:devId(),r})});
+  if(!x.ok)throw 0;try{localStorage.setItem('md-enc','hecha')}catch(e){}closeDlg();toast('¡Gracias! Tu respuesta nos ayuda mucho 💛')}
+ catch(e){b.disabled=false;b.textContent='Enviar';toast('No se pudo enviar. Revisa tu internet e intenta de nuevo')}}
+// Solo creador: ver las respuestas de la encuesta y descargarlas para Excel
+let encFilas=[];
+async function verEncuestas(){dlg('<h3>Respuestas de la encuesta</h3><div class="small muted">Cargando…</div>');
+ try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:aiCode(),modo:'ver_encuestas'})});const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(r.status===403?'Solo el creador puede verlas':'No pude cargarlas');encFilas=j.filas||[];
+  const cuenta={};encFilas.forEach(f=>cuenta[f.pagaria]=(cuenta[f.pagaria]||0)+1);
+  dlg(`<h3>Respuestas de la encuesta</h3><div class="small"><b>${encFilas.length}</b> respuesta${encFilas.length===1?'':'s'}</div>
+  ${Object.keys(cuenta).length?`<div class="small" style="margin-top:6px">${Object.entries(cuenta).map(([k,n])=>`${esc(k)}: <b>${n}</b>`).join('<br>')}</div>`:'<div class="small muted" style="margin-top:6px">Todavía no responde nadie. La encuesta le aparece a cada mamá a los '+ENC_DIAS+' días de su prueba.</div>'}
+  <div style="max-height:46vh;overflow:auto;margin-top:8px">${encFilas.map(f=>`<div class="enc-row"><b>${esc(f.nombre||'Sin nombre')}</b> · <a href="https://wa.me/591${esc(f.celular)}" target="_blank" rel="noopener">${esc(f.celular)}</a>${f.ciudad?' · '+esc(f.ciudad):''}<br>${esc(f.pagaria)}${f.monto?' ('+esc(f.monto)+')':''}${f.pago?' · paga con '+esc(f.pago):''}${f.aviso?' · Aviso Play Store: '+esc(f.aviso):''}${f.usa?'<br><span class="muted">Usa: '+esc(f.usa)+'</span>':''}${f.comentario?'<br>“'+esc(f.comentario)+'”':''}<div class="tiny muted">${esc(f.fecha||'')}</div></div>`).join('')}</div>
+  <div class="dlg-act" style="flex-wrap:wrap">${encFilas.length?'<button class="btn" onclick="encuestaExcel()">Descargar para Excel</button>':''}<button class="btn soft" onclick="encuestaDlg(1)">Ver la encuesta</button><button class="btn ghost" onclick="closeDlg()">Cerrar</button></div>`)}
+ catch(e){dlg(`<h3>Respuestas de la encuesta</h3><div class="small">${esc(e.message||'Sin conexión')}</div><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cerrar</button></div>`)}}
+function encuestaExcel(){const cols=['fecha','nombre','celular','ciudad','pagaria','monto','pago','aviso','usa','comentario','plan','dias'],tit=['Fecha','Nombre','Celular','Ciudad','¿Pagaría?','Monto','Cómo paga','Avisar Play Store','Qué usa','Comentario','Plan','Días de prueba'];
+ const q=x=>'"'+String(x==null?'':x).replace(/"/g,'""')+'"';const csv='﻿'+[tit.map(q).join(';')].concat(encFilas.map(f=>cols.map(c=>q(f[c])).join(';'))).join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='encuesta-mama-al-dia-'+ymd(new Date())+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 function crearProDlg(){dlg(`<h3>Crear código Pro</h3><div class="small muted">Elige cuánto tiempo dura. El código deja de funcionar solo cuando vence.</div>
  <div class="dlg-act" style="flex-direction:column"><button class="btn" onclick="crearPro(1)">1 mes</button><button class="btn soft" onclick="crearPro(3)">3 meses</button><button class="btn soft" onclick="crearPro(12)">1 año</button><button class="btn ghost" onclick="closeDlg()">Cancelar</button></div>`)}
 async function crearPro(m){try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:aiCode(),modo:'crear_pro',meses:m})});const j=await r.json().catch(()=>({}));
@@ -1455,7 +1503,7 @@ function budgetDlg(){dlg(`<h3>Presupuesto de comida</h3><label class="f">Por sem
  <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.profile.budget=+$('#bB').value||0;S.profile.adults=+$('#bA').value;makeMenu(S.menu&&S.menu.seed);save();closeDlg();render()">Guardar</button></div>`)}
 function priceDlg(k){dlg(`<h3>${esc(CAT[k].n)}</h3><label class="f">Precio por ${CAT[k].u==='u'?'unidad':CAT[k].u} (Bs)</label><input class="inp" id="pP" type="number" step="0.1" inputmode="decimal" value="${price(k)}"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.prices['${k}']=parseFloat($('#pP').value)||0;save();closeDlg();render()">Guardar</button></div>`)}
 function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3><button class="btn soft sm" style="width:100%;margin:4px 0 10px" onclick="novedades()">✨ Novedades y recorrido guiado</button>
- <div class="pl-box"><div><div class="tiny muted">Tu plan</div><b>${esc(planTxt())}</b></div><button class="btn soft sm" onclick="openPlanes()">Planes</button></div>${plan().tipo==='creador'&&aiCode()?'<button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="crearProDlg()">🔑 Crear código Pro para una mamá</button><button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="grabarGuia()">🎙️ Grabar la voz suave del recorrido</button>':''}
+ <div class="pl-box"><div><div class="tiny muted">Tu plan</div><b>${esc(planTxt())}</b></div><button class="btn soft sm" onclick="openPlanes()">Planes</button></div>${plan().tipo==='creador'&&aiCode()?'<button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="crearProDlg()">🔑 Crear código Pro para una mamá</button><button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="grabarGuia()">🎙️ Grabar la voz suave del recorrido</button><button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="verEncuestas()">📋 Ver respuestas de la encuesta</button>':''}
  <label class="f">Tu nombre</label><input class="inp" id="sM" value="${esc(p.mom)}"><label class="f" for="sRol">Uso la app como</label><select class="inp" id="sRol"><option value="" ${!p.rol?'selected':''}>Prefiero no decir</option><option value="mama" ${p.rol==='mama'?'selected':''}>Mamá</option><option value="papa" ${p.rol==='papa'?'selected':''}>Papá</option><option value="otro" ${p.rol==='otro'?'selected':''}>Otra persona que cuida</option></select>
  <label class="f" style="margin-top:14px">Tus hijos (0 a 18 años)</label><div id="kidsEd">${kids().map(kidRow).join('')}</div>
  <button class="btn ghost sm" style="margin-top:6px" onclick="addKidRow()">+ Agregar hijo o hija</button>
@@ -1691,7 +1739,7 @@ async function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();awa
 S=load();if(S){if(!S.defs1){S.defs1=1;S.wake=true}S=Object.assign(blank(),S);S.chat=S.chat.filter(m=>!m.typing);if(S.profile.mom)syncKid()}
 (()=>{try{const q=new URLSearchParams(location.search).get('c');if(q){setCode(q.toUpperCase().replace(/\s+/g,''));history.replaceState(null,'',location.pathname);setTimeout(()=>checkCode(aiCode()),800)}}catch(e){}})();
 (function pidePermiso(){if(!('Notification' in window)||Notification.permission!=='default')return;const f=()=>{if(!S||!S.profile||!S.profile.mom||($('#dlg')||{}).open)return;document.removeEventListener('pointerup',f,true);askNotif()};document.addEventListener('pointerup',f,true)})();
-render();calmaInicio();novAuto();
+render();calmaInicio();novAuto();setTimeout(encuestaAuto,12000);
 window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEventListener('pointercancel',e=>{if(rec&&rec.held)micUp(e)});
 try{if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
 setTimeout(()=>{try{if('Notification' in window&&Notification.permission==='granted')pushSync(true)}catch(e){}},4000);

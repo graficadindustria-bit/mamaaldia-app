@@ -30,6 +30,16 @@ async function contar(clave, segundos) {
   }
   return (memo[clave] = (memo[clave] || 0) + 1);
 }
+// Comandos sueltos a Redis (para la encuesta de planes)
+async function redis(cmds) {
+  if (!(RURL && RTOK)) return null;
+  try {
+    const r = await fetch(RURL.replace(/\/$/, '') + '/pipeline', { method: 'POST', headers: { authorization: 'Bearer ' + RTOK, 'content-type': 'application/json' }, body: JSON.stringify(cmds), signal: AbortSignal.timeout(4000) });
+    if (r.ok) return (await r.json()).map(x => x.result);
+  } catch (e) {}
+  return null;
+}
+const limpio = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, n);
 const semana = () => { const d = new Date(Date.now() - 4 * 3600000); const l = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - (d.getUTCDay() + 6) % 7)); return l.toISOString().slice(0, 10); };
 const usos = {};
 const MODELOS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
@@ -230,6 +240,20 @@ module.exports = async (req, res) => {
     if (!n) return res.status(503).json({ error: 'sin-clave' });
     return res.status(200).json(n);
   }
+  // Encuesta de planes (a los 14 días de prueba): una respuesta por celular, se guarda en Redis
+  if (b.modo === 'encuesta') {
+    if (!disp) return res.status(400).json({ error: 'dispositivo' });
+    const r0 = b.r || {};
+    const cel = String(r0.celular || '').replace(/\D/g, '').replace(/^591/, '');
+    if (!/^[67]\d{7}$/.test(cel)) return res.status(400).json({ error: 'celular' });
+    const dh = crypto.createHash('sha256').update('disp:' + disp).digest('hex').slice(0, 24);
+    if (await contar('mad:encuesta-n:' + dh, 86400) > 5) return res.status(429).json({ error: 'limite' });
+    const fila = { fecha: new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 16).replace('T', ' '), nombre: limpio(r0.nombre, 40), celular: cel, ciudad: limpio(r0.ciudad, 40),
+      pagaria: limpio(r0.pagaria, 40), monto: limpio(r0.monto, 20), pago: limpio(r0.pago, 30), usa: limpio(r0.usa, 120), comentario: limpio(r0.comentario, 400), aviso: limpio(r0.aviso, 4), plan: limpio(r0.plan, 20), dias: limpio(r0.dias, 4) };
+    const ok = await redis([['HSET', 'mad:encuesta', dh, JSON.stringify(fila)]]);
+    if (!ok) return res.status(503).json({ error: 'sin-base' });
+    return res.status(200).json({ ok: true });
+  }
   if (!b.codigo && disp && !b.modo && !b.audio && !b.imagen) cod = { tipo: 'gratis', h: crypto.createHash('sha256').update('disp:' + disp).digest('hex') };
   if (!cod) return res.status(401).json({ error: 'codigo' });
   if (cod.tipo === 'vencido') return res.status(401).json({ error: 'vencido', prueba: !!cod.prueba, vence: cod.vence });
@@ -241,6 +265,15 @@ module.exports = async (req, res) => {
     const n = crearPro(dias);
     if (!n) return res.status(503).json({ error: 'sin-clave' });
     return res.status(200).json(n);
+  }
+  if (b.modo === 'ver_encuestas') {
+    if (tipo !== 'creador') return res.status(403).json({ error: 'permiso' });
+    const r = await redis([['HGETALL', 'mad:encuesta']]);
+    if (!r) return res.status(503).json({ error: 'sin-base' });
+    const arr = r[0] || [], filas = [];
+    for (let i = 1; i < arr.length; i += 2) { try { filas.push(JSON.parse(arr[i])); } catch (e) {} }
+    filas.sort((x, y) => String(y.fecha).localeCompare(String(x.fecha)));
+    return res.status(200).json({ filas });
   }
   const key = process.env.GEMINI_API_KEY;
   if (!key) return res.status(503).json({ error: 'sin-clave' });
