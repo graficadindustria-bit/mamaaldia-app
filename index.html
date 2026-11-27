@@ -786,7 +786,7 @@ async function tick(){if(!S||!S.profile.mom||tourSnap)return;const al=dueAlerts(
  let say=[];for(const a of al){if(!S.notified[a.id]){S.notified[a.id]=1;changed=true;notify('Mamá al Día',a.title+' · '+a.sub,a.id);if(a.say)say.push(a.say)}}
  if(changed&&document.visibilityState==='visible'&&!rec&&!busy){avisoSonido();if(say.length)setTimeout(()=>speak(say.slice(0,3).join(' ')),1100)}
  if(changed){save();if(S.tab==='hoy')render()}}
-async function notify(title,body,tag){try{if(!('Notification' in window)||Notification.permission!=='granted')return;const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)r.showNotification(title,{body,icon:'icon-192.png',badge:'icon-192.png',tag:tag||body});else new Notification(title,{body,icon:'icon-192.png'})}catch(e){}}
+async function notify(title,body,tag){try{if(!('Notification' in window)||Notification.permission!=='granted')return;const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r)r.showNotification(title,{body,icon:'icon-192.png',badge:'icon-192.png',tag:tag||body,renotify:true,silent:false,requireInteraction:true,vibrate:[300,120,300,120,300]});else new Notification(title,{body,icon:'icon-192.png',silent:false})}catch(e){}}
 function dismissAlert(id){S.notified['x'+id]=1;save();render()}
 function giveDose(mid,aid){const m=S.meds.find(x=>x.id===mid);if(!m)return;m.given.push(Date.now());S.health.push({id:uid(),kid:kidOf(m),ts:Date.now(),type:'dosis',text:'Dosis de '+m.name+(m.dose?' '+m.dose:'')});if(aid)S.notified['x'+aid]=1;save();render();const nx=medNext(m);toast(nx?'Anotado. Próxima dosis '+hm(new Date(nx)):'Tratamiento terminado')}
 
