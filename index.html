@@ -866,7 +866,7 @@ async function encuestaEnviar(vista){const v=n=>{const e=document.querySelector(
  if(vista){closeDlg();toast('Vista previa: así la recibe cada mamá (no se guardó)');return}
  const b=$('#encBtn');b.disabled=true;b.textContent='Enviando…';
  try{const x=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'encuesta',dispositivo:devId(),r})});
-  if(!x.ok)throw 0;try{localStorage.setItem('md-enc','hecha')}catch(e){}closeDlg();toast('¡Gracias! Tu respuesta nos ayuda mucho 💛')}
+  if(!x.ok)throw 0;try{localStorage.setItem('md-enc','hecha');localStorage.setItem('md-cel',cel)}catch(e){}closeDlg();toast('¡Gracias! Tu respuesta nos ayuda mucho 💛')}
  catch(e){b.disabled=false;b.textContent='Enviar';toast('No se pudo enviar. Revisa tu internet e intenta de nuevo')}}
 // Solo creador: ver las respuestas de la encuesta y descargarlas para Excel
 let encFilas=[];
@@ -882,6 +882,32 @@ async function verEncuestas(){dlg('<h3>Respuestas de la encuesta</h3><div class=
 function encuestaExcel(){const cols=['fecha','nombre','celular','ciudad','pagaria','monto','pago','aviso','usa','comentario','plan','dias'],tit=['Fecha','Nombre','Celular','Ciudad','¿Pagaría?','Monto','Cómo paga','Avisar Play Store','Qué usa','Comentario','Plan','Días de prueba'];
  const q=x=>'"'+String(x==null?'':x).replace(/"/g,'""')+'"';const csv='﻿'+[tit.map(q).join(';')].concat(encFilas.map(f=>cols.map(c=>q(f[c])).join(';'))).join('\r\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='encuesta-mama-al-dia-'+ymd(new Date())+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+// Observaciones: cualquier mamá puede mandar una sugerencia o un problema desde Ajustes
+function obsDlg(){const op=(v,t,on)=>`<label class="enc-op"><input type="radio" name="ot" value="${esc(v)}"${on?' checked':''}>${t}</label>`;let cel='';try{cel=localStorage.getItem('md-cel')||''}catch(e){}
+ dlg(`<h3>Tus observaciones 💬</h3><div class="small muted">Cuéntanos qué te gusta, qué no funciona o qué te gustaría que tenga la app. Lo leemos todo.</div>
+ <div class="enc-q">¿De qué se trata?</div><div class="enc-ops">${op('Algo no funciona','🐞 Algo no funciona',1)}${op('Una idea','💡 Una idea')}${op('Me gusta','💛 Algo que me gusta')}${op('Otra cosa','✏️ Otra cosa')}</div>
+ <textarea class="inp" id="obsT" rows="4" maxlength="800" placeholder="Escribe aquí tu observación…" style="margin-top:10px"></textarea>
+ <input class="inp" id="obsNom" placeholder="Tu nombre" value="${esc(S.profile.mom||'')}" style="margin-top:6px">
+ <input class="inp" id="obsCel" type="tel" inputmode="numeric" maxlength="16" placeholder="Tu celular (opcional, para responderte)" value="${esc(cel)}" style="margin-top:6px">
+ <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" id="obsBtn" onclick="obsEnviar()">Enviar</button></div>`);setTimeout(()=>{const t=$('#obsT');if(t)t.focus()},100)}
+async function obsEnviar(){const t=$('#obsT').value.trim();if(t.length<3){toast('Escribe tu observación');$('#obsT').focus();return}
+ const cel=$('#obsCel').value.replace(/\D/g,'').replace(/^591/,'');if(cel&&!/^[67]\d{7}$/.test(cel)){toast('Revisa tu celular: son 8 números');return}
+ const e=document.querySelector('#dlgIn input[name=ot]:checked');const b=$('#obsBtn');b.disabled=true;b.textContent='Enviando…';
+ try{const x=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({modo:'observacion',dispositivo:devId(),r:{tipo:e?e.value:'',texto:t,nombre:$('#obsNom').value,celular:cel,ciudad:S.profile.city||'',plan:plan().tipo||'',pantalla:S.tab||''}})});
+  if(!x.ok)throw 0;try{if(cel)localStorage.setItem('md-cel',cel)}catch(e){}closeDlg();toast('¡Gracias! Ya nos llegó tu observación 💛')}
+ catch(e){b.disabled=false;b.textContent='Enviar';toast('No se pudo enviar. Revisa tu internet e intenta de nuevo')}}
+let obsFilas=[];
+async function verObs(){dlg('<h3>Observaciones</h3><div class="small muted">Cargando…</div>');
+ try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:aiCode(),modo:'ver_observaciones'})});const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(r.status===403?'Solo el creador puede verlas':'No pude cargarlas');obsFilas=j.filas||[];
+  dlg(`<h3>Observaciones</h3><div class="small"><b>${obsFilas.length}</b> observaci${obsFilas.length===1?'ón':'ones'}${obsFilas.length?' (las más nuevas primero)':''}</div>
+  ${obsFilas.length?'':'<div class="small muted" style="margin-top:6px">Todavía no llega ninguna. Las mamás las mandan desde Ajustes › "Enviar una observación".</div>'}
+  <div style="max-height:50vh;overflow:auto;margin-top:8px">${obsFilas.map(f=>`<div class="enc-row"><b>${esc(f.tipo||'Observación')}</b> · ${esc(f.nombre||'Sin nombre')}${f.celular?` · <a href="https://wa.me/591${esc(f.celular)}" target="_blank" rel="noopener">${esc(f.celular)}</a>`:''}<br>${esc(f.texto)}<div class="tiny muted">${esc(f.fecha||'')}${f.ciudad?' · '+esc(f.ciudad):''}</div></div>`).join('')}</div>
+  <div class="dlg-act" style="flex-wrap:wrap">${obsFilas.length?'<button class="btn" onclick="obsExcel()">Descargar para Excel</button>':''}<button class="btn ghost" onclick="closeDlg()">Cerrar</button></div>`)}
+ catch(e){dlg(`<h3>Observaciones</h3><div class="small">${esc(e.message||'Sin conexión')}</div><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cerrar</button></div>`)}}
+function csvBajar(nombre,tit,cols,filas){const q=x=>'"'+String(x==null?'':x).replace(/"/g,'""')+'"';const csv='﻿'+[tit.map(q).join(';')].concat(filas.map(f=>cols.map(c=>q(f[c])).join(';'))).join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=nombre+'-'+ymd(new Date())+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+function obsExcel(){csvBajar('observaciones-mama-al-dia',['Fecha','Tipo','Observación','Nombre','Celular','Ciudad','Plan','Pantalla'],['fecha','tipo','texto','nombre','celular','ciudad','plan','pantalla'],obsFilas)}
 function crearProDlg(){dlg(`<h3>Crear código Pro</h3><div class="small muted">Elige cuánto tiempo dura. El código deja de funcionar solo cuando vence.</div>
  <div class="dlg-act" style="flex-direction:column"><button class="btn" onclick="crearPro(1)">1 mes</button><button class="btn soft" onclick="crearPro(3)">3 meses</button><button class="btn soft" onclick="crearPro(12)">1 año</button><button class="btn ghost" onclick="closeDlg()">Cancelar</button></div>`)}
 async function crearPro(m){try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:aiCode(),modo:'crear_pro',meses:m})});const j=await r.json().catch(()=>({}));
@@ -1503,7 +1529,7 @@ function budgetDlg(){dlg(`<h3>Presupuesto de comida</h3><label class="f">Por sem
  <div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.profile.budget=+$('#bB').value||0;S.profile.adults=+$('#bA').value;makeMenu(S.menu&&S.menu.seed);save();closeDlg();render()">Guardar</button></div>`)}
 function priceDlg(k){dlg(`<h3>${esc(CAT[k].n)}</h3><label class="f">Precio por ${CAT[k].u==='u'?'unidad':CAT[k].u} (Bs)</label><input class="inp" id="pP" type="number" step="0.1" inputmode="decimal" value="${price(k)}"><div class="dlg-act"><button class="btn ghost" onclick="closeDlg()">Cancelar</button><button class="btn" onclick="S.prices['${k}']=parseFloat($('#pP').value)||0;save();closeDlg();render()">Guardar</button></div>`)}
 function openSettings(){const p=S.profile;dlg(`<h3>Ajustes</h3><button class="btn soft sm" style="width:100%;margin:4px 0 10px" onclick="novedades()">✨ Novedades y recorrido guiado</button>
- <div class="pl-box"><div><div class="tiny muted">Tu plan</div><b>${esc(planTxt())}</b></div><button class="btn soft sm" onclick="openPlanes()">Planes</button></div>${plan().tipo==='creador'&&aiCode()?'<button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="crearProDlg()">🔑 Crear código Pro para una mamá</button><button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="grabarGuia()">🎙️ Grabar la voz suave del recorrido</button><button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="verEncuestas()">📋 Ver respuestas de la encuesta</button>':''}
+ <div class="pl-box"><div><div class="tiny muted">Tu plan</div><b>${esc(planTxt())}</b></div><button class="btn soft sm" onclick="openPlanes()">Planes</button></div>${plan().tipo==='creador'&&aiCode()?'<button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="crearProDlg()">🔑 Crear código Pro para una mamá</button><button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="grabarGuia()">🎙️ Grabar la voz suave del recorrido</button><button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="verEncuestas()">📋 Ver respuestas de la encuesta</button><button class="btn ghost sm" style="width:100%;margin-top:6px" onclick="verObs()">💬 Ver observaciones de las mamás</button>':''}<button class="btn soft sm" style="width:100%;margin-top:8px" onclick="obsDlg()">💬 Enviar una observación o sugerencia</button>
  <label class="f">Tu nombre</label><input class="inp" id="sM" value="${esc(p.mom)}"><label class="f" for="sRol">Uso la app como</label><select class="inp" id="sRol"><option value="" ${!p.rol?'selected':''}>Prefiero no decir</option><option value="mama" ${p.rol==='mama'?'selected':''}>Mamá</option><option value="papa" ${p.rol==='papa'?'selected':''}>Papá</option><option value="otro" ${p.rol==='otro'?'selected':''}>Otra persona que cuida</option></select>
  <label class="f" style="margin-top:14px">Tus hijos (0 a 18 años)</label><div id="kidsEd">${kids().map(kidRow).join('')}</div>
  <button class="btn ghost sm" style="margin-top:6px" onclick="addKidRow()">+ Agregar hijo o hija</button>

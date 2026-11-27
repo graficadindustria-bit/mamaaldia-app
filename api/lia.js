@@ -254,6 +254,20 @@ module.exports = async (req, res) => {
     if (!ok) return res.status(503).json({ error: 'sin-base' });
     return res.status(200).json({ ok: true });
   }
+  // Observaciones de las mamás (en cualquier momento, desde Ajustes)
+  if (b.modo === 'observacion') {
+    if (!disp) return res.status(400).json({ error: 'dispositivo' });
+    const r0 = b.r || {};
+    const texto = limpio(r0.texto, 800);
+    if (texto.length < 3) return res.status(400).json({ error: 'texto' });
+    const cel = String(r0.celular || '').replace(/\D/g, '').replace(/^591/, '');
+    const dh = crypto.createHash('sha256').update('disp:' + disp).digest('hex').slice(0, 24);
+    if (await contar('mad:obs-n:' + dh + ':' + new Date().toISOString().slice(0, 10), 86400) > 10) return res.status(429).json({ error: 'limite' });
+    const fila = { fecha: new Date(Date.now() - 4 * 3600000).toISOString().slice(0, 16).replace('T', ' '), tipo: limpio(r0.tipo, 30), texto, nombre: limpio(r0.nombre, 40), celular: /^[67]\d{7}$/.test(cel) ? cel : '', ciudad: limpio(r0.ciudad, 40), plan: limpio(r0.plan, 20), pantalla: limpio(r0.pantalla, 20) };
+    const ok = await redis([['LPUSH', 'mad:observaciones', JSON.stringify(fila)], ['LTRIM', 'mad:observaciones', '0', '1999']]);
+    if (!ok) return res.status(503).json({ error: 'sin-base' });
+    return res.status(200).json({ ok: true });
+  }
   if (!b.codigo && disp && !b.modo && !b.audio && !b.imagen) cod = { tipo: 'gratis', h: crypto.createHash('sha256').update('disp:' + disp).digest('hex') };
   if (!cod) return res.status(401).json({ error: 'codigo' });
   if (cod.tipo === 'vencido') return res.status(401).json({ error: 'vencido', prueba: !!cod.prueba, vence: cod.vence });
@@ -265,6 +279,13 @@ module.exports = async (req, res) => {
     const n = crearPro(dias);
     if (!n) return res.status(503).json({ error: 'sin-clave' });
     return res.status(200).json(n);
+  }
+  if (b.modo === 'ver_observaciones') {
+    if (tipo !== 'creador') return res.status(403).json({ error: 'permiso' });
+    const r = await redis([['LRANGE', 'mad:observaciones', '0', '499']]);
+    if (!r) return res.status(503).json({ error: 'sin-base' });
+    const filas = []; for (const x of (r[0] || [])) { try { filas.push(JSON.parse(x)); } catch (e) {} }
+    return res.status(200).json({ filas });
   }
   if (b.modo === 'ver_encuestas') {
     if (tipo !== 'creador') return res.status(403).json({ error: 'permiso' });
