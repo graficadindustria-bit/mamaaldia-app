@@ -29,3 +29,6 @@ Los pasos con `a:N` usan `guia/N.mp3`. Los demás piden su voz a `/api/lia` (mod
 ## Observaciones
 - Cualquier mamá puede mandar una observación o sugerencia desde Ajustes › "Enviar una observación o sugerencia" (tipo, texto, nombre y celular opcional).
 - Se guardan en Redis (`mad:observaciones`, las últimas 2000). El creador las ve en Ajustes › "Ver observaciones de las mamás" y las descarga para Excel.
+
+## Pendiente para la versión de Play Store
+- Tono de avisos: crear el canal de notificaciones de Android con el sonido `gotitas.mp3` (res/raw) para que los avisos suenen con Gotitas aunque la app esté cerrada, sin que la mamá lo configure.
