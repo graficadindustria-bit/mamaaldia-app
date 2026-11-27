@@ -838,7 +838,7 @@ function crearProDlg(){dlg(`<h3>Crear código Pro</h3><div class="small muted">E
  <div class="dlg-act" style="flex-direction:column"><button class="btn" onclick="crearPro(1)">1 mes</button><button class="btn soft" onclick="crearPro(3)">3 meses</button><button class="btn soft" onclick="crearPro(12)">1 año</button><button class="btn ghost" onclick="closeDlg()">Cancelar</button></div>`)}
 async function crearPro(m){try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:aiCode(),modo:'crear_pro',meses:m})});const j=await r.json().catch(()=>({}));
  if(!r.ok||!j.codigo){toast(r.status===403?'Solo el código de creador puede crear códigos Pro':'No pude crear el código, intenta de nuevo');return}
- const msg='¡Bienvenida al plan Pro de Mamá al Día! 🌸\nTu código: '+j.codigo+'\nVale hasta el '+fmtDate(fromYmd(j.vence))+'.\nÁbrelo en mamaaldia-app.vercel.app › Ajustes › Código de Lía con IA.';
+ const msg='¡Bienvenida al plan Pro de Mamá al Día! 🌸\nToca este link desde tu celular y listo, se activa solo:\nhttps://mamaaldia-app.vercel.app/?c='+j.codigo+'\nVale hasta el '+fmtDate(fromYmd(j.vence))+'.';
  dlg(`<h3>Código Pro listo</h3><div class="pl-code">${esc(j.codigo)}</div><div class="small muted">Vale hasta el ${esc(fmtDate(fromYmd(j.vence)))}. Mándaselo a la mamá que pagó.</div>
  <div class="dlg-act" style="flex-wrap:wrap"><a class="btn" style="text-align:center;text-decoration:none" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Enviar por WhatsApp</a><button class="btn soft" onclick="try{navigator.clipboard.writeText(${esc(JSON.stringify(msg))});toast('Copiado')}catch(e){}">Copiar</button><button class="btn ghost" onclick="closeDlg()">Cerrar</button></div>`)}catch(e){toast('Sin conexión')}}
 async function checkCode(c){try{const r=await fetch('/api/lia',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:c,modo:'probar'})});
@@ -1696,6 +1696,8 @@ window.addEventListener('pointerup',e=>{if(rec&&rec.held)micUp(e)});window.addEv
 try{if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}}catch(e){}
 setTimeout(()=>{try{if('Notification' in window&&Notification.permission==='granted')pushSync(true)}catch(e){}},4000);
 function avisoHablar(t){if(!t)return;S.tab='hoy';render();setTimeout(()=>speak(String(t).slice(0,300),true),400)}
+// Link de acceso: mamaaldia-app.vercel.app/?c=CODIGO guarda el código solo (creador o Pro) y lo borra de la barra de direcciones
+try{const u=new URLSearchParams(location.search);const c=(u.get('c')||'').toUpperCase().replace(/[^A-Z0-9-]/g,'');if(c){u.delete('c');history.replaceState(null,'',location.pathname+(u.toString()?'?'+u:''));if(c!==aiCode()){setCode(c);setTimeout(()=>checkCode(c),800)}}}catch(e){}
 try{const q=new URLSearchParams(location.search).get('aviso');if(q){history.replaceState(null,'',location.pathname);document.addEventListener('pointerdown',()=>{},{once:true});setTimeout(()=>avisoHablar(q),900)}}catch(e){}
 try{navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',ev=>{if(ev.data&&ev.data.aviso)avisoHablar(ev.data.aviso)})}catch(e){}
 setInterval(()=>{if(S&&S.profile.mom){tick();if(S.tab==='hoy'&&!rec&&!busy&&!$('#dlg').open&&document.activeElement.tagName!=='INPUT')render()}},30000);

@@ -1,5 +1,6 @@
 // Códigos de acceso (hash SHA-256). Compartido por las funciones.
 const CODIGOS = {
+  '15663b794ec496a1fa34dd7d7a7156148d42d1ba09c6eb009e26a6c3c778b2bd': 'creador',
   'c6b231b8ad5fef167852607732839f6c21cc8acfbb4f19f3a41c0bcada16b171': 'creador',
   '78749e367ce2622016ecc1c0bc93fb828b548b56922e9bfd234dfe26e2581b71': 'creador',
   '09b692077df14e2b305f17ace152ee937fb2f896e5a0b99851026e3baa4ae4a5': 'invitada',
